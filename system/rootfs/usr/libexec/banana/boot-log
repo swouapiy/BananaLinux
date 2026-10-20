@@ -6,6 +6,29 @@
 # run, and adds only those after them, so a long session (sleep timings fill it fast) doesn't push the boot out.
 L=/data/banana/logs
 mkdir -p $L 2>/dev/null || exit 0
+# The battery when the handheld was turned off and when it came on again (#34: does it charge while off?):
+# logs/battery-while-off.txt, a line a boot. rcK runs this with "off" to note it at shutdown.
+bat() {
+    P=/sys/class/power_supply/battery; c=0
+    for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && c=1; done
+    # (the rk817 has no voltage_now: the average, and at boot the one it measured as the handheld came on)
+    v=$(cat $P/voltage_avg 2>/dev/null); [ "$1" = boot ] && v=$(cat $P/voltage_boot 2>/dev/null || echo $v)
+    echo "$(date +%s) $(cat $P/capacity 2>/dev/null) ${v:-0} $c $(cat $P/charge_now 2>/dev/null || echo 0)"
+}
+# (the power-on line first, once a boot, also when it turns off again before rcS's run: a start for charging)
+if [ ! -f /run/banana/battery-noted ] && [ -f $L/battery-off.txt ]; then
+    read -r t0 p0 v0 c0 q0 < $L/battery-off.txt
+    set -- $(bat boot)
+    m=$(( ($1 - t0) / 60 )); g=$(( ($5 - ${q0:-0}) / 1000 ))
+    # what it drew while off, on battery all along, as sleep.log's "battery while asleep" (from 10 min on)
+    a=; [ "$c0" = 0 ] && [ "$4" = 0 ] && [ $m -ge 10 ] && [ $g -le 0 ] && a=", $(( -g * 60 / m )) mA on average"
+    { tail -n 19 $L/battery-while-off.txt 2>/dev/null
+      echo "$(date '+%F %T'): off $m min, battery ${p0}% $((v0 / 1000)) mV -> ${2}% $(($3 / 1000)) mV at power-on, gauge $g mAh$a (charger at shutdown: $([ "$c0" = 1 ] && echo in || echo out), now: $([ "$4" = 1 ] && echo in || echo out))"
+    } > $L/battery-while-off.txt.new 2>/dev/null && mv -f $L/battery-while-off.txt.new $L/battery-while-off.txt
+    rm -f $L/battery-off.txt
+fi
+touch /run/banana/battery-noted 2>/dev/null
+[ "$1" = off ] && { bat > $L/battery-off.txt 2>/dev/null; sync; }
 B=/run/banana/dmesg-boot.txt
 if [ ! -f $B ]; then
     # (rotated on this boot's first run: the one before kept, a boot that crashed before its shutdown among them)
