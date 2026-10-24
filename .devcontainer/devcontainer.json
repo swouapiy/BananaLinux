@@ -1,0 +1,12 @@
+// VS Code's Dev Containers: the editor inside tools/dev's Linux (the same image as tools/dev.sh), so the C++ and C
+// language servers see linux/input.h, libdrm and freetype.
+{
+  "name": "BananaOS host checks",
+  "build": { "dockerfile": "../tools/dev/Dockerfile" },
+  "workspaceFolder": "/work",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/work,type=bind",
+  "runArgs": ["--privileged"],
+  "customizations": {
+    "vscode": { "extensions": ["llvm-vs-code-extensions.vscode-clangd"] }
+  }
+}

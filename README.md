@@ -256,6 +256,10 @@ make ui            # ui/banana-ui for this computer
 make test          # renders the menu from a test library into ui/tests/out
 ```
 
+Not on Linux (a Mac, say)? `tools/dev.sh` runs the same in CI's Ubuntu through Docker (Colima or Docker Desktop):
+`tools/dev.sh make test`, `tools/dev.sh ci` for every check CI runs, or `tools/dev.sh` for a shell. VS Code's Dev
+Containers opens the repo in that image (`.devcontainer/`).
+
 | Path | What |
 |---|---|
 | `ui/` | `banana-ui`: the KMS host (`src/`), ROCKNIXDS Pixel's engine (`rnds/`), its assets, the headless tests |
