@@ -8,6 +8,11 @@ on:
         description: "Also build the SD card images (an hour or more)"
         type: boolean
         default: false
+      boards:
+        description: "Which handhelds' images (each built and boot-tested on its own)"
+        type: choice
+        options: [both, rgds-plus, rgds]
+        default: both
 
 jobs:
   checks:
@@ -55,89 +60,18 @@ jobs:
             done
           done
 
-  image:
-    if: github.event_name == 'workflow_dispatch' && inputs.image
+  # each handheld's image and boot test (.github/workflows/board.yml), side by side and independent: the RG DS Plus's
+  # boot test starts as soon as its own image is done. "boards" builds one of them only (a quick test of one handheld)
+  rgds-plus:
+    if: github.event_name == 'workflow_dispatch' && inputs.image && inputs.boards != 'rgds'
     needs: checks
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
-    strategy:
-      matrix:
-        board: [rgds, rgds-plus]
-    env:
-      BR2_DL_DIR: ${{ github.workspace }}/dl
-    steps:
-      - uses: actions/checkout@v4
-      - name: Free disk space (the toolchain, the kernel, Mesa and RetroArch)
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
-          df -h /
-      - name: Packages
-        run: sudo apt-get update && sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio file wget python3-dev swig libgnutls28-dev
-      # downloads and the compiler cache, kept even when the build fails (the next attempt starts from them)
-      - name: Restore downloads
-        uses: actions/cache/restore@v4
-        with:
-          path: dl
-          key: dl-${{ hashFiles('buildroot/configs/*', 'buildroot/package/**') }}
-          restore-keys: dl-
-      - name: Restore compiler cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.buildroot-ccache
-          key: ccache-${{ matrix.board }}-${{ github.run_id }}
-          restore-keys: ccache-${{ matrix.board }}-
-      - name: Build
-        run: make ${{ matrix.board }}
-      - name: Save downloads
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: dl
-          key: dl-${{ hashFiles('buildroot/configs/*', 'buildroot/package/**') }}-${{ matrix.board }}-${{ github.run_id }}
-      - name: Save compiler cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.buildroot-ccache
-          key: ccache-${{ matrix.board }}-${{ github.run_id }}
-      - name: Build log on failure
-        if: failure()
-        run: tail -n 200 output/${{ matrix.board }}/build/*/.stamp_* 2>/dev/null | tail -n 50; ls -t output/${{ matrix.board }}/build | head -5
-      - uses: actions/upload-artifact@v4
-        with:
-          name: banana-${{ matrix.board }}
-          path: |
-            output/${{ matrix.board }}/images/banana-${{ matrix.board }}.img.gz
-            output/${{ matrix.board }}/images/banana-${{ matrix.board }}-*.update.tar
+    uses: ./.github/workflows/board.yml
+    with:
+      board: rgds-plus
 
-  # the whole image booted in QEMU: the first boot makes the data partition, the menu comes up on both panels, a
-  # game is started from the library and the menu comes back, a shutdown from the settings powers the VM off; the
-  # screenshots and the card's logs are kept as an artifact
-  boot:
-    if: github.event_name == 'workflow_dispatch' && inputs.image
-    needs: image
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    strategy:
-      matrix:
-        board: [rgds, rgds-plus]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: banana-${{ matrix.board }}
-          path: image
-      - name: Packages
-        run: sudo apt-get update && sudo apt-get install -y qemu-system-arm qemu-utils mtools exfatprogs exfat-fuse
-      - name: Boot the image in QEMU
-        run: sh tools/qemu-boot.sh image/banana-${{ matrix.board }}.img.gz qemu-out
-      - name: Serial log on failure
-        if: failure()
-        run: tail -n 80 qemu-out/serial.log
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: qemu-boot-${{ matrix.board }}
-          path: |
-            qemu-out/*.png
-            qemu-out/*.log
+  rgds:
+    if: github.event_name == 'workflow_dispatch' && inputs.image && inputs.boards != 'rgds-plus'
+    needs: checks
+    uses: ./.github/workflows/board.yml
+    with:
+      board: rgds
