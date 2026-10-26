@@ -264,7 +264,9 @@
 
 		green_led: led-0 {
 			color = <LED_COLOR_ID_GREEN>;
-			default-state = "on";
+			/* off until bananad sets the LEDs: on, green lit at the driver's probe, so a start for charging while
+			 * off (amber) flashed green first */
+			default-state = "off";
 			function = LED_FUNCTION_POWER;
 			max-brightness = <255>;
 			pwms = <&pwm5 0 25000 0>;
