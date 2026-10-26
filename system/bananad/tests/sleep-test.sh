@@ -260,11 +260,11 @@ kill -9 -$GAME 2>/dev/null || true
 POWEROFF=0
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
 
-echo "13. the lid shut and opened in a flick: one short sleep, then awake for good"
+echo "13. the lid shut and opened in a flick: one short sleep (or the sleep called off), then awake for good"
 start
 ev $EV_SW $SW_LID 1; ev $EV_SW $SW_LID 0       # (the lid's file says open: it was only a moment)
-asleep && ok "slept on the close" || bad "no sleep on the close"
-wake
+# the open event read before the suspend began calls it off (wake_inputs); read after, it is a short sleep
+if asleep; then ok "slept on the close"; wake; else grep -q 'called off: the lid opened' /data/banana/logs/sleep.log && ok "the sleep called off by the open" || bad "neither a sleep nor a called-off one"; fi
 asleep && bad "back to sleep after the flick" || ok "awake after the wake, the open event not taken again"
 [ "$(gstate)" != T ] && ok "game running" || bad "game still stopped"
 stop
