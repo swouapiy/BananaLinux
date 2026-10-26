@@ -1347,6 +1347,7 @@ static int charge_mode(void)
 	led_set(green, r ? "off" : "on", level);
 	if (!r) cpus_low(0);	/* (the boot's banana-perf sets the governor it wants) */
 	return r;
+}
 
 /* the charger's state for banana-ui, written when it changes (/run/banana/charger: 1 or 0): the menu watches
  * /run/banana, so the bolt on its battery comes and goes with the cable, not at its next minute */
