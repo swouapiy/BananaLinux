@@ -272,6 +272,7 @@
 		};
 
 		amber_led: led-1 {
+			retain-state-suspended;	/* lit while asleep on the charger (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_AMBER>;
 			function = LED_FUNCTION_CHARGING;
 			max-brightness = <255>;

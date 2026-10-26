@@ -429,26 +429,11 @@ static void suspend_now(const char *why)
 	sleep_fallback = 0;	/* every sleep tries the configured way first, as a phone retries its suspend */
 	sleep_mode();
 	leds_asleep = 1; leds_last = -2; leds_update();	/* the upper LED lit (led_sleep): asleep, not off */
-	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0;
-	double asleep = 0, dark_from = 0, led_at = 0;
+	int cycles = 0, rtc_wakes = 0, failures = 0;
+	double asleep = 0;
 	const char *woke = "?";
 	int charger0 = charger_online();
 	for (;;) {
-		/* charging with the lid shut: no suspend, which turns the charging light off (it is a PWM LED, and the PWM
-		 * stops in suspend). Dark and awake instead, the game still paused, until the lid opens (back as from a
-		 * sleep) or the charger is pulled out (then a real sleep). */
-		if (lid_closed && charger_online()) {
-			if (!dark) {
-				dark = 1; dark_from = mono();
-				backlights_power(0);
-				sleep_log("%s while charging: dark and awake, so the charging light stays on%s", why, game ? ", game paused" : "");
-			}
-			if (mono() >= led_at) { leds_update(); led_at = mono() + 10; }	/* (it goes out when the battery is full) */
-			usleep(500000);
-			read_lid();
-			if (!lid_closed) { woke = "lid opened"; break; }
-			continue;
-		}
 		/* a power press or the lid opened while the suspend got under way (the hooks, the sync): called off, the
 		 * screens back, instead of a press lost and a second one needed. With the lid shut and lid sleep on, asleep
 		 * all the same (the button pressed in a bag) */
@@ -467,7 +452,9 @@ static void suspend_now(const char *why)
 		 * whichever comes first */
 		int secs = (int)(cfg.sleep_check_hours * 3600);
 		double off_in = cfg.poweroff_min > 0 ? cfg.poweroff_min * 60 - asleep : -1;
-		if (off_in > 0 && (secs <= 0 || off_in < secs)) secs = (int)off_in + (off_in > (int)off_in);
+		/* on the charger: no turning off, and a look every 10 minutes for the charging light (amber until full) */
+		if (charger_online()) secs = secs > 0 && secs < 600 ? secs : 600;
+		else if (off_in > 0 && (secs <= 0 || off_in < secs)) secs = (int)off_in + (off_in > (int)off_in);
 		time_t alarm = rtc_alarm(secs);
 		double t_in = mono();
 		struct timespec b0, b1;
@@ -527,6 +514,7 @@ static void suspend_now(const char *why)
 		/* why it woke: the battery check's alarm, or someone (lid, power button) */
 		if (rtc_fired) {
 			rtc_wakes++;
+			leds_update();	/* (the charging light out once the battery is full) */
 			int pct = battery_discharging_pct();
 			if (pct >= 0 && pct <= cfg.sleep_poweroff_pct) {
 				sleep_log("battery check: %d%% after %.1f h asleep: shutting down", pct, asleep / 3600);
@@ -534,8 +522,8 @@ static void suspend_now(const char *why)
 				shutdown_now("battery empty while asleep");
 				return;
 			}
-			/* asleep long enough: off, as a held power button does (not on the charger: off, the RG DS Plus doesn't
-			 * charge; it sleeps on, the next alarm the battery check's) */
+			/* asleep long enough: off, as a held power button does (not on the charger: as a phone, it sleeps on while
+			 * plugged in, and turns off at the first look after the cable comes out) */
 			if (cfg.poweroff_min > 0 && asleep >= cfg.poweroff_min * 60 - 1 && !charger_online()) {
 				sleep_log("asleep %.0f min: turning off", asleep / 60);
 				if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
@@ -557,9 +545,9 @@ static void suspend_now(const char *why)
 	}
 	/* awake: the game and the menu first */
 	double t_wake = mono();
-	/* the panels on when the lid is open: dark while charging, or dark from a lid shut with lid_sleep off before a
-	 * power-button sleep (the lid-open event that would light them is drained below) */
-	if (dark || !lid_closed) backlights_power(!lid_closed);
+	/* the panels on when the lid is open (dark too from a lid shut with lid_sleep off before a power-button sleep:
+	 * the lid-open event that would light them is drained below) */
+	if (!lid_closed) backlights_power(1);
 	if (pg > 0) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
 	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
@@ -577,7 +565,6 @@ static void suspend_now(const char *why)
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
 	last_input = mono();
-	if (dark) sleep_log("dark while charging for %.0f s", t_wake - dark_from);
 	sleep_log("awake (%s) after %.0f s asleep%s%s, game and menu back %.1f ms after the kernel", woke, asleep,
 		rtc_wakes ? ", battery checked" : "", cycles - rtc_wakes > 1 ? ", slept again with the lid shut" : "",
 		(t_back - t_wake) * 1000);
@@ -1030,11 +1017,12 @@ static void leds_update(void)
 		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", upper);
 		say("LEDs: battery %d%%%s", pct, charging ? ", charging" : "");
 	}
-	/* the lower LED: amber, steady, the whole time the charger is plugged in and the battery isn't full */
+	/* the lower LED: amber, steady, the whole time the charger is plugged in and the battery isn't full; asleep at
+	 * full, as the upper one (a phone's charging light stays on while it sleeps on the charger) */
 	int amber_on = level > 0 && plugged && (pct < 0 || pct < 100);
 	if (amber_on != amber_last || last == -2) {
 		amber_last = amber_on;
-		led_set(amber, amber_on ? "on" : "off", level);
+		led_set(amber, amber_on ? "on" : "off", leds_asleep ? 255 : level);
 	}
 }
 
@@ -1403,8 +1391,9 @@ int main(int argc, char **argv)
 		int idle = !game || cfg.idle_in_games;
 		if (idle && quiet_scan()) undim();
 		if (cfg.dim_min > 0 && !dimmed && idle && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
-		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */
-		if (cfg.autosleep_min > 0 && idle && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
+		/* on the charger too, as a phone sleeps on it (the charging light stays on); only turning off waits for the
+		 * cable to come out */
+		if (cfg.autosleep_min > 0 && idle && now - last_input >= cfg.autosleep_min * 60.0 &&
 		    !pid_of("/run/banana/awake.pid"))
 			suspend_now("idle");
 		/* never sleeping (autosleep_minutes 0): off after poweroff_minutes without input, as a held power button does
