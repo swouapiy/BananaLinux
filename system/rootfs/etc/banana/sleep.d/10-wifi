@@ -1,16 +1,30 @@
 #!/bin/sh
 # The RG DS's Wi-Fi (RTL8821CS on SDIO) doesn't come back from a suspend by itself: unload it before, load it after
 # and start it again when it was on. "post" runs in the background, after the game and the menu are back.
+# Its SD controller is unbound too, which powers the card off: left bound, the kernel's resume brought the card up
+# again (power, reset, tuning) before anything else could go on, 0.3 s of every wake. Phones keep a radio that is
+# off powered down while asleep as well.
 [ -d /sys/module/rtw88_8821cs ] || [ -f /run/banana/wifi-unloaded ] || exit 0	# no Wi-Fi: nothing to do, at once
+M=/sys/bus/platform/drivers/dwmmc_rockchip
 case $1 in
 pre)
+    # the controller the Wi-Fi card is on (fe000000.mmc), from its SDIO function's path
+    H=
+    for d in /sys/bus/sdio/devices/*; do
+        [ -e "$d" ] && H=$(readlink -f "$d" | sed -n 's|.*/\([0-9a-f]*\.mmc\)/.*|\1|p') && [ -n "$H" ] && break
+    done
     [ -f /run/banana/wpa.pid ] && touch /run/banana/wifi-was-up
     /usr/libexec/banana/wifi down
     modprobe -r rtw88_8821cs 2>/dev/null
     touch /run/banana/wifi-unloaded
+    [ -n "$H" ] && [ -e $M/$H ] && echo $H > $M/unbind 2>/dev/null && echo $H > /run/banana/wifi-host-unbound
     ;;
 post)
     rm -f /run/banana/wifi-unloaded
+    if [ -f /run/banana/wifi-host-unbound ]; then
+        cat /run/banana/wifi-host-unbound > $M/bind 2>/dev/null
+        rm -f /run/banana/wifi-host-unbound
+    fi
     modprobe rtw88_8821cs 2>/dev/null
     [ -f /run/banana/wifi-was-up ] && { rm -f /run/banana/wifi-was-up; /usr/libexec/banana/wifi up; }
     ;;
