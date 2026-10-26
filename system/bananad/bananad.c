@@ -973,6 +973,7 @@ static int charge_mode(void)
 	int pct = -1, charging = 0;
 	battery_state(bat, sizeof bat, &pct, &charging);
 	charge_log("charging while off (%s): battery %d%%", why, pct);
+	close(open("/run/banana/charging", O_WRONLY | O_CREAT | O_CLOEXEC, 0644));	/* (for a boot's own waits) */
 	backlights_power(0);
 	cpus_low(1);
 	char green[300], red[300], amber[300];
@@ -1028,6 +1029,7 @@ static int charge_mode(void)
 		}
 	}
 	for (int i = 0; i < n; i++) close(pf[i].fd);
+	unlink("/run/banana/charging");
 	battery_state(bat, sizeof bat, &pct, &charging);
 	charge_log("%s after %.0f min: battery %d%%", r ? "the charger pulled out: turning off" : "the power button: starting",
 		(mono() - t0) / 60, pct);

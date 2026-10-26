@@ -29,6 +29,7 @@ ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0      # an old press, waiting: n
 "$W/bananad" --charge & CB=$!
 sleep 0.7
 kill -0 $CB 2>/dev/null && ok "charging (an old press didn't start it)" || bad "bananad --charge gone"
+[ -e /run/banana/charging ] && ok "/run/banana/charging while it charges" || bad "no /run/banana/charging"
 [ "$(cat $L/amber:charging/brightness)" != 0 ] && [ "$(cat $L/green:power/brightness)" = 0 ] && ok "amber on, green off" ||
     bad "amber $(cat $L/amber:charging/brightness), green $(cat $L/green:power/brightness)"
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && [ "$(cat /sys/class/backlight/backlight1/bl_power)" = 4 ] && ok "both panels dark" || bad "bl_power not 4"
@@ -41,6 +42,7 @@ finish
 ev $EV_KEY $KEY_POWER 0
 [ $r = 0 ] && ok "held a second: exit 0, the boot goes on" || bad "exit $r"
 [ "$(cat /sys/devices/system/cpu/cpu1/online)" = 1 ] && ok "the CPUs back" || bad "cpu1 still offline"
+[ ! -e /run/banana/charging ] && ok "/run/banana/charging gone" || bad "/run/banana/charging left"
 grep -q "charging while off (turned off with the charger in): battery [0-9]*%" /data/banana/logs/charging.log &&
     grep -q "the power button: starting" /data/banana/logs/charging.log && ok "charging.log" || bad "charging.log: $(cat /data/banana/logs/charging.log)"
 
