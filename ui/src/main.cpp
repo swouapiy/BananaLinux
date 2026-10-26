@@ -1790,7 +1790,14 @@ int main(int argc, char** argv)
 			else if (p.fd == launchWatch)
 			{
 				alignas(inotify_event) char buf[1024];
-				while (read(launchWatch, buf, sizeof buf) > 0) {}	// (the loop's next pass looks for the launch file)
+				ssize_t n;
+				while ((n = read(launchWatch, buf, sizeof buf)) > 0)	// (the loop's next pass looks for the launch file)
+					for (char* q = buf; q + sizeof(inotify_event) <= buf + n; )
+					{
+						inotify_event* e = (inotify_event*)q;
+						if (e->len && !strcmp(e->name, "charger")) { lib.powerChanged(); batteryDue = true; dirty = true; }	// (bananad: the cable)
+						q += sizeof(inotify_event) + e->len;
+					}
 			}
 			else if (p.fd == worker.wakeFd)
 			{
