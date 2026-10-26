@@ -677,7 +677,8 @@ static void suspend_now(const char *why)
 			continue;	/* enough battery: back to sleep at once */
 		}
 		read_lid();
-		if (lid_closed && cfg.lid_sleep) { woke = "lid shut"; continue; }	/* not meant: back to sleep */
+		/* not meant: back to sleep, the LEDs set first (a charger plugged in may be what woke it) */
+		if (lid_closed && cfg.lid_sleep) { woke = "lid shut"; leds_update(); continue; }
 		/* what woke it: the wake keys' events, else the lid's state before and after; with the lid open all along
 		 * and no key seen, the charger when it came or went, else the power button (its event can come late) */
 		int charger1 = charger_online();

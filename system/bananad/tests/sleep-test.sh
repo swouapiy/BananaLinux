@@ -269,19 +269,18 @@ asleep && bad "back to sleep after the flick" || ok "awake after the wake, the o
 [ "$(gstate)" != T ] && ok "game running" || bad "game still stopped"
 stop
 
-echo "14. a charger plugged in while asleep with the lid shut: awake and dark, not asleep (the charging light stays on)"
+echo "14. a charger plugged in while asleep with the lid shut: back to sleep, the charging light lit (as a phone)"
 start
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "asleep" || bad "no sleep"
 mkdir -p /sys/class/power_supply/charger
 echo USB > /sys/class/power_supply/charger/type; echo 1 > /sys/class/power_supply/charger/online
 wake      # the plug woke it; the lid is still shut
-asleep 2>/dev/null && bad "back to sleep on the charger" || ok "awake on the charger"
+asleep && ok "back to sleep on the charger" || bad "awake on the charger with the lid shut"
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark" || bad "backlight bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
-a=$(cat /sys/class/leds/amber:charging/brightness)
-[ -n "$a" ] && [ "$a" != 0 ] && ok "charging light on ($a)" || bad "charging light off ('$a')"
+[ "$(cat /sys/class/leds/amber:charging/brightness)" = 255 ] && ok "charging light lit at full" || bad "charging light '$(cat /sys/class/leds/amber:charging/brightness)'"
 [ "$(gstate)" = T ] && ok "game still paused" || bad "game running with the lid shut ($(gstate))"
-echo 0 > /run/test/lid; sleep 1
+echo 0 > /run/test/lid; wake
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels back when the lid opens" || bad "panels still dark"
 [ "$(gstate)" != T ] && ok "game running again" || bad "game still paused"
 rm -rf /sys/class/power_supply/charger
