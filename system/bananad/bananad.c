@@ -313,6 +313,24 @@ static void drain_inputs(void)
 		while (read(devfd[i], ev, sizeof ev) > 0) {}
 }
 
+/* the wake keys among the events waiting (read, and so used up: a wake, not a request): WAKE_POWER a power press,
+ * WAKE_LID the lid opened. What Android's wakeup reasons are for: the label in sleep.log, and a press while the
+ * suspend was under way calls it off instead of getting lost */
+enum { WAKE_POWER = 1, WAKE_LID = 2 };
+static int wake_inputs(void)
+{
+	struct input_event ev[64];
+	int why = 0;
+	ssize_t n;
+	for (int i = 0; i < ndev; i++)
+		while ((n = read(devfd[i], ev, sizeof ev)) > 0)
+			for (size_t k = 0; k < (size_t)n / sizeof *ev; k++) {
+				if (ev[k].type == EV_KEY && ev[k].code == KEY_POWER && ev[k].value == 1) why |= WAKE_POWER;
+				if (ev[k].type == EV_SW && ev[k].code == SW_LID && ev[k].value == 0) why |= WAKE_LID;
+			}
+	return why;
+}
+
 /* ---- sleep ------------------------------------------------------------------------------------------------------
  * Closing the lid: the game is paused, the pre-sleep hooks run (Wi-Fi down), the card is flushed (this kernel skips
  * its own sync), an RTC alarm is set for the battery check, and the SoC suspends to RAM. Opening the lid: the game
@@ -408,11 +426,13 @@ static void suspend_now(const char *why)
 	backlights_power(0);
 	hooks("pre", 0);
 	sync();
+	sleep_fallback = 0;	/* every sleep tries the configured way first, as a phone retries its suspend */
 	sleep_mode();
 	leds_asleep = 1; leds_last = -2; leds_update();	/* the upper LED lit (led_sleep): asleep, not off */
 	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
 	const char *woke = "?";
+	int charger0 = charger_online();
 	for (;;) {
 		/* charging with the lid shut: no suspend, which turns the charging light off (it is a PWM LED, and the PWM
 		 * stops in suspend). Dark and awake instead, the game still paused, until the lid opens (back as from a
@@ -428,6 +448,20 @@ static void suspend_now(const char *why)
 			read_lid();
 			if (!lid_closed) { woke = "lid opened"; break; }
 			continue;
+		}
+		/* a power press or the lid opened while the suspend got under way (the hooks, the sync): called off, the
+		 * screens back, instead of a press lost and a second one needed. With the lid shut and lid sleep on, asleep
+		 * all the same (the button pressed in a bag) */
+		int lid_was = lid_closed;
+		int early = wake_inputs();
+		if (early) {
+			read_lid();
+			if (!(lid_closed && cfg.lid_sleep)) {
+				woke = early & WAKE_LID || (lid_was && !lid_closed) ? "lid opened" : "power button";
+				sleep_log("sleep (%s) called off: %s before it suspended", why,
+					early & WAKE_LID ? "the lid opened" : "the power button pressed");
+				break;
+			}
 		}
 		/* the RTC's alarm: the battery check, or turning off (poweroff_minutes asleep, every sleep of this one counted),
 		 * whichever comes first */
@@ -470,9 +504,18 @@ static void suspend_now(const char *why)
 		}
 		rtc_alarm(0);
 		cycles++;
+		int pressed = wake_inputs();	/* (what woke it, or came in while it tried) */
 		if (r) {
-			/* it didn't suspend: devices one at a time, then the lighter s2idle, then give up and blank the panels */
+			/* it didn't suspend: devices one at a time, then the lighter s2idle, then give up and blank the panels.
+			 * Unless someone woke it meanwhile: a failed suspend can take seconds, and a press then is a wake, not
+			 * the start of another try that needed a second press */
 			failures++;
+			read_lid();
+			if (pressed && !(lid_closed && cfg.lid_sleep)) {
+				woke = pressed & WAKE_LID || (lid_was && !lid_closed) ? "lid opened" : "power button";
+				sleep_log("suspend failed (%s), %s meanwhile: awake", strerror(err), pressed & WAKE_LID ? "the lid opened" : "the power button pressed");
+				break;
+			}
 			sleep_log("suspend failed (%s)%s", strerror(err), sleep_fallback < 2 ? ": trying the safer way" : "");
 			if (sleep_fallback < 2 && failures <= 2) { sleep_fallback++; sleep_mode(); usleep(200000); continue; }
 			woke = "failed";
@@ -503,7 +546,13 @@ static void suspend_now(const char *why)
 		}
 		read_lid();
 		if (lid_closed && cfg.lid_sleep) { woke = "lid shut"; continue; }	/* not meant: back to sleep */
-		woke = lid_closed ? "power button" : "lid opened";
+		/* what woke it: the wake keys' events, else the lid's state before and after; with the lid open all along
+		 * and no key seen, the charger when it came or went, else the power button (its event can come late) */
+		int charger1 = charger_online();
+		if (pressed & WAKE_LID || (lid_was && !lid_closed)) woke = "lid opened";
+		else if (pressed & WAKE_POWER || lid_closed) woke = "power button";
+		else if (charger1 != charger0) woke = charger1 ? "the charger plugged in" : "the charger unplugged";
+		else woke = "power button";
 		break;
 	}
 	/* awake: the game and the menu first */

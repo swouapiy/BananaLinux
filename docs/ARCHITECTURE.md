@@ -158,8 +158,14 @@ When `/sys/power/state` returns:
   fraction of a millisecond of the kernel returning; then the `post` hooks (Wi-Fi back) in the background, the LEDs,
   the headphone route; the press that woke it is ignored.
 
+What woke it (sleep.log's "awake (...)") comes from the wake keys' events waiting when it returns (a power press,
+the lid opening), else the lid's state before and after, else the charger coming or going, else the power button.
+A power press or the lid opening while the suspend is still under way (the hooks, the sync) calls it off, as
+Android's wakeup count does, instead of the press getting lost and a second one needed.
+
 If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
-fails with the lid shut, both backlights go off until it opens. With lid sleep switched off, closing the lid only
+fails with the lid shut, both backlights go off until it opens. A press during a failed try is a wake, not the
+start of the next try; and the next sleep starts from the configured way again. With lid sleep switched off, closing the lid only
 turns the backlights off. Every sleep is a line in `banana/logs/sleep.log` (time to suspend, time asleep, why it
 woke, how long the game and the menu took to come back); with `sleep_debug = yes` the kernel's per-device times go
 to `banana/logs/sleep-devices.log`, slowest first.
