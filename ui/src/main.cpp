@@ -1274,7 +1274,7 @@ int main(int argc, char** argv)
 			break;
 		}
 		case Settings::REBOOT: logf("restarting"); recordEvent("menu", "restart (Settings)"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
-		case Settings::POWEROFF: logf("shutting down"); recordEvent("menu", "shut down (Settings)"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
+		case Settings::POWEROFF: logf("shutting down"); recordEvent("menu", "shut down (Settings)"); close(open("/run/banana/poweroff", O_WRONLY | O_CREAT | O_CLOEXEC, 0644)); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off (rcK: off, not a restart)
 		default: break;
 		}
 		dirty = true;

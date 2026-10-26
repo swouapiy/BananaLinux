@@ -7,3 +7,6 @@ CONFIG_DISPLAY_CPUINFO=n
 # only the SD card is a boot target (the RG DS's eMMC holds Android)
 CONFIG_ENV_IS_NOWHERE=y
 CONFIG_ENV_IS_IN_MMC=n
+# a charger plugged into the handheld while it is off starts the whole boot, and rcS's "bananad --charge" charges
+# with only the LEDs on, as a phone does (this option turned it straight off again: "Power Off due to plug-in event")
+# CONFIG_ROCKCHIP_RK8XX_DISABLE_BOOT_ON_POWERON is not set

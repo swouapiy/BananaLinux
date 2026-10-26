@@ -183,6 +183,19 @@ minute, the dim, sleep or turn-off deadline, a pending save), so an idle handhel
 down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`
 (the settings screen writes it and sends SIGHUP).
 
+### Charging while off
+
+A charger plugged into the handheld while it is off starts the RK817, and with it the whole boot: U-Boot's
+`ROCKCHIP_RK8XX_DISABLE_BOOT_ON_POWERON`, which turned it straight off again, is no longer set (charging was then
+left to the PMIC alone, and some handhelds didn't charge at all, #34). Turned off with the charger in (from the menu,
+or by bananad), rcK leaves `banana/.charge-next` and restarts instead of powering off. Either way rcS runs
+`bananad --charge` once the data partition is mounted, before anything else: the RK817's power-on reason (register
+0xf5 over I2C: a charger plugged in, not the power key) or the mark makes it a charger's start, and a restart's own
+mark (`banana/.restart`, rcK's) keeps a restart from being taken for one, since the RK817 remembers what first
+started it. Then, as a phone does: both panels dark, one CPU on `powersave`, the amber LED until the battery is full
+and the green one after; the power button held a second goes on with the boot, the charger pulled out turns it off.
+Each one is in `banana/logs/charging.log` (why, the battery at the start, full, the end).
+
 ## What it costs
 
 Measured in the VM (`tools/qemu-boot.sh`, a 1 GB machine, idle in the menu): 95 MB used in all, the kernel and its

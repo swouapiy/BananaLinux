@@ -65,6 +65,13 @@ mark "rcS: data partition ready"
 # the boot's milestones on the card every 2 s until the menu is up: a boot that stops leaves where it stopped
 # (banana/logs/boot-progress.txt)
 /usr/libexec/banana/boot-guard progress
+# started by a charger plugged in while it was off, or turned off with one in: charging, as a phone does while off,
+# until the power button is held (then the boot goes on) or the charger is pulled out (off again). bananad --charge
+bananad --charge
+case $? in
+0) mark "rcS: charged, started" ;;
+3) /usr/libexec/banana/boot-guard charged; umount /data; sync; poweroff -f ;;
+esac
 
 bananad &
 # the buttons and the sound up before the menu's first frame: bananad creates bananad-ready once the power and volume

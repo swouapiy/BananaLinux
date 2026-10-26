@@ -54,7 +54,15 @@ echo "5. a trial for the other slot (DEFAULT changed by hand): cleared, nothing 
 card a a "b a"; run early; settle
 [ ! -e "$R/boot/trial" ] && [ "$(default)" = a ] && [ -z "$(restarts)" ] && ok "trial cleared, DEFAULT a, no restart" || bad "trial $(cat "$R/boot/trial" 2>/dev/null), default $(default), restarts '$(restarts)'"
 
-echo "6. the breadcrumbs: the milestones on the card until the menu is up, the boot before kept"
+echo "6. charging while off on a trial's first start: the clock waits; pulled out (off), that start doesn't count"
+card b b "b a"; : > "$R/run/banana/charging"; W=2 run early; settle 4
+[ "$(default)" = b ] && [ -z "$(restarts)" ] && ok "4 s charging past a 2 s wait: no rollback" || bad "default $(default), restarts '$(restarts)'"
+run charged
+[ "$(cat "$R/boot/trial")" = "b a" ] && ok "the charger out: the start not counted (b a)" || bad "trial: $(cat "$R/boot/trial" 2>/dev/null)"
+rm -f "$R/run/banana/charging"; : > "$R/run/banana/boot-ok"; settle 2
+[ ! -e "$R/boot/trial" ] && [ "$(default)" = b ] && ok "the menu up after the charging: kept" || bad "trial $(cat "$R/boot/trial" 2>/dev/null), default $(default)"
+
+echo "7. the breadcrumbs: the milestones on the card until the menu is up, the boot before kept"
 card a a; echo "the boot before" > "$R/data/banana/logs/boot-progress.txt"
 printf 'rcS: started                   1.90 s\nrcS: data partition ready      2.90 s\n' > "$R/run/banana/boot-times"
 run progress; settle 1

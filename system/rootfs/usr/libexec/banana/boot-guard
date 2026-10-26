@@ -6,6 +6,8 @@
 #                         trial is over and the new system stays; no menu in BOOTGUARD_WAIT seconds (120), back to
 #                         the previous slot and a restart. A trial slot booting a second time means the first never
 #                         reached the menu (someone turned it off and on again): back at once.
+#   boot-guard charged    rcS, when charging while off ended with the charger pulled out (off again): that start
+#                         doesn't count, so the next one isn't taken for a start that never reached the menu
 #   boot-guard progress   rcS, once /data is mounted: the boot's milestones (/run/banana/boot-times: rcS's, bananad's,
 #                         banana-ui's) copied to banana/logs/boot-progress.txt every 2 s until the menu is up, so a
 #                         boot that stops somewhere leaves where on the card (the boot before: boot-progress.1.txt)
@@ -71,6 +73,8 @@ early)
     (
         i=0
         while [ $i -lt "$WAIT" ]; do
+            # charging while off (bananad --charge, /run/banana/charging): the menu isn't due yet, the clock waits
+            [ -e "$RUN/charging" ] && { sleep 1; continue; }
             if [ -e "$RUN/boot-ok" ]; then
                 # (only this trial's: a switch of slots made since names another, and stays)
                 read -r now rest < "$TRIAL" 2>/dev/null
@@ -82,6 +86,11 @@ early)
         done
         rollback clean "no menu after $WAIT s"
     ) &
+    ;;
+charged)
+    [ -f "$TRIAL" ] || exit 0
+    read -r new prev starts < "$TRIAL"
+    [ "$new" = "$slot" ] && [ -n "$prev" ] && { boot_rw; put "$TRIAL" "$new $prev"; boot_ro; }
     ;;
 progress)
     L=$R/data/banana/logs
@@ -100,11 +109,11 @@ progress)
             mv -f "$P.new" "$P"
             sync
             [ -n "$up" ] && exit 0
-            sleep 2; i=$((i + 1))
+            sleep 2; [ -e "$RUN/charging" ] || i=$((i + 1))     # (charging while off: the boot not yet under way)
         done
     ) &
     ;;
 *)
-    echo "usage: boot-guard early|progress" >&2; exit 2 ;;
+    echo "usage: boot-guard early|charged|progress" >&2; exit 2 ;;
 esac
 exit 0

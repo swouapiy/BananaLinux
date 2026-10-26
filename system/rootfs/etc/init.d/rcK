@@ -18,9 +18,19 @@ for i in 1 2 3 4 5 6 7 8 9 10; do pidof bananad >/dev/null || break; sleep 0.1; 
 /usr/libexec/banana/ssh down 2>/dev/null
 /usr/libexec/banana/wifi down 2>/dev/null
 hwclock -w 2>/dev/null
+# turned off with the charger in: started again into charging (rcS, bananad --charge) as a phone does; a restart
+# leaves its own mark, so the RK817's memory of a charger that started it isn't taken for a new one
+CHARGE=
+if [ -f /run/banana/poweroff ]; then
+    for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && CHARGE=1; done
+    [ -n "$CHARGE" ] && touch /data/banana/.charge-next
+else
+    touch /data/banana/.restart
+fi
 /usr/libexec/banana/boot-log       # the boot's log, complete, whenever the handheld is turned off
 sync
 umount /data 2>/dev/null || mount -o remount,ro /data
 sync
 # the LEDs off: switched off, the handheld shows nothing (bananad stopped above, so it doesn't put them back)
 for l in /sys/class/leds/*; do echo none > "$l/trigger"; echo 0 > "$l/brightness"; done 2>/dev/null
+[ -n "$CHARGE" ] && reboot -f
