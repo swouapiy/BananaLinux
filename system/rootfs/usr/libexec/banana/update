@@ -2,8 +2,9 @@
 # Updates. The card has two root slots (partitions 2 and 3, banana-root-a and banana-root-b) and a kernel for each
 # in the boot partition (a/, b/); extlinux.conf's DEFAULT names the one that boots. An update package (the
 # banana-<board>-<version>.update.tar the build makes: Image, the device tree (both, for the universal board: U-Boot
-# picks one, extlinux.conf's FDTDIR), rootfs.squashfs, VERSION, board, sha256sums) is written to the slot not in use, checked against its hashes as written, and only then made the
-# default: the running system is never touched, and a failure leaves everything as it was. Settings > System >
+# picks one, extlinux.conf's FDTDIR), rootfs.squashfs, VERSION, board, sha256sums, u-boot-rockchip.bin) is written to the slot not in use, checked against its hashes as written, and only then made the
+# default: the running system is never touched, and a failure leaves everything as it was. U-Boot is the exception:
+# there is one copy of it, before the partitions, written only when the package's differs (see apply). Settings > System >
 # Update runs this and shows its progress (/run/banana/update-status: one line, "writing 42%", "done <version>",
 # "failed: <why>"...).
 #   update list                     the packages in banana/updates/ on the card: path, version, board
@@ -120,10 +121,35 @@ apply)
     # device trees the package doesn't have would be old ones: they go
     for f in /boot/$TO/*.dtb; do [ -f "$DIR/$(basename "$f")" ] || rm -f "$f"; done
     boot_ro
+    # U-Boot, as ROCKNIX's updates do, so an updated card starts as a newly written one would (charging when a
+    # charger is plugged into it while off needs the U-Boot of 2026-10). It sits where the boot ROM looks for it,
+    # from sector 64 (32 KB) up to the boot partition at 16 MB, and there is one copy: written only when it differs,
+    # flushed, and read back from the card before the switch (a power cut in that second leaves a card to write
+    # again on a computer; the handheld's own memory still starts). Only from a package for this card's own board: a
+    # universal package fits any card, not its U-Boot.
+    UB=$DIR/u-boot-rockchip.bin; UBNOTE=
+    if [ -f "$UB" ] && [ -n "$BOARD" ] && [ "$PB" = "$BOARD" ]; then
+        UBS=$(wc -c < "$UB")
+        [ "$UBS" -gt 0 ] && [ "$UBS" -le $((16 * 1048576 - 32768)) ] || fail "U-Boot ($UBS bytes) doesn't fit before the boot partition"
+        UBH=$(hash_of "$UB")
+        uboot_on_card() { dd if="$DISK" bs=32768 skip=1 count=$(( (UBS + 32767) / 32768 )) 2>/dev/null | head -c "$UBS" | sha256sum | cut -d' ' -f1; }
+        if [ "$(uboot_on_card)" != "$UBH" ]; then
+            status "writing U-Boot"
+            tries=0
+            while :; do
+                dd if="$UB" of="$DISK" bs=32768 seek=1 conv=fsync,notrunc 2>/dev/null
+                uncache
+                [ "$(uboot_on_card)" = "$UBH" ] && break
+                tries=$((tries + 1))
+                [ $tries -lt 2 ] || fail "U-Boot reads back wrong: the card may not start (write the image to it again)"
+            done
+            UBNOTE=", U-Boot updated"
+        fi
+    fi
     set_default $TO
     rm -f /data/banana/panel-tune.txt      # the new device tree is tuned on its first boot
     [ -d "$UPDATES/.unpack" ] && rm -rf "$UPDATES/.unpack"
-    mkdir -p /data/banana/logs; echo "$(date '+%Y-%m-%d %H:%M:%S') $PV to slot $TO from $(basename "$P")" >> /data/banana/logs/updates.log
+    mkdir -p /data/banana/logs; echo "$(date '+%Y-%m-%d %H:%M:%S') $PV to slot $TO from $(basename "$P")$UBNOTE" >> /data/banana/logs/updates.log
     status "done $PV"
     echo "update $PV written to slot $TO; restart to run it"
     ;;

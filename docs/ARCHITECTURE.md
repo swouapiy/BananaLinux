@@ -18,13 +18,17 @@ can read and fill it). The root is never written to; nothing on it can be corrup
 ## Updates
 
 The build makes `banana-<board>-<version>.update.tar` next to the image: `Image`, the device tree, `rootfs.squashfs`,
-`VERSION`, `board` and their `sha256sums`. Put in `banana/updates/` on the card (file sharing copies it over Wi-Fi)
+`VERSION`, `board`, `u-boot-rockchip.bin` and their `sha256sums`. Put in `banana/updates/` on the card (file sharing copies it over Wi-Fi)
 it appears in Settings > System > Update. `/usr/libexec/banana/update apply` checks every file's hash, refuses a
 package for the other handheld, writes the squashfs to the slot not in use (16 MB at a time, the progress on the
 screen), reads it back and compares the hash, copies the kernel and device tree to the boot partition's `b/` (or
 `a/`), checks those too, and only then rewrites `extlinux.conf`'s `DEFAULT` (a tiny file, renamed over the old one).
 The running system is never touched; a failure at any step leaves everything as it was; the new system runs from
-the restart. `Previous version` switches `DEFAULT` back to the other slot, so a version that misbehaves is one
+the restart. U-Boot is the one exception, as in ROCKNIX's updates: there is a single copy, at sector 64, so it is
+written only when the package's differs from the card's (from a package for the card's own board, never a universal
+one), flushed, and read back before the switch; `updates.log` says "U-Boot updated". A power cut in that second
+leaves a card to write again on a computer (the handheld's own memory still starts); without it, an updated card
+would keep the U-Boot it was first written with (charging when plugged in while off needs the newer one). `Previous version` switches `DEFAULT` back to the other slot, so a version that misbehaves is one
 restart away from the one before it. Each update is a line in `banana/logs/updates.log`, and the new device tree
 is retuned by `banana-panel-tune` on its first boot. `tools/qemu-boot.sh` applies an update in the VM and boots
 the other slot, reading `extlinux.conf` as U-Boot does.
