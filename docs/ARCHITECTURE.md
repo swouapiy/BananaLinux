@@ -188,7 +188,9 @@ as a held power button does (`poweroff_minutes`: the RTC alarm that wakes it for
 too; with sleep set to never, an hour without input awake). Input is a button, a touch or a stick pushed: the
 touchscreen and the sticks have a second, unpolled descriptor read when the timers are due, so their motion never
 wakes bananad. The timers count in the menu, or in games too with `idle_in_games` (a game is paused by a sleep, as by
-the lid); never on the charger. bananad itself sleeps in `poll()` until something is due (the battery look once a
+the lid). On the charger it sleeps as a phone does, but never turns off by itself: asleep, the amber LED stays lit
+(at full, `retain-state-suspended`) and an RTC alarm every 10 minutes looks at the battery, putting the amber LED out
+once it is full; the cable coming out wakes it. bananad itself sleeps in `poll()` until something is due (the battery look once a
 minute, the dim, sleep or turn-off deadline, a pending save), so an idle handheld wakes it about once a minute. Hold power
 2 s to shut down; volume keys change the mixer, F + volume the backlights; a battery at 3% and discharging shuts
 down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`
