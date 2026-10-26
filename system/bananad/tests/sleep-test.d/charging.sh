@@ -1,5 +1,5 @@
 # Charging while off: rcS's "bananad --charge" (a charger's start, or turned off with the charger in), sourced by
-# sleep-test.sh after its own scenarios. Only the LEDs on; the power button held starts it, the charger out turns it off.
+# sleep-test.sh after its own scenarios (marks made with ": >": the sleep test's touch() is a touchscreen's). Only the LEDs on; the power button held starts it, the charger out turns it off.
 mount -t tmpfs none /sys/devices/system/cpu     # (the made-up CPUs: the test's machine keeps its own online)
 mkdir -p /sys/devices/system/cpu/cpufreq/policy0
 echo performance > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
@@ -13,18 +13,18 @@ finish() { for i in $(seq 60); do kill -0 $CB 2>/dev/null || break; sleep 0.1; d
 
 echo "charging 1. not a charger's start (no mark, no PMIC to ask), or no charger: on with the boot at once"
 charge; [ $r = 1 ] && ok "no charger's start: exit 1" || bad "exit $r"
-touch /data/banana/.charge-next; charge
+: > /data/banana/.charge-next; charge
 [ $r = 1 ] && ok "turned off with no charger in: exit 1" || bad "exit $r"
 [ "$(cat /sys/devices/system/cpu/cpu1/online)" = 1 ] && ok "nothing changed (the CPUs)" || bad "cpu1 offline"
 
 echo "charging 2. a restart's mark wins over the charger: a restart isn't a charger's start"
 echo 1 > $CH/online
-touch /data/banana/.restart /data/banana/.charge-next; charge
+: > /data/banana/.restart; : > /data/banana/.charge-next; charge
 [ $r = 1 ] && ok "a restart: exit 1" || bad "exit $r"
 [ ! -e /data/banana/.restart ] && [ ! -e /data/banana/.charge-next ] && ok "both marks used up" || bad "marks left: $(ls -a /data/banana)"
 
 echo "charging 3. turned off with the charger in: the panels dark, one CPU, amber; the power button held starts it"
-touch /data/banana/.charge-next
+: > /data/banana/.charge-next
 ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0      # an old press, waiting: not for the charging
 "$W/bananad" --charge & CB=$!
 sleep 0.7
@@ -48,7 +48,7 @@ grep -q "charging while off (turned off with the charger in): battery [0-9]*%" /
 
 echo "charging 4. full: green instead of amber; the charger pulled out turns it off"
 echo 100 > /sys/class/power_supply/battery/capacity
-touch /data/banana/.charge-next
+: > /data/banana/.charge-next
 "$W/bananad" --charge & CB=$!
 sleep 0.7
 [ "$(cat $L/green:power/brightness)" != 0 ] && [ "$(cat $L/amber:charging/brightness)" = 0 ] && ok "full: green on, amber off" ||
