@@ -1382,13 +1382,29 @@ namespace rnds
 			std::string bmode = src->batteryMode();
 			float lvl = src->battery();
 			bool pctText = bmode == "text" && lvl >= 0;
-			auto battery = [&](float bx)		// the 26x14 icon, its level 3 px in
+			bool charging = src->charging();
+			// the 26x14 icon, its level 3 px in. As on phones: red under 20% (not on the charger), and a bolt on it
+			// on the charger, cut out of the level where it covers it and in ink past it
+			auto battery = [&](float bx)
 			{
-				drawSprite(still("batt", batt, false), bx, 25 + ry, nullptr, INK);
+				Color c = !charging && lvl >= 0 && lvl < 0.195f ? RED : INK;
+				drawSprite(still("batt", batt, false), bx, 25 + ry, nullptr, c);
 				float l = lvl < 0 ? 0.75f : lvl;
 				float fw = std::round(16 * std::min(1.0f, std::max(0.0f, l)) * s) / s;
 				if (fw > 0)
-					be->fill(std::round(X(bx + 3)), std::round(X(28 + ry)), std::round(X(fw)), std::round(X(8)), INK);
+					be->fill(std::round(X(bx + 3)), std::round(X(28 + ry)), std::round(X(fw)), std::round(X(8)), c);
+				if (charging)
+				{
+					static const char* bolt[8] = { "....##", "...##.", "..##..", ".#####", "#####.", "..##..", ".##...", "##...." };
+					for (int r = 0; r < 8; r++)
+						for (int k = 0; k < 6; k++)
+							if (bolt[r][k] == '#')
+							{
+								float px = 5.0f + k;
+								float x0 = std::round(X(bx + 3 + px)), y0 = std::round(X(28 + ry + r));
+								be->fill(x0, y0, std::round(X(bx + 4 + px)) - x0, std::round(X(29 + ry + r)) - y0, px + 0.5f < fw ? P.screenBg : INK);
+							}
+				}
 			};
 			// on the left after the Wi-Fi: "icon only" the battery icon; "icon and text" the percentage and then the icon
 			// ("78% [battery]"), the percentage right-aligned in room for "100%" so nothing moves as it changes, and

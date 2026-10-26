@@ -892,6 +892,21 @@ static int charger_online(void)
 	return on;
 }
 
+/* the charger's state for banana-ui, written when it changes (/run/banana/charger: 1 or 0): the menu watches
+ * /run/banana, so the bolt on its battery comes and goes with the cable, not at its next minute */
+static void charger_note(void)
+{
+	static int last = -1;
+	int on = charger_online();
+	if (on == last) return;
+	last = on;
+	FILE *f = fopen("/run/banana/charger.new", "w");
+	if (!f) return;
+	fputs(on ? "1\n" : "0\n", f);
+	fclose(f);
+	rename("/run/banana/charger.new", "/run/banana/charger");
+}
+
 int leds_last = -2;	/* the upper LED's state as last set; -2: set it again */
 static int amber_last = -2;	/* the charging LED's, the same way */
 static void leds_update(void)
@@ -1175,7 +1190,7 @@ int main(int argc, char **argv)
 			while ((r = read(devfd[i], ev, sizeof ev)) > 0)
 				for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++) handle(&ev[k]);
 		}
-		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_read(uev)) leds_update();
+		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_read(uev)) { leds_update(); charger_note(); }
 		save_settings(now);
 		if (ino_at >= 0 && (pf[ino_at].revents & POLLIN)) {
 			char buf[4096];
@@ -1199,6 +1214,7 @@ int main(int argc, char **argv)
 		if (now >= next_battery) {
 			next_battery = now + 60;
 			leds_update();	/* a capacity change has no uevent on every gauge */
+			charger_note();
 			int pct = battery_discharging_pct();
 			low_count = pct >= 0 && pct <= cfg.battery_off_pct ? low_count + 1 : 0;
 			if (low_count >= 2) shutdown_now("battery empty");	/* two readings in a row: not a load spike */
