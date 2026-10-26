@@ -138,9 +138,11 @@ nothing). Closing the lid (the hall sensor, `SW_LID`), a short press of power, o
 the handheld to sleep:
 
 1. The game's process group gets `SIGSTOP` (ROCKNIX found DraStic's dynarec must not run on while the clocks drop).
-2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its driver unloaded: the RTL8821CS doesn't survive a
-   suspend otherwise; nothing at all when Wi-Fi is off. The USB-C port's controller unbound: run as a host, as this
-   kernel without a USB gadget side has it, its xHCI fails the suspend with a timeout; bound again after).
+2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down, its driver unloaded and its SD controller unbound, which
+   powers the card off: the RTL8821CS doesn't survive a suspend otherwise, and a bound controller brought the card
+   back up inside the kernel's resume; nothing at all when Wi-Fi is off. The USB-C port's controller unbound: run
+   as a host, as this kernel without a USB gadget side has it, its xHCI fails the suspend with a timeout; bound
+   again after).
 3. `sync()`: this kernel has `SUSPEND_SKIP_SYNC`, so the flush is bananad's (with saves written within 2 s anyway,
    `vm.dirty_expire`).
 4. The RTC alarm for the battery check (`sleep_check_hours`, 4), devices set to resume in parallel
@@ -166,9 +168,12 @@ woke, how long the game and the menu took to come back, and what it cost the bat
 average current, off the charger); with `sleep_debug = yes` the kernel's per-device times go
 to `banana/logs/sleep-devices.log`, slowest first.
 
-What a wake costs is then the kernel's device resume: on the RG DS mostly the two panels' power-on sequences
-(ROCKNIX's 20 + 10 + 50 ms, the init commands and 120 ms after sleep-out, one panel after the other) and the SD
-card; on the RG DS Plus the panels take about a fifth of that. `system/bananad/tests/sleep-test.sh` runs all of the
+What a wake costs is then the kernel's device resume. The two panels' power-on sequences (reset, the init
+commands, 120 ms after sleep-out, one panel after the other) are the longest part, so the display is restored on a
+workqueue (kernel patch `2-linux-0030`), as phones do: the kernel's resume returns, the game and the menu go on,
+and the panels light up meanwhile (a commit waits on the restore's locks). The RG DS Plus's device tree had
+`wait=255` after sleep-out and display-on, which `panel-generic-dsi` reads as hex: 597 ms each, 2.4 s a wake (and
+a boot); now 120 and 50 ms. `system/bananad/tests/sleep-test.sh` runs all of the
 above against a made-up `/sys` in its own namespaces (a FIFO for `/sys/power/state`, real input events for the lid).
 
 Idle, the handheld dims, sleeps, then turns off: two minutes without input dim both panels to 30% (`dim_minutes`,

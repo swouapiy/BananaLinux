@@ -513,6 +513,9 @@
 		iovcc-supply = <&vccio_lcd0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&lcd0_rst>;
+		/* the "wait" of an "I" line is in hex milliseconds (panel-generic-dsi parses it base 16): the 255 these had
+		 * were 597 ms each, 2.4 s for the two panels at every boot and every wake. Now the MIPI DCS times: sleep out
+		 * 120 ms (0x78), display on 50 ms (0x32) */
 		panel_description =
 			"G size=87,66 delays=10,10,10,10,20 format=rgb888 lanes=2 flags=0xe03",
 
@@ -552,8 +555,8 @@
 			"I seq=300d",
 			"I seq=100c", "I seq=110c", "I seq=120c", "I seq=130c",
 			"I seq=3000",
-			"I seq=1100 wait=255",
-			"I seq=2900 wait=255";
+			"I seq=1100 wait=78",
+			"I seq=2900 wait=32";
 
 		port {
 			mipi_in_panel0: endpoint {
@@ -593,6 +596,7 @@
 		iovcc-supply = <&vccio_lcd1>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&lcd1_rst>;
+		/* (the waits: see panel@0's) */
 		panel_description =
 			"G size=87,66 delays=10,10,10,10,20 format=rgb888 lanes=2 flags=0xe03",
 
@@ -632,9 +636,9 @@
 			"I seq=300d",
 			"I seq=100c", "I seq=110c", "I seq=120c", "I seq=130c",
 			"I seq=3000",
-			"I seq=1100 wait=255",
+			"I seq=1100 wait=78",
 			"I seq=3603",
-			"I seq=2900 wait=255";
+			"I seq=2900 wait=32";
 
 		port {
 			mipi_in_panel1: endpoint {
