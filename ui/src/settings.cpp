@@ -328,15 +328,34 @@ namespace banana
 		add(D, "picture", "Clock", "How the time on the top screen is written.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
 		add(D, "picture", "Boot animation", "The bananas and the cartridge while Banana starts, and backwards when it shuts down. Off goes straight to the menu once it is ready, and straight to black.", menu, "splash", { "On", "Off" }, { "on", "off" });
 		const char* P = "Sleep & power";
-		add(P, "moon", "Sleep when idle", "In the menu, after this long with no button pressed. Never while a game is running.", power, "autosleep_minutes",
-			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
-		add(P, "moon", "Dim when idle", "In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.", power, "dim_minutes",
+		// the idle chain: dim, sleep, off (bananad.conf). The top screen says what the row is for, then what the chosen
+		// option does: short and plain (hint, after each row)
+		auto hint = [&](std::vector<std::string> h) { items.back().hints = h; };
+		add(P, "moon", "Dim when idle", "Lowers the screens when you leave the handheld alone.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
-		add(P, "moon", "Closing the lid", "Sleep with the lid: the game pauses, opening the lid carries on where you were.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
-		add(P, "moon", "Waking up", "Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.",
-			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
-		add(P, "moon", "LEDs", "Green, red when the battery is low, blinking red when nearly empty, amber while charging.", power, "led_brightness",
+		hint({ "The screens never dim.", "Screens dim after 1 minute without use.", "Screens dim after 2 minutes without use.",
+			"Screens dim after 5 minutes without use." });
+		add(P, "moon", "Sleep when idle", "Puts the handheld to sleep when you leave it alone. Your game pauses.", power, "autosleep_minutes",
+			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
+		hint({ "It never falls asleep by itself.", "Sleeps after 5 minutes without use.", "Sleeps after 10 minutes without use.",
+			"Sleeps after 15 minutes without use.", "Sleeps after 30 minutes without use." });
+		add(P, "moon", "Turn off when idle", "Turns the handheld off after it has slept for a while. Your game saves first.", power, "poweroff_minutes",
+			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour", "3 hours", "6 hours" }, { "0", "5", "10", "15", "30", "60", "180", "360" });
+		hint({ "It stays asleep until you wake it.", "Turns off after 5 minutes asleep.", "Turns off after 10 minutes asleep.",
+			"Turns off after 15 minutes asleep.", "Turns off after 30 minutes asleep.", "Turns off after 1 hour asleep.",
+			"Turns off after 3 hours asleep.", "Turns off after 6 hours asleep." });
+		add(P, "moon", "Idle timers", "Where dimming, sleep and turning off can happen.", power, "idle_in_games",
+			{ "In the menu", "Everywhere" }, { "no", "yes" });
+		hint({ "Only in the menu. A game is never interrupted.", "In the menu and in games. Touching the screen counts as use." });
+		add(P, "moon", "Closing the lid", "What happens when you close the lid.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
+		hint({ "It sleeps. Open the lid to carry on where you were.", "The screens go dark, but the game keeps running." });
+		add(P, "moon", "Waking up", "How the handheld wakes from sleep.", power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
+		hint({ "Wakes up quickly.", "Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong." });
+		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
+		hint({ "Full brightness.", "Softer lights.", "No lights." });
+		add(P, "moon", "LED while asleep", "The power light while the handheld sleeps.", power, "led_sleep", { "On", "Off" }, { "on", "off" });
+		hint({ "The light stays on, so you can tell it's asleep, not off.", "The light goes out while it sleeps." });
 		// Nintendo DS: the emulator and the quick resume are shared; below them only the chosen emulator's own settings,
 		// each in that emulator's files (switching the emulator builds the list again: change()). Both draw the DS's 3D
 		// with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
@@ -741,8 +760,8 @@ namespace banana
 			// what the settings screen keeps outside settings.conf: bananad's sleep/LED rows (same defaults the rows
 			// show when the card has no line), the backlights and the mixer's level
 			static const struct { const char* key; const char* def; } BANANAD[] = {
-				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
-				{ "fast_resume", "yes" }, { "led_brightness", "128" } };
+				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "poweroff_minutes", "60" }, { "idle_in_games", "no" },
+				{ "lid_sleep", "yes" }, { "fast_resume", "yes" }, { "led_brightness", "128" }, { "led_sleep", "on" } };
 			for (const auto& b : BANANAD)
 				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
 			if (DIR* d = opendir("/sys/class/backlight"))
@@ -1296,6 +1315,12 @@ namespace banana
 		{
 			wrapped("Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.", 20, 50, 196, 540, 4, p.muted);
 			scrapeBar(50, 330, 540);
+		}
+		else if (cur.kind == Item::CHOICE && cur.at < (int)cur.hints.size() && !cur.hints[cur.at].empty())
+		{
+			// the row in a line, then what the chosen option does, brighter (it changes as the option does)
+			wrapped(help, 20, 50, 196, 540, 3, p.muted);
+			wrapped(cur.hints[cur.at], 22, 50, 300, 540, 3, p.ink);
 		}
 		else wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
