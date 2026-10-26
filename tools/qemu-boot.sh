@@ -64,8 +64,13 @@ make_update() {    # make_update <dir>
     off=$(part_offset 2)
     size=$(python3 -c "import struct, sys; f = open(sys.argv[1], 'rb'); f.seek($off + 40); print(struct.unpack('<Q', f.read(8))[0])" "$CARD")
     dd if="$CARD" of="$U/rootfs.squashfs" bs=1M iflag=skip_bytes,count_bytes skip=$off count=$size status=none
+    # U-Boot: the card's own first MB with a mark in it, so it differs and the update writes it (QEMU starts the
+    # kernel itself: what is there doesn't matter to the boot); a copy kept to compare the card with afterwards
+    dd if="$CARD" of="$U/u-boot-rockchip.bin" bs=32768 skip=1 count=32 status=none
+    printf 'banana qemu-test u-boot' | dd of="$U/u-boot-rockchip.bin" bs=1 seek=$((1048576 - 64)) conv=notrunc status=none
+    cp "$U/u-boot-rockchip.bin" "$OUT/u-boot-test.bin"
     echo qemu-test > "$U/VERSION"; echo "$BOARD" > "$U/board"
-    (cd "$U" && sha256sum Image $DTBS rootfs.squashfs > sha256sums)
+    (cd "$U" && sha256sum Image $DTBS rootfs.squashfs u-boot-rockchip.bin > sha256sums)
     tar -C "$1" -cf "$U.tar" "$(basename "$U")"; rm -rf "$U"
     ls -la "$U.tar" | awk '{print $5, $9}'
 }
@@ -286,6 +291,8 @@ key ret            # Restart
 for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || break; sleep 0.5; done
 kill -0 $QEMU 2>/dev/null && { bad "no restart after the update"; kill $QEMU; } || ok "restarted after the update"
 wait $QEMU 2>/dev/null || true
+dd if="$CARD" bs=32768 skip=1 count=32 status=none | cmp -s - "$OUT/u-boot-test.bin" &&
+    ok "the update wrote the package's U-Boot to the card (at 32 KB, read back)" || bad "the card's U-Boot isn't the package's"
 boot fourth
 grep -q "rcS: slot b booted" "$OUT/serial.log" && ok "the fourth boot ran slot b: the update" || bad "the fourth boot didn't run slot b"
 shot fourth-menu
@@ -303,6 +310,7 @@ show_logs() {
     [ -f "$DATA/banana/logs/boot.txt" ] && ok "logs/boot.txt written" || bad "no logs/boot.txt"
     ls "$DATA/banana/logs/" | tr '\n' ' '; echo
     echo "--- logs/updates.log"; cat "$DATA/banana/logs/updates.log" 2>/dev/null || echo "(none)"
+    grep -q "qemu-test to slot b .*, U-Boot updated" "$DATA/banana/logs/updates.log" 2>/dev/null && ok "updates.log: U-Boot updated" || bad "updates.log doesn't say U-Boot was updated"
 }
 with_data show_logs
 echo "qemu boot test: $pass passed, $fail failed ($OUT)"
