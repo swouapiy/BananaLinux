@@ -1,0 +1,30 @@
+#!/bin/sh
+# What a sleep cost the battery, in banana/logs/sleep.log: the gauge's counter (charge_now, kept right across a
+# sleep) before and after, and the average current over the whole sleep. The number to compare with ROCKNIX's and
+# the stock firmware's, and to see what a change to the sleep saved. Not on the charger: it charges then.
+B=; for d in /sys/class/power_supply/*; do [ "$(cat $d/type 2>/dev/null)" = Battery ] && { B=$d; break; }; done
+[ -n "$B" ] || exit 0
+F=/run/banana/sleep-battery
+charger() { for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && return 0; done; return 1; }
+now() { echo "$(date +%s) $(cat $B/charge_now 2>/dev/null || echo -) $(cat $B/capacity 2>/dev/null) $(cat $B/voltage_avg 2>/dev/null || cat $B/voltage_now 2>/dev/null || echo 0)"; }
+case $1 in
+pre)
+    charger && { rm -f $F; exit 0; }
+    now > $F
+    ;;
+post)
+    [ -f $F ] || exit 0
+    read -r t0 q0 p0 v0 < $F; rm -f $F
+    charger && exit 0   # plugged in meanwhile: the counter went up
+    set -- $(now); t1=$1 q1=$2 p1=$3 v1=$4
+    s=$((t1 - t0)); [ $s -ge 60 ] || exit 0     # a sleep of seconds says nothing
+    [ "$q0" != - ] && [ "$q1" != - ] || exit 0
+    used=$(( (q0 - q1) / 1000 ))                # mAh
+    # the average current, mA: used over hours, to a tenth
+    ma=$(( (q0 - q1) * 36 / s / 10 )); tenth=$(( (q0 - q1) * 36 / s % 10 ))
+    printf '%s battery while asleep: %s%% %s mV -> %s%% %s mV, %s mAh in %d.%d h: %d.%d mA on average\n' \
+        "$(date '+%Y-%m-%d %H:%M:%S')" "$p0" $((v0 / 1000)) "$p1" $((v1 / 1000)) $used $((s / 3600)) $((s % 3600 / 360)) \
+        $ma ${tenth#-} >> /data/banana/logs/sleep.log
+    ;;
+esac
+exit 0
