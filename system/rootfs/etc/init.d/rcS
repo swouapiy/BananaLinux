@@ -58,6 +58,13 @@ data || {
 mark "rcS: data partition ready"
 # the boot partition, read-only (the panel tuner writes the DTB there once)
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
+# started by a charger plugged in while it was off, or turned off with one in: charging, as a phone does while off,
+# until the power button is held (then the boot goes on) or the charger is pulled out (off again). bananad --charge
+bananad --charge
+case $? in
+0) mark "rcS: charged, started" ;;
+3) umount /data; sync; poweroff -f ;;
+esac
 
 bananad &
 banana-perf ui

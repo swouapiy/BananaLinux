@@ -30,6 +30,8 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <linux/i2c.h>
+#include <linux/i2c-dev.h>
 #include <linux/input.h>
 #include <poll.h>
 #include <signal.h>
@@ -491,6 +493,7 @@ static void shutdown_now(const char *why)
 		for (int i = 0; i < 50 && kill(game, 0) == 0; i++) usleep(100000);
 	}
 	sync();
+	close(open("/run/banana/poweroff", O_WRONLY | O_CREAT | O_CLOEXEC, 0644));	/* (rcK: off, not a restart) */
 	/* busybox init runs /etc/init.d/rcK (unmount, sync) on SIGUSR2 = poweroff */
 	if (kill(1, SIGUSR2)) reboot(RB_POWER_OFF);
 }
@@ -892,6 +895,148 @@ static int charger_online(void)
 	return on;
 }
 
+/* ---- charging while off ---------------------------------------------------------------------------------------- */
+/* A charger plugged into the handheld while it is off starts the RK817, and so the whole boot (U-Boot no longer turns
+ * it straight off again: "Power Off due to plug-in event"); turned off with the charger in, rcK restarts it instead
+ * (banana/.charge-next). Either way rcS runs "bananad --charge" before anything else, and it charges as a phone does
+ * while off: the panels dark, one CPU at its lowest clock, the amber LED until the battery is full, then the green
+ * one. The power button held a second starts the handheld (exit 0: rcS goes on); the charger pulled out turns it off
+ * (exit 3). Not a charger's start: exit 1 at once. banana/logs/charging.log says what each one did. */
+#define RK817_ON_SOURCE 0xf5	/* why the RK817 started: bit 7 the power key, bit 6 a charger plugged in */
+
+/* a register of the PMIC (I2C address 0x20, its bus found in sysfs), -1 if it can't be read (QEMU: none) */
+static int pmic_read(unsigned char reg)
+{
+	int bus = -1;
+	DIR *d = opendir("/sys/bus/i2c/devices");
+	struct dirent *e;
+	while (d && (e = readdir(d))) {
+		int b;
+		char p[300], name[32];
+		if (sscanf(e->d_name, "%d-0020", &b) != 1 || !strstr(e->d_name, "-0020")) continue;
+		snprintf(p, sizeof p, "/sys/bus/i2c/devices/%s/name", e->d_name);
+		read_str(p, name, sizeof name);
+		if (!strncmp(name, "rk8", 3)) { bus = b; break; }
+	}
+	if (d) closedir(d);
+	if (bus < 0) return -1;
+	char dev[32];
+	snprintf(dev, sizeof dev, "/dev/i2c-%d", bus);
+	int fd = open(dev, O_RDWR | O_CLOEXEC);
+	if (fd < 0) return -1;
+	/* the register's number and its value in one transfer (the kernel's driver shares the bus) */
+	unsigned char v = 0;
+	struct i2c_msg m[2] = { { 0x20, 0, 1, &reg }, { 0x20, I2C_M_RD, 1, &v } };
+	struct i2c_rdwr_ioctl_data x = { m, 2 };
+	int r = ioctl(fd, I2C_RDWR, &x);
+	close(fd);
+	return r == 2 ? v : -1;
+}
+
+static void charge_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+static void charge_log(const char *fmt, ...)
+{
+	char line[256];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(line, sizeof line, fmt, ap);
+	va_end(ap);
+	say("%s", line);
+	FILE *f = fopen("/data/banana/logs/charging.log", "a");
+	if (!f) return;
+	time_t now = time(NULL);
+	char when[32];
+	strftime(when, sizeof when, "%Y-%m-%d %H:%M:%S", localtime(&now));
+	fprintf(f, "%s %s\n", when, line);
+	fclose(f);
+}
+
+static void cpus_low(int low)
+{
+	write_file("/sys/devices/system/cpu/cpufreq/policy0/scaling_governor", low ? "powersave" : "schedutil");
+	for (int c = 1; c < 8; c++) {
+		char p[64];
+		snprintf(p, sizeof p, "/sys/devices/system/cpu/cpu%d/online", c);
+		write_file(p, low ? "0" : "1");
+	}
+}
+
+static int charge_mode(void)
+{
+	/* a restart (rcK's mark): the RK817 still says what started it the first time, a charger perhaps */
+	if (!unlink("/data/banana/.restart")) { unlink("/data/banana/.charge-next"); return 1; }
+	const char *why = !unlink("/data/banana/.charge-next") ? "turned off with the charger in" : NULL;
+	int on = pmic_read(RK817_ON_SOURCE);
+	if (!why && on >= 0 && (on & 0x40) && !(on & 0x80)) why = "the charger plugged in";
+	if (!why || !charger_online()) return 1;
+	char bat[256] = "";
+	int pct = -1, charging = 0;
+	battery_state(bat, sizeof bat, &pct, &charging);
+	charge_log("charging while off (%s): battery %d%%", why, pct);
+	backlights_power(0);
+	cpus_low(1);
+	char green[300], red[300], amber[300];
+	led_path("power", green, sizeof green);
+	led_path("status", red, sizeof red);
+	led_path("charging", amber, sizeof amber);
+	int level = cfg.led_brightness > 0 ? cfg.led_brightness : 128;	/* (the LEDs are all it shows) */
+	led_set(red, "off", level);
+	/* the power button: every input device that has it */
+	struct pollfd pf[16];
+	int n = 0;
+	DIR *d = opendir("/dev/input");
+	struct dirent *e;
+	while (d && n < 16 && (e = readdir(d))) {
+		if (strncmp(e->d_name, "event", 5)) continue;
+		char p[300];
+		snprintf(p, sizeof p, "/dev/input/%s", e->d_name);
+		int fd = open(p, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+		if (fd < 0) continue;
+		unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = { 0 };
+		int k = ioctl(fd, EVIOCGBIT(EV_KEY, sizeof keys), keys) < 0 ||	/* (the test's FIFOs: can't say, kept) */
+			(keys[KEY_POWER / (8 * sizeof(long))] & (1UL << (KEY_POWER % (8 * sizeof(long)))));
+		if (k) pf[n++] = (struct pollfd){ fd, POLLIN, 0 };
+		else close(fd);
+	}
+	if (d) closedir(d);
+	struct input_event ev;
+	for (int i = 0; i < n; i++) while (read(pf[i].fd, &ev, sizeof ev) > 0) {}	/* (what came before isn't for us) */
+	double t0 = mono(), held = 0, look = 0;
+	int full = -1, out = 0, r = -1;
+	while (r < 0) {
+		poll(pf, n, held ? 100 : look ? 2000 : 0);	/* (the first look at once) */
+		double now = mono();
+		for (int i = 0; i < n; i++) {
+			while (read(pf[i].fd, &ev, sizeof ev) == (ssize_t)sizeof ev)
+				if (ev.type == EV_KEY && ev.code == KEY_POWER) held = ev.value ? (held ? held : now) : 0;
+		}
+		if (held && now - held >= 1.0) { r = 0; break; }
+		if (now < look) continue;
+		look = now + 2;
+		out = charger_online() ? 0 : out + 1;
+		if (out >= 2) { r = 3; break; }	/* (one look missed: a cable wiggled) */
+		char st[32] = "", p[320];
+		battery_state(bat, sizeof bat, &pct, &charging);
+		snprintf(p, sizeof p, "/sys/class/power_supply/%s/status", bat);
+		read_str(p, st, sizeof st);
+		int f = pct >= 100 || !strcmp(st, "Full");
+		if (f != full) {
+			full = f;
+			led_set(amber, f ? "off" : "on", level);
+			led_set(green, f ? "on" : "off", level);
+			if (f) charge_log("full after %.0f min", (now - t0) / 60);
+		}
+	}
+	for (int i = 0; i < n; i++) close(pf[i].fd);
+	battery_state(bat, sizeof bat, &pct, &charging);
+	charge_log("%s after %.0f min: battery %d%%", r ? "the charger pulled out: turning off" : "the power button: starting",
+		(mono() - t0) / 60, pct);
+	led_set(amber, "off", level);
+	led_set(green, r ? "off" : "on", level);
+	if (!r) cpus_low(0);	/* (the boot's banana-perf sets the governor it wants) */
+	return r;
+}
+
 int leds_last = -2;	/* the upper LED's state as last set; -2: set it again */
 static int amber_last = -2;	/* the charging LED's, the same way */
 static void leds_update(void)
@@ -1099,8 +1244,13 @@ static int battery_discharging_pct(void)
 
 int main(int argc, char **argv)
 {
-	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
+	if (argc > 1 && !strcmp(argv[1], "--charge")) {	/* rcS's, before the menu: charging while off (above) */
+		load_conf("/etc/banana/bananad.conf");
+		load_conf("/data/banana/bananad.conf");
+		load_timezone();
+		return charge_mode();
+	}
 	test_lid = getenv("BANANAD_TEST_LID");
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
