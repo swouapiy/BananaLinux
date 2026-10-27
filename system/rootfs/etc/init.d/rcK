@@ -10,6 +10,14 @@ for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
     pidof banana-ui retroarch drastic >/dev/null || { [ -n "$G" ] && kill -0 "$G" 2>/dev/null; } || break
     sleep 0.1
 done
+# still there after 3 s (a game ignoring SIGTERM, hung on its save): killed, so nothing holds the card open at the
+# unmount below; a card left mounted read-write is what a pulled battery would leave
+if pidof banana-ui retroarch drastic >/dev/null || { [ -n "$G" ] && kill -0 "$G" 2>/dev/null; }; then
+    echo "rcK: still running after 3 s: killed" > /dev/kmsg 2>/dev/null
+    [ -n "$G" ] && kill -KILL -"$G" 2>/dev/null
+    killall -KILL banana-ui retroarch drastic 2>/dev/null
+    sleep 0.2
+fi
 # then bananad, while the card is still mounted: it writes the flight recorder's last lines out and goes (killed after
 # the unmount, the last half-minute of a recording was lost at every restart)
 killall bananad 2>/dev/null
