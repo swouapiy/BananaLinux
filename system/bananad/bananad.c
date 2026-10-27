@@ -73,7 +73,8 @@ static struct {
 	double poweroff_min;	/* asleep this long (any sleep), or idle this long when it never sleeps: off (0: never) */
 	int idle_in_games;		/* the idle timers (dim, sleep, off) in games too, not only in the menu */
 	int recorder;			/* the flight recorder (below): everything bananad sees, written to banana/logs/sessions */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 60, 0, 0 };
+	int lid_start;			/* the power button (or reset) starts it with the lid shut too; no: off again at once */
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 60, 0, 0, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
@@ -140,6 +141,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "brightness_step")) cfg.brightness_step = atoi(v);
 		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atof(v);
 		else if (!strcmp(k, "lid_sleep")) cfg.lid_sleep = !strcmp(v, "yes") || !strcmp(v, "1");
+		else if (!strcmp(k, "lid_start")) cfg.lid_start = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "power_long_ms")) cfg.power_long_ms = atoi(v);
 		else if (!strcmp(k, "battery_shutdown_percent")) cfg.battery_off_pct = atoi(v);
 		else if (!strcmp(k, "mem_sleep")) snprintf(cfg.mem_sleep, sizeof cfg.mem_sleep, "%s", v);
@@ -349,6 +351,7 @@ static void drain_inputs(void)
  * WAKE_LID the lid opened. What Android's wakeup reasons are for: the label in sleep.log, and a press while the
  * suspend was under way calls it off instead of getting lost */
 enum { WAKE_POWER = 1, WAKE_LID = 2 };
+static int power_down_ev;	/* the power button down, by the events read (the tests' FIFOs have no EVIOCGKEY) */
 static int wake_inputs(void)
 {
 	struct input_event ev[64];
@@ -359,6 +362,7 @@ static int wake_inputs(void)
 			for (size_t k = 0; k < (size_t)n / sizeof *ev; k++) {
 				if (ev[k].type == EV_KEY && ev[k].code == KEY_POWER && ev[k].value == 1) why |= WAKE_POWER;
 				if (ev[k].type == EV_SW && ev[k].code == SW_LID && ev[k].value == 0) why |= WAKE_LID;
+				if (ev[k].type == EV_KEY && ev[k].code == KEY_POWER && ev[k].value != 2) power_down_ev = ev[k].value;
 			}
 	return why;
 }
@@ -416,6 +420,34 @@ static void wake_sources_fired(char *out, size_t n)
 		if (c > wsrc[i].count && wsrc[i].count >= 0)
 			len += snprintf(out + len, n - len, "%s%s", len ? ", " : "", wsrc[i].name[0] ? wsrc[i].name : wsrc[i].dir);
 	}
+}
+
+/* the power button down now: as the kernel has it (EVIOCGKEY), else as the events said */
+static int power_key_down(void)
+{
+	int known = 0, down = 0;
+	for (int i = 0; i < ndev; i++) {
+		unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = { 0 };
+		if (ioctl(devfd[i], EVIOCGKEY(sizeof keys), keys) < 0) continue;
+		known = 1;
+		if (keys[KEY_POWER / (8 * sizeof(long))] & (1UL << (KEY_POWER % (8 * sizeof(long))))) down = 1;
+	}
+	return known ? down : power_down_ev;
+}
+
+/* woken with the lid shut: the power button held as long as a long press is, from the press that woke it (its event
+ * can come a moment after the resume: up to 0.3 s for it). With the lid shut a press can't start anything, but a
+ * long one still turns the handheld off, as it does awake */
+static int power_held_long(void)
+{
+	double t0 = mono();
+	while (!power_key_down() && mono() - t0 < 0.3) { usleep(20000); wake_inputs(); }
+	while (power_key_down()) {
+		if (mono() - t0 >= cfg.power_long_ms / 1000.0) return 1;
+		usleep(20000);
+		wake_inputs();
+	}
+	return 0;
 }
 
 /* ---- sleep ------------------------------------------------------------------------------------------------------
@@ -766,7 +798,15 @@ static void suspend_now(const char *why)
 		}
 		read_lid();
 		/* not meant: back to sleep, the LEDs set first (a charger plugged in may be what woke it) */
-		if (lid_closed && cfg.lid_sleep) { woke = "lid shut"; leds_update(); continue; }
+		if (lid_closed && cfg.lid_sleep) {
+			if (power_held_long()) {
+				sleep_log("the power button held with the lid shut: turning off");
+				if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
+				shutdown_now("power held, the lid shut");
+				return;
+			}
+			woke = "lid shut"; leds_update(); continue;
+		}
 		/* what woke it: the wake keys' events, else the lid's state before and after; with the lid open all along
 		 * and no key seen, the charger when it came or went, else the power button (its event can come late) */
 		int charger1 = charger_online();
@@ -1355,6 +1395,28 @@ static void cpus_low(int low)
 	}
 }
 
+/* the lid shut now, read at once from every input device that has it (charging while off has none open yet) */
+static int lid_shut_now(void)
+{
+	if (test_lid) return read_int(test_lid, 0);
+	int shut = 0;
+	DIR *d = opendir("/dev/input");
+	struct dirent *e;
+	while (d && !shut && (e = readdir(d))) {
+		if (strncmp(e->d_name, "event", 5)) continue;
+		char p[300];
+		snprintf(p, sizeof p, "/dev/input/%s", e->d_name);
+		int fd = open(p, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+		if (fd < 0) continue;
+		unsigned long sw[(SW_MAX + 8 * sizeof(long)) / (8 * sizeof(long))] = { 0 };
+		if (ioctl(fd, EVIOCGSW(sizeof sw), sw) >= 0 && (sw[SW_LID / (8 * sizeof(long))] >> (SW_LID % (8 * sizeof(long))) & 1))
+			shut = 1;
+		close(fd);
+	}
+	if (d) closedir(d);
+	return shut;
+}
+
 static int charge_mode(void)
 {
 	/* a restart (rcK's mark): the RK817 still says what started it the first time, a charger perhaps */
@@ -1362,6 +1424,12 @@ static int charge_mode(void)
 	const char *why = !unlink("/data/banana/.charge-next") ? "turned off with the charger in" : NULL;
 	int on = pmic_read(RK817_ON_SOURCE);
 	if (!why && on >= 0 && (on & 0x40) && !(on & 0x80)) why = "the charger plugged in";
+	/* the power button (or reset) with the lid shut, in a bag perhaps: not meant, as a press with it shut doesn't wake
+	 * the handheld either. Off again (exit 3, as the charger pulled out), or charging if a charger is in; U-Boot left
+	 * the power LED dark. Opening the lid is what starts it; bananad.conf's lid_start = yes, as before */
+	int lid_start = !why && !cfg.lid_start && lid_shut_now();
+	if (lid_start && charger_online()) why = "started with the lid shut, the charger in";
+	if (lid_start && !why) { charge_log("started with the lid shut: turned off again"); return 3; }
 	if (!why || !charger_online()) return 1;
 	char bat[256] = "";
 	int pct = -1, charging = 0;
@@ -1406,7 +1474,7 @@ static int charge_mode(void)
 			while (read(pf[i].fd, &ev, sizeof ev) == (ssize_t)sizeof ev)
 				if (ev.type == EV_KEY && ev.code == KEY_POWER) held = ev.value ? (held ? held : now) : 0;
 		}
-		if (held && now - held >= 1.0) { r = 0; break; }
+		if (held && now - held >= 1.0 && !lid_shut_now()) { r = 0; break; }	/* (not with the lid shut: open it first) */
 		if (now < look) continue;
 		look = now + 2;
 		out = charger_online() ? 0 : out + 1;
@@ -1948,13 +2016,13 @@ int main(int argc, char **argv)
 		test_wake = open(getenv("BANANAD_TEST_WAKE"), O_RDWR | O_CLOEXEC);
 		snprintf(test_asleep, sizeof test_asleep, "%s.asleep", getenv("BANANAD_TEST_WAKE"));
 	}
+	test_lid = getenv("BANANAD_TEST_LID");
 	if (argc > 1 && !strcmp(argv[1], "--charge")) {	/* rcS's, before the menu: charging while off (above) */
 		load_conf("/etc/banana/bananad.conf");
 		load_conf("/data/banana/bananad.conf");
 		load_timezone();
 		return charge_mode();
 	}
-	test_lid = getenv("BANANAD_TEST_LID");
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();

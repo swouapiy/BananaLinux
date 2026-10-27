@@ -14,3 +14,6 @@ CONFIG_ENV_IS_IN_MMC=n
 # within a second of the press instead of when bananad starts
 CONFIG_LED=y
 CONFIG_LED_PWM=y
+# the lid read for the power LED (a start with the lid shut stays dark: bananad turns it off again)
+CONFIG_BUTTON=y
+CONFIG_BUTTON_GPIO=y

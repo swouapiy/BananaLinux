@@ -7,10 +7,11 @@ for c in 1 2 3; do mkdir -p /sys/devices/system/cpu/cpu$c; echo 1 > /sys/devices
 L=/sys/class/leds; CH=/sys/class/power_supply/charger
 mkdir -p $CH; echo USB > $CH/type; echo 0 > $CH/online
 echo 1 > /sys/class/backlight/backlight0/bl_power; echo 0 > /sys/class/backlight/backlight0/bl_power
-charge() { r=0; "$W/bananad" --charge || r=$?; }
+charge() { r=0; BANANAD_TEST_LID=/run/test/lid "$W/bananad" --charge || r=$?; }
 # the background one's end, up to 6 s (then stopped: a FAIL, not a hung test), its exit status in r
 finish() { for i in $(seq 60); do kill -0 $CB 2>/dev/null || break; sleep 0.1; done; kill $CB 2>/dev/null || true; r=0; wait $CB || r=$?; }
 
+echo 0 > /run/test/lid      # (the lid open: a scenario before may have left it shut, and shut is charging 5's)
 echo "charging 1. not a charger's start (no mark, no PMIC to ask), or no charger: on with the boot at once"
 charge; [ $r = 1 ] && ok "no charger's start: exit 1" || bad "exit $r"
 : > /data/banana/.charge-next; charge
@@ -62,5 +63,28 @@ echo 0 > $CH/online; wake                                             # the cabl
 finish
 [ $r = 3 ] && ok "the charger out: exit 3 (rcS turns it off)" || bad "exit $r"
 [ "$(cat $L/green:power/brightness)$(cat $L/amber:charging/brightness)" = 00 ] && ok "the LEDs off" || bad "LEDs left on"
-echo 50 > /sys/class/power_supply/battery/capacity; rm -rf $CH
+echo 50 > /sys/class/power_supply/battery/capacity
+
+echo "charging 5. the power button with the lid shut, no charger: off again at once (lid_start = yes: it starts)"
+echo 0 > $CH/online; echo 1 > /run/test/lid
+charge; [ $r = 3 ] && ok "the lid shut: exit 3 (rcS turns it off)" || bad "exit $r"
+grep -q "started with the lid shut: turned off again" /data/banana/logs/charging.log && ok "charging.log says so" || bad "not logged"
+: > /data/banana/.restart; charge
+[ $r = 1 ] && ok "a restart with the lid shut: exit 1, it goes on" || bad "exit $r"
+echo "lid_start = yes" > /data/banana/bananad.conf; charge
+[ $r = 1 ] && ok "lid_start = yes: exit 1, it starts" || bad "exit $r"
+rm -f /data/banana/bananad.conf
+
+echo "charging 6. the lid shut, a charger in: charging instead; held power doesn't start it until the lid opens"
+echo 1 > $CH/online
+BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" --charge & CB=$!
+asleep && ok "asleep, charging" || bad "not asleep"
+grep -q "charging while off (started with the lid shut, the charger in)" /data/banana/logs/charging.log && ok "charging.log: the lid shut, the charger in" || bad "charging.log: $(tail -n1 /data/banana/logs/charging.log)"
+ev $EV_KEY $KEY_POWER 1; wake; sleep 1.4
+kill -0 $CB 2>/dev/null && ok "held a second with the lid shut: still charging" || bad "it started with the lid shut"
+echo 0 > /run/test/lid; sleep 1.2
+finish
+ev $EV_KEY $KEY_POWER 0
+[ $r = 0 ] && ok "the lid opened, still held: exit 0, the boot goes on" || bad "exit $r"
+rm -rf $CH
 umount /sys/devices/system/cpu
