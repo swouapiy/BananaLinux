@@ -1,8 +1,10 @@
 name: Soak
 # The long tests, by hand after an image build (fork only, never in a PR branch): the menu driven for hundreds of
 # hours of use watching its memory, the sleep test over and over for races, the fuzzers for hours instead of seconds.
-# One job after another, each run whatever the one before did.
+# One job after another, each run whatever the one before did. Started by pushing to the soak branch.
 on:
+  push:
+    branches: [soak]    # (a manual run needs the file on the default branch: this branch is how it starts here)
   workflow_dispatch:
     inputs:
       menu_rounds:
@@ -23,8 +25,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Packages
         run: sudo apt-get update && sudo apt-get install -y -o Acquire::Retries=3 libfreetype-dev libdrm-dev zlib1g-dev imagemagick
-      - name: The menu, ${{ inputs.menu_rounds }} rounds, its memory read throughout
-        run: OUT=$PWD/soak-out ui/tests/soak.sh ${{ inputs.menu_rounds }}
+      - name: The menu, ${{ inputs.menu_rounds || '1000000' }} rounds, its memory read throughout
+        run: OUT=$PWD/soak-out ui/tests/soak.sh ${{ inputs.menu_rounds || '1000000' }}
       - name: The menu with AddressSanitizer and UBSan (leaks, misuse), 20000 rounds
         run: SANITIZE=1 OUT=$PWD/soak-asan ui/tests/soak.sh 20000
       - name: The logs
@@ -45,17 +47,17 @@ jobs:
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
-      - name: The sleep test, ${{ inputs.sleep_runs }} times in a row (a race shows as one failing run)
+      - name: The sleep test, ${{ inputs.sleep_runs || '25' }} times in a row (a race shows as one failing run)
         run: |
           fails=0
-          for i in $(seq ${{ inputs.sleep_runs }}); do
+          for i in $(seq ${{ inputs.sleep_runs || '25' }}); do
             if timeout 900 sudo system/bananad/tests/sleep-test.sh > run-$i.log 2>&1; then
               echo "run $i: $(tail -n 1 run-$i.log)"; rm run-$i.log
             else
               fails=$((fails + 1)); echo "run $i FAILED:"; grep -E 'FAIL|^[a-z-]* *[0-9]+b?\. ' run-$i.log | grep -B1 FAIL | head -20
             fi
           done
-          echo "sleep test: $fails of ${{ inputs.sleep_runs }} runs failed"
+          echo "sleep test: $fails of ${{ inputs.sleep_runs || '25' }} runs failed"
           [ $fails = 0 ]
       - name: The failing runs' logs
         if: failure()
@@ -74,8 +76,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Packages
         run: sudo apt-get update && sudo apt-get install -y -o Acquire::Retries=3 libfreetype-dev libdrm-dev zlib1g-dev clang
-      - name: Every reader of the card's files fuzzed for ${{ inputs.fuzz_seconds }} s
-        run: FUZZ_SECONDS=${{ inputs.fuzz_seconds }} ui/fuzz/run.sh
+      - name: Every reader of the card's files fuzzed for ${{ inputs.fuzz_seconds || '1500' }} s
+        run: FUZZ_SECONDS=${{ inputs.fuzz_seconds || '1500' }} ui/fuzz/run.sh
       - name: The failing inputs (replay one with ui/fuzz/run.sh <target> <input>)
         if: failure()
         uses: actions/upload-artifact@v4
