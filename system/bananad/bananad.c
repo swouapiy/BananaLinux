@@ -555,6 +555,8 @@ static void suspend_now(const char *why)
 	double asleep = 0, dark_from = 0, led_at = 0;
 	const char *woke = "?";
 	for (;;) {
+		/* asked to stop (rcK, a shutdown over SSH) between two sleeps: awake, so the main loop goes (not asleep again) */
+		if (stopping) { woke = "asked to stop"; break; }
 		/* charging with the lid shut: no suspend, which turns the charging light off (it is a PWM LED, and the PWM
 		 * stops in suspend). Dark and awake instead, the game still paused, until the lid opens (back as from a
 		 * sleep) or the charger is pulled out (then a real sleep). */
@@ -592,7 +594,7 @@ static void suspend_now(const char *why)
 			char c;
 			int fd = open(test_asleep, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);	/* (write_file doesn't create) */
 			if (fd >= 0) close(fd);
-			while (read(test_wake, &c, 1) < 0 && errno == EINTR && !stopping) {}	/* (stopped asleep: rcK, the test) */
+			while (!stopping && read(test_wake, &c, 1) < 0 && errno == EINTR) {}	/* (stopped asleep: rcK, the test) */
 			unlink(test_asleep);
 		}
 		clock_gettime(CLOCK_BOOTTIME, &b1);
