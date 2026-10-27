@@ -3,8 +3,8 @@ Subject: [PATCH] rockchip: the RG DS LEDs lit from U-Boot as it starts (power: g
 
 diff -ruN a/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi b/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi
 --- a/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi	2026-10-27 09:29:34
-+++ b/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi	2026-10-27 12:29:19
-@@ -40,3 +40,30 @@
++++ b/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi	2026-10-27 13:33:00
+@@ -40,3 +40,51 @@
  &vcc_sd_h {
  	bootph-pre-ram;
  };
@@ -34,20 +34,43 @@ diff -ruN a/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi b/arch/arm/dts/rk3566-qua
 +			pwms = <&pwm6 0 25000 0>;
 +		};
 +	};
++
++	/* the lid's hall sensor (low: shut), read by board.c: no power LED for a start with the lid shut */
++	banana-keys {
++		compatible = "gpio-keys";
++
++		banana-lid {
++			label = "banana-lid";
++			gpios = <&gpio0 RK_PC3 GPIO_ACTIVE_LOW>;
++			linux,code = <0>;
++			pinctrl-0 = <&banana_hall_l>;
++			pinctrl-names = "default";
++		};
++	};
++};
++
++&pinctrl {
++	banana-hall {
++		banana_hall_l: banana-hall-l {
++			rockchip,pins = <0 RK_PC3 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++	};
 +};
 diff -ruN a/arch/arm/mach-rockchip/board.c b/arch/arm/mach-rockchip/board.c
 --- a/arch/arm/mach-rockchip/board.c	2026-10-27 09:29:34
-+++ b/arch/arm/mach-rockchip/board.c	2026-10-27 12:31:12
-@@ -25,6 +25,8 @@
++++ b/arch/arm/mach-rockchip/board.c	2026-10-27 13:33:09
+@@ -25,6 +25,10 @@
  #include <part.h>
  #include <ram.h>
  #include <syscon.h>
++#include <button.h>
 +#include <led.h>
++#include <linux/delay.h>
 +#include <power/pmic.h>
  #include <u-boot/uuid.h>
  #include <u-boot/crc.h>
  #include <u-boot/sha256.h>
-@@ -184,13 +186,56 @@
+@@ -184,13 +188,69 @@
  }
  #endif /* CONFIG_EFI_HAVE_CAPSULE_SUPPORT && CONFIG_EFI_PARTITION */
  
@@ -56,7 +79,8 @@ diff -ruN a/arch/arm/mach-rockchip/board.c b/arch/arm/mach-rockchip/board.c
 + * starting, as a phone's light does: the power LED (green, PWM5) when the power button started it, the charging
 + * light (amber, PWM6) with a charger in. Linux keeps them as left (default-state = "keep") until bananad sets them.
 + * Each is set off otherwise (no green for a start for charging, nor for rcK's restart into charging: the PMIC still
-+ * says power button then), which also gives its PWM a period to read back.
++ * says power button then; nor with the lid shut, as bananad turns it off again then), which also gives its PWM a
++ * period to read back.
 + */
 +#define BANANA_RK817_SYS_STS		0xf0
 +#define BANANA_RK817_PLUG_IN_STS	BIT(6)
@@ -74,6 +98,17 @@ diff -ruN a/arch/arm/mach-rockchip/board.c b/arch/arm/mach-rockchip/board.c
 +		led_set_state(led, on ? LEDST_ON : LEDST_OFF);
 +}
 +
++/* the lid shut (the hall sensor, through its pull-up as Linux sets it); not known: open */
++static bool banana_lid_shut(void)
++{
++	struct udevice *lid;
++
++	if (!CONFIG_IS_ENABLED(BUTTON_GPIO) || button_get_by_label("banana-lid", &lid))
++		return false;
++	udelay(1000);	/* (the pull-up just set by its probe) */
++	return button_get_state(lid) == BUTTON_ON;
++}
++
 +static void banana_leds(void)
 +{
 +	struct udevice *pmic;
@@ -86,7 +121,8 @@ diff -ruN a/arch/arm/mach-rockchip/board.c b/arch/arm/mach-rockchip/board.c
 +	sts = pmic_reg_read(pmic, BANANA_RK817_SYS_STS);
 +	on = pmic_reg_read(pmic, BANANA_RK817_ON_SOURCE);
 +	if (on >= 0)
-+		banana_led("banana-power", (on & BANANA_RK817_ON_PWRON) && banana_boot_mode != BOOT_CHARGING);
++		banana_led("banana-power", (on & BANANA_RK817_ON_PWRON) && banana_boot_mode != BOOT_CHARGING &&
++			   !banana_lid_shut());
 +	if (sts >= 0)
 +		banana_led("banana-charging", sts & BANANA_RK817_PLUG_IN_STS);
 +}
