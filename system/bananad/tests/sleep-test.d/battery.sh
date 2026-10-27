@@ -31,3 +31,21 @@ stop
 POWEROFF=0
 echo 50 > $B/capacity
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
+
+echo "battery 3. a note read half written (a sleep 2 s after a wake), or a sleep under 10 minutes: no line"
+: > /data/banana/logs/sleep.log
+start
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep" || bad "no sleep"
+: > /run/banana/sleep-battery                                         # empty, as it read mid-write
+echo 0 > /run/test/lid; wake; sleep 1.5
+! grep -q 'battery while asleep' /data/banana/logs/sleep.log && ok "an empty note: nothing logged" || bad "logged: $(grep 'battery while' /data/banana/logs/sleep.log)"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep again" || bad "no sleep"
+read -r t0 rest < /run/banana/sleep-battery && echo "$((t0 - 120)) $rest" > /run/banana/sleep-battery    # (two minutes)
+echo 1980000 > $B/charge_now
+echo 0 > /run/test/lid; wake; sleep 1.5
+! grep -q 'battery while asleep' /data/banana/logs/sleep.log && ok "two minutes: nothing logged" || bad "logged: $(grep 'battery while' /data/banana/logs/sleep.log)"
+[ ! -e /run/banana/sleep-battery.new ] && ok "no half-written note left" || bad "sleep-battery.new left"
+stop
+echo 2000000 > $B/charge_now

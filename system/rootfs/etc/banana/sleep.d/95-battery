@@ -10,7 +10,8 @@ now() { echo "$(date +%s) $(cat $B/charge_now 2>/dev/null || echo -) $(cat $B/ca
 case $1 in
 pre)
     charger && { rm -f $F; exit 0; }
-    now > $F
+    # (whole or not at all: a wake's post runs in the background, and a sleep 2 s later read this half written)
+    now > $F.new && mv -f $F.new $F
     ;;
 post|off)    # off: turned off from sleep (the battery check, or asleep long enough)
     how=; [ "$1" = off ] && how=', then turned off'
@@ -18,8 +19,10 @@ post|off)    # off: turned off from sleep (the battery check, or asleep long eno
     read -r t0 q0 p0 v0 < $F; rm -f $F
     charger && exit 0   # plugged in meanwhile: the counter went up
     set -- $(now); t1=$1 q1=$2 p1=$3 v1=$4
-    s=$((t1 - t0)); [ $s -ge 60 ] || exit 0     # a sleep of seconds says nothing
+    for x in "$t0" "$q0" "$p0" "$v0" "$q1" "$p1" "$v1"; do case $x in ''|*[!0-9-]*) exit 0 ;; esac; done   # one missing
     [ "$q0" != - ] && [ "$q1" != - ] || exit 0
+    # under 10 minutes the gauge's own steps outweigh what the sleep drew (a minute read as 460 mA)
+    s=$((t1 - t0)); [ $s -ge 600 ] || exit 0
     used=$(( (q0 - q1) / 1000 ))                # mAh
     # the average current, mA: used over hours, to the nearest tenth
     t=$(( ((q0 - q1) * 36 + s / 2) / s )); ma=$((t / 10)); tenth=$((t % 10))
