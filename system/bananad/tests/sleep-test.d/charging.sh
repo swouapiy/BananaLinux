@@ -49,6 +49,9 @@ ev $EV_KEY $KEY_POWER 0
 grep -q "charging while off (turned off with the charger in): battery [0-9]*%" /data/banana/logs/charging.log &&
     grep -q "the power button: starting" /data/banana/logs/charging.log && ok "charging.log" || bad "charging.log: $(cat /data/banana/logs/charging.log)"
 
+grep -q "charging while off (turned off with the charger in): battery [0-9]*%, the charging light off until now" /data/banana/logs/charging.log &&
+    ok "charging.log: whether U-Boot had lit the charging light (off here)" || bad "charging.log: $(grep 'charging while off' /data/banana/logs/charging.log | tail -n1)"
+
 echo "charging 4. full: green instead of amber at the 10-minute look; the charger pulled out turns it off"
 : > /data/banana/.charge-next
 BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" --charge & CB=$!
