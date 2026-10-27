@@ -51,3 +51,17 @@ grep -q '^deep' /sys/power/mem_sleep && ok "deep chosen again" || bad "mem_sleep
 echo 0 > /run/test/lid; wake
 grep -q 'awake (lid opened)' /data/banana/logs/sleep.log && ok "woke: the lid" || bad "woke: $(grep -o 'awake ([^)]*)' /data/banana/logs/sleep.log | tail -n1)"
 stop
+
+echo "wake 5. the kernel's side in sleep.log: the wakeup sources that fired (and the wake interrupt when there is one)"
+: > /data/banana/logs/sleep.log
+mkdir -p /sys/class/wakeup/wakeup0 /sys/class/wakeup/wakeup1
+echo rk805-pwrkey > /sys/class/wakeup/wakeup0/name; echo 3 > /sys/class/wakeup/wakeup0/event_count
+echo alarmtimer > /sys/class/wakeup/wakeup1/name; echo 7 > /sys/class/wakeup/wakeup1/event_count
+start "autosleep_minutes = 30"
+ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0
+asleep && ok "asleep" || bad "no sleep"
+echo 4 > /sys/class/wakeup/wakeup0/event_count; echo 999999 > /sys/power/pm_wakeup_irq     # the power key fired
+wake
+grep -q "woke after .*; the kernel: irq 999999, rk805-pwrkey$" /data/banana/logs/sleep.log && ok "logged: $(grep 'the kernel:' /data/banana/logs/sleep.log | tail -n1 | sed 's/.*the kernel:/the kernel:/')" || bad "not logged: $(grep 'woke after' /data/banana/logs/sleep.log | tail -n1)"
+stop
+rm -rf /sys/class/wakeup /sys/power/pm_wakeup_irq
