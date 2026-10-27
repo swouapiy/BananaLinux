@@ -471,6 +471,7 @@ grep -q "MARK" "$F" 2>/dev/null && bad "a marker from a quick press" || ok "a qu
 ev $EV_KEY 314 1; sleep 2.4; ev $EV_KEY 314 0                  # Select held 2 s: a marker (written at once)
 sleep 0.5
 grep -q "MARK .*marker 1" "$F" 2>/dev/null && ok "Select held 2 s: the marker on the card at once" || bad "no marker in $F"
+sleep 0.5; ls "${F%.txt}"-marker-1-dmesg.txt >/dev/null 2>&1 && ok "the kernel's log saved beside it" || bad "no ${F%.txt}-marker-1-dmesg.txt"
 [ "$(cat /sys/class/leds/green:power/brightness)" = 128 ] && ok "the power LED back after its blinks" || bad "LED $(cat /sys/class/leds/green:power/brightness)"
 # banana-ui's events: a datagram on the recorder's socket, copied in (control characters made spaces)
 python3 -c "
