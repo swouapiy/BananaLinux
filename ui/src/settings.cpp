@@ -259,7 +259,52 @@ namespace banana
 
 	// on the RG DS Plus a shader's GPU pass heats the chip enough to slow the CPU in a long session (Golden Sun: Dark
 	// Dawn at 2x: none 0.0% missed refreshes in 6 min, the LCD grid 0.6-1%, measured 2026-10-18)
-	static const char* PLUS_SHADER_NOTE = " On the RG DS Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes with one. Set such a game to None on its own page (X in the library).";
+	static const char* PLUS_SHADER_NOTE = " A heavy 3D game may slow down with one after a while: set it to None (X in the library).";
+
+	// what each DS shader looks like, a hint each (Settings > Nintendo DS > Shader); the card's own last
+	static std::vector<std::string> shaderHints(const std::vector<std::string>& values)
+	{
+		static const std::pair<const char*, const char*> known[] = {
+			{ "none", "Smooth scaling. The lightest: no extra work for the chip." },
+			{ "ds-integer", "Every DS pixel an exact square, no blur." },
+			{ "ds-crisp", "Sharp, evenly sized pixels, without blur." },
+			{ "ds-crisp-color", "Sharp, even pixels, in the DS's own duller colours." },
+			{ "ds-grid", "The fine grid of the DS's screen." },
+			{ "ds-grid-color", "The DS's screen grid, in its own duller colours." },
+			{ "ds-fsr", "Smooth, clean edges. The heaviest." },
+			{ "lcd1x-nds", "A handheld LCD's look, in the DS's colours." },
+			{ "lcd1x", "A handheld LCD's look." },
+			{ "lcd3x", "A handheld LCD's look, with stronger lines." },
+			{ "zfast-lcd", "A light LCD look." },
+			{ "nds-color", "The DS's own, duller colours." },
+			{ "retro-v2", "A soft retro pixel look." },
+			{ "bevel", "Each pixel with a raised edge." },
+			{ "sharp-bilinear", "Sharp pixels with smooth edges." },
+			{ "sharp-bilinear-scanlines", "Sharp pixels with a TV's scanlines." },
+			{ "zfast-crt", "An old TV's scanlines." },
+			{ "fxaa", "Jagged edges softened." },
+			{ "ds-integer-fill", "Exact square pixels, filling more of the screen." },
+			{ "ds-grid-2x", "The DS's screen grid, at double size." },
+			{ "nnddss-dot-mizai", "Round dots, like a printed picture (MiZai)." },
+			{ "nnddss-dot-mizai-rgds", "MiZai's dots, tuned for the RG DS screens." },
+			{ "nnddss-retro-tiles", "Each pixel a small tile." },
+			{ "drastic-lcd1x", "DraStic's LCD look." },
+			{ "drastic-lcd1x-nds-color", "DraStic's LCD look, in the DS's colours." },
+			{ "drastic-quilez", "DraStic's smooth pixel scaling." },
+			{ "drastic-sharp-bilinear", "DraStic's sharp pixels with smooth edges." },
+			{ "drastic-sharp-bilinear-nds-color", "DraStic's sharp pixels, in the DS's colours." },
+			{ "drastic-zfast-lcd", "DraStic's light LCD look." },
+			{ "drastic-zfast-lcd-nds-color", "DraStic's light LCD look, in the DS's colours." },
+		};
+		std::vector<std::string> h;
+		for (auto& v : values)
+		{
+			const char* t = "Your own shader, from banana/shaders on the card.";
+			for (auto& k : known) if (v == k.first) { t = k.second; break; }
+			h.push_back(t);
+		}
+		return h;
+	}
 
 	// Settings > Nintendo DS > Shader's choices: Banana's shaders, then the card's own (banana/shaders/<name>.frag,
 	// SuperDrastic's shader format: README.txt there). Made again each time Settings loads the row (load()), so a shader
@@ -308,29 +353,38 @@ namespace banana
 			it.names = names; it.values = values; it.kind = kind;
 			items.push_back(it);
 		};
+		// each row: what it is, in a sentence (help); then what the chosen option does, short and plain (hint)
+		auto hint = [&](std::vector<std::string> h) { items.back().hints = h; };
 		const char* D = "Display & sound";
 		{
 			// Banana's three, then the themes in banana/themes on the card and the image's examples (theme.h)
 			std::vector<std::string> names = { "Dark", "Light", "Carts" }, values = { "dark", "light", "carts" };
 			for (auto& t : userThemes()) { names.push_back(t.name); values.push_back(t.value); }
-			add(D, "picture", "Theme", "ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).",
+			add(D, "picture", "Theme", "How the menu looks. Your own themes go in banana/themes on the card (its README says how).",
 				menu, "theme", names, values);
+			std::vector<std::string> h = { "Dark colours, easy on the eyes.", "Light colours, for daylight.",
+				"Your games as cartridges on a shelf. Still experimental." };
+			while (h.size() < names.size()) h.push_back("A theme from banana/themes on the card.");
+			hint(h);
 		}
 		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
 			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
-		add(D, "picture", "Brightness", "Both panels' backlights. F + volume changes it anywhere, in games too.", "", "",
+		add(D, "picture", "Brightness", "How bright both screens are. F + volume changes it anywhere, in games too.", "", "",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
-		add(D, "picture", "Motion", "The top screen's bob and shine. Off holds it still and saves a little battery.", menu, "motion", { "On", "Off" }, { "on", "off" });
-		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
+		add(D, "picture", "Motion", "The top screen's gentle movement and shine.", menu, "motion", { "On", "Off" }, { "on", "off" });
+		hint({ "The top screen moves and shines.", "The top screen holds still, and saves a little battery." });
+		add(D, "music", "Volume", "How loud the speakers or headphones are. The volume keys change it anywhere.", "", "",
 			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
-		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge going into the console.", menu, "sounds", { "On", "Off" }, { "on", "off" });
-		add(D, "picture", "Battery", "The battery on the top screen: its icon, or its icon and how full it is.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
-		add(D, "picture", "Clock", "How the time on the top screen is written.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
-		add(D, "picture", "Boot animation", "The bananas and the cartridge while Banana starts. Off goes straight to the menu once it is ready.", menu, "splash", { "On", "Off" }, { "on", "off" });
+		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge sound when a game starts.", menu, "sounds", { "On", "Off" }, { "on", "off" });
+		hint({ "The menu plays its sounds.", "The menu is silent. Games keep their sound." });
+		add(D, "picture", "Battery", "How the battery shows on the top screen.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
+		hint({ "Just the battery icon.", "The icon, and how full it is in percent." });
+		add(D, "picture", "Clock", "How the time shows on the top screen.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
+		hint({ "Like 14:30.", "Like 2:30 PM." });
+		add(D, "picture", "Boot animation", "The bananas and the cartridge as the handheld starts.", menu, "splash", { "On", "Off" }, { "on", "off" });
+		hint({ "Plays as it starts.", "Goes straight to the menu once it is ready." });
 		const char* P = "Sleep & power";
-		// the idle chain: dim, sleep, off (bananad.conf). The top screen says what the row is for, then what the chosen
-		// option does: short and plain (hint, after each row)
-		auto hint = [&](std::vector<std::string> h) { items.back().hints = h; };
+		// the idle chain: dim, sleep, off (bananad.conf)
 		add(P, "moon", "Dim when idle", "Lowers the screens when you leave the handheld alone.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
 		hint({ "The screens never dim.", "Screens dim after 1 minute without use.", "Screens dim after 2 minutes without use.",
@@ -361,90 +415,122 @@ namespace banana
 		// with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
 		const char* N = "Nintendo DS";
 		const std::string emu = getConfValue(menu, "nds_emulator", getConfValue("/etc/banana/settings.conf", "nds_emulator", "superdrastic"));
-		add(N, "nds", "Emulator", "SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on L3; each keeps its own settings below. X on a game in the library picks one for that game alone.",
+		add(N, "nds", "Emulator", "Which emulator plays DS games. X on a game in the library picks one for that game alone.",
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
-		add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
+		hint({ "DraStic: the fastest. Its own settings are below.", "Banana's own, built on melonDS: the most accurate. Its own settings are below." });
+		add(N, "nds", "Quick resume", "What quitting a game does.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
+		hint({ "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place, even through a shutdown. Next time the game carries on from there." });
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
-		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders, named with letters, digits and . _ + - only. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
+		std::string shaderHelpS = "The look of the DS screens. Your own go in banana/shaders.";
 		if (readLine("/etc/banana/board") == "rgds-plus") shaderHelpS += PLUS_SHADER_NOTE;
 		const char* shaderHelp = shaderHelpS.c_str();
 		if (emu == "bananads")
 		{
 			const std::string bds = "/data/bananads/bananads.conf";
 			add(N, "nds", "Shader", shaderHelp, bds, "kms.shader", shaderNames, shaderValues);
-			add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest.",
+			hint(shaderHints(shaderValues));
+			add(N, "nds", "3D resolution", "How sharp DS games' 3D is drawn.",
 				bds, "render.scale", { "2x", "1x" }, { "2", "1" });
-			add(N, "nds", "Edge marking", "The outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",
+			hint({ "Twice the DS's size: sharper 3D.", "The DS's own size: the lightest." });
+			add(N, "nds", "Edge marking", "The outlines some games draw around 3D models (Zelda, Kirby, many Pokémon battles).",
 				bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
-			add(N, "nds", "Fog", "The distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
-			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
+			hint({ "Outlines drawn, as on a DS.", "Outlines left out." });
+			add(N, "nds", "Fog", "The distance fog some games draw in 3D.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
+			hint({ "Fog drawn, as on a DS.", "Fog left out." });
+			add(N, "nds", "Frame pacing", "How DS frames line up with the screens.",
 				bds, "kms.pace", { "Panels", "DS rate" }, { "display", "ds" });
-			add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
+			hint({ "A new frame every screen refresh: the smoothest. Games run 0.3% fast, the sound matched.", "The DS's own speed. A frame shows twice about every 6 seconds." });
+			add(N, "nds", "CPU clock", "How fast the processor runs in DS games.",
 				bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
-			add(N, "nds", "Timing", "Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.",
+			hint({ "Finds the lowest speed each game runs at full speed, and remembers it.", "Always the top speed. Uses more battery." });
+			add(N, "nds", "Timing", "How closely the DS's two processors keep in step.",
 				bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
-			add(N, "nds", "Microphone", "On: the game hears the real microphone (a blow, a voice; the DS's own games that ask for one). Off: it hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+			hint({ "As melonDS does it. Works with every game.", "About 10% faster, but it can break a game: Golden Sun: Dark Dawn loses its 3D world." });
+			add(N, "nds", "Microphone", "Whether games hear the real microphone.",
 				bds, "mic.source", { "On", "Off" }, { "device", "none" });
-			add(N, "nds", "Mic sensitivity", "How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.",
+			hint({ "Games hear the microphone: blow or speak when a game asks.", "Games hear nothing. The in-game menu's Blow still works." });
+			add(N, "nds", "Mic sensitivity", "How loud a sound must be to reach the game.",
 				bds, "mic.threshold", { "Medium", "High", "Low", "Gate off" }, { "0.05", "0.02", "0.15", "0" });
+			hint({ "Speaking and blowing get through.", "Quieter sounds get through too.", "Only loud sounds get through.", "Everything gets through, the game's own sound from the speakers too." });
 		}
 		else
 		{
 			add(N, "nds", "Shader", shaderHelp, sd, "DSFLIP_SHADER", shaderNames, shaderValues);
-			add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
-			add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
+			hint(shaderHints(shaderValues));
+			add(N, "nds", "3D resolution", "How sharp DS games' 3D is drawn.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
+			hint({ "Twice the DS's size: sharper 3D, still at full speed.", "The DS's own size: the lightest." });
+			add(N, "nds", "CPU clock", "How fast the processor runs in DS games.",
 				sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
-			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
+			hint({ "Finds the lowest speed each game runs at full speed, and remembers it.", "Always the top speed. Uses more battery." });
+			add(N, "nds", "Frame pacing", "How DS frames line up with the screens.",
 				sd, "DSFLIP_PACE", { "Panels", "DS rate" }, { "panels", "ds" });
-			add(N, "nds", "Microphone", "How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+			hint({ "A new frame every screen refresh: the smoothest. Games run 0.3% fast, the sound matched.", "The DS's own speed. A frame shows twice about every 6 seconds." });
+			add(N, "nds", "Microphone", "How loud a sound must be to reach the game.",
 				sd, "DSHOOK_MIC_THRESH", { "Medium", "High", "Low", "Off" }, { "0.15", "0.03", "0.3", "0" });
+			hint({ "Speaking and blowing get through.", "Quieter sounds get through too.", "Only loud sounds get through.", "Games hear nothing. The in-game menu's Blow still works." });
 		}
 		const char* O = "Other systems";
-		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.",
+		add(O, "gamepad", "Screen", "Which screen other systems' games play on.",
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
-		add(O, "gamepad", "Second screen", "While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.",
+		hint({ "Games play on the top screen.", "Games play on the bottom screen." });
+		add(O, "gamepad", "Second screen", "What the other screen shows while a game plays.",
 			menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
-		add(O, "gamepad", "RetroAchievements", "Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.",
+		hint({ "Achievements, and buttons to save, load, open RetroArch's menu, fast-forward and quit. Touch them on the bottom screen.", "The other screen stays dark." });
+		add(O, "gamepad", "RetroAchievements", "How achievements unlock. RetroArch's own menu changes this too.",
 			"/data/retroarch/retroarch.cfg", "cheevos_hardcore_mode_enable", { "Softcore", "Hardcore" }, { "false", "true" });
-		add(O, "gamepad", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.", "/data/retroarch/retroarch.cfg", "savestate_auto_save", { "Off", "On" }, { "false", "true" });
-		add(O, "picture", "Shader", "A look for the systems RetroArch runs: a handheld's LCD grid, a CRT's scanlines, or sharp pixels at any size. RetroArch's own Shaders menu still picks any of libretro's presets.",
+		hint({ "Save states, rewind and cheats still work.", "Those are locked, and unlocks count as hardcore on retroachievements.org." });
+		add(O, "gamepad", "Quick resume", "What quitting a game does.", "/data/retroarch/retroarch.cfg", "savestate_auto_save", { "Off", "On" }, { "false", "true" });
+		hint({ "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place. Next time the game carries on from there (not in Hardcore)." });
+		add(O, "picture", "Shader", "The look of other systems' games. RetroArch's own menu has many more.",
 			menu, "ra_shader", { "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" });
-		add(O, "music", "Audio latency", "RetroArch's audio buffer. Low is the quickest to react and can crackle on a busy game; Safe has the most margin (and the most delay).",
+		hint({ "Plain pixels, no effect.", "A handheld LCD's grid.", "An old TV's scanlines.", "Sharp pixels at any size." });
+		add(O, "music", "Audio latency", "How much sound RetroArch keeps ready ahead.",
 			menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
-		add(O, "picture", "VSync", "On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.",
+		hint({ "The sound reacts fastest, but can crackle in a busy game.", "A balance of delay and safety.", "The most margin against crackling, with a little more delay." });
+		add(O, "picture", "VSync", "Whether games wait for the screen before drawing.",
 			menu, "ra_vsync", { "On", "Off" }, { "on", "off" });
+		hint({ "No tearing.", "Games can run faster, but the picture can tear." });
 		if (access("/usr/lib/libretro/mgba_libretro.so", F_OK) == 0)
-			add(O, "gamepad", "Game Boy Advance", "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore.", menu, "core.gba", { "gpSP", "mGBA" }, { "gpsp", "mgba" });
+		{
+			add(O, "gamepad", "Game Boy Advance", "Which emulator plays Game Boy Advance games.", menu, "core.gba", { "gpSP", "mGBA" }, { "gpsp", "mgba" });
+			hint({ "The fastest.", "The most accurate. Needed for RetroAchievements hardcore." });
+		}
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
-		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
+		hint({ "Joins your saved networks.", "Wi-Fi stays off, and saves battery." });
+		add(W, "phone", "Network", "The networks around you. A on one joins it.", "", "network", {}, {}, Item::PAGE);
 		add(W, "phone", "File sharing", "", menu, "share", { "Off", "On" }, { "off", "on" });
+		hint({ "The card isn't shared.", "Shared with no password while it's on." });
 		const char* S = "System";
 		{
 			std::vector<std::string> names, tzs;
 			for (auto& z : ZONES) { names.push_back(z.name); tzs.push_back(z.tz); }
-			add(S, "gear", "Time zone", "The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.",
+			add(S, "gear", "Time zone", "Your time zone, for the clock and your games. Summer time is included.",
 				menu, "timezone", names, tzs);
 		}
-		add(S, "gear", "Update", "A new version of Banana from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
-		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.",
+		add(S, "gear", "Update", "Installs a new version of Banana from a package on the card. It runs from the next restart.", "", "update", {}, {}, Item::PAGE);
+		add(S, "picture", "Box art", "Downloads covers, title screens, genres and years for your games. Needs Wi-Fi, no account. It only fetches what's missing.",
 			"", "scrape", {}, {}, Item::PAGE);
-		add(S, "picture", "Box art from", "libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.",
+		add(S, "picture", "Box art from", "Where covers come from.",
 			menu, "boxart_source", { "libretro", "libretro + Twilight", "Twilight first" }, { "libretro", "both", "twilight" });
-		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
+		hint({ "libretro's free collections.", "libretro, and TwilightBoxart for the covers libretro doesn't have.", "TwilightBoxart's covers first, libretro's for the rest." });
+		add(S, "gear", "Previous version", "Restarts into the version you had before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
 		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot (bananad's sd2 script): the RG DS Plus
-		add(S, "gear", "Second SD card", "Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
-		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).", "", "setup", {}, {}, Item::PAGE);
-		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults (banana/settings.conf and the sleep/LED rows; your games and card are untouched). Press A twice.",
+		{
+			add(S, "gear", "Second SD card", "Shows the games on the card in the second slot.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
+			hint({ "Its games appear in your library while it's in (its roms folder, exFAT or FAT32).", "Its games stay hidden." });
+		}
+		add(S, "gear", "First-time setup", "Runs the first-start steps again: Wi-Fi, the time zone and the RetroAchievements account.", "", "setup", {}, {}, Item::PAGE);
+		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults. Your games and saves are untouched. Press A twice.",
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the core.<system> picks and RetroArch's shader, audio latency and VSync. Your menu and card settings stay. Press A twice.",
+		add(S, "gear", "Reset emulator settings", "Puts the emulators' settings back to their defaults: each system's emulator, and RetroArch's shader, audio latency and VSync. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
+		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice, or hold the power button.", "", "poweroff", { "" }, { "" }, Item::ACTION);
 	}
 
 	void Settings::load(Item& it)
@@ -1298,17 +1384,16 @@ namespace banana
 		if (!value.empty()) text(value, true, 22, 170, 130, p.accent);
 		std::string help = cur.help;
 		if (cur.kind == Item::INFO) help = about;
-		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
+		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one.";
 		if (cur.key == "ssh")
-			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
-				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.";
+			help = "For working on Banana from a computer: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
+				", with your keys in banana/ssh/authorized_keys on the card.";
 		if (cur.key == "switch" && !message.empty()) help = message;
 		if (cur.key == "share")
 		{
 			std::string at = ip.empty() ? "<address>" : ip;
-			help = "The card on the network: \\\\" + at + "\\banana in Windows' File Explorer, smb://" + at +
-				"/banana on a Mac (Finder, Go, Connect to Server). Anyone on the network can open it with no password: "
-				"leave it off on networks you don't trust.";
+			help = "The card on your network: \\\\" + at + "\\banana on Windows, smb://" + at +
+				"/banana on a Mac. Keep it off on networks you don't trust.";
 			if (ip.empty()) help += " (Not connected to Wi-Fi now.)";
 		}
 		if (cur.key == "scrape" && scraping())
@@ -2132,10 +2217,10 @@ namespace banana
 		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
 		text(fit(pgRow == 0 ? emuValue : shValue, true, 22, 420), true, 22, 170, 130, p.accent);
 		std::string help = pgRow == 0
-			? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
-			  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
-			: std::string("The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. "
-			  "None scales smoothly and costs no GPU work.") + (plus ? PLUS_SHADER_NOTE : "");
+			? "Which emulator plays this game: SuperDrastic, the fastest, or BananaDS, the most accurate. Other games follow "
+			  "Settings > Nintendo DS > Emulator."
+			: std::string("The look of this game's screens. Other games follow Settings > Nintendo DS > Shader.") +
+			  (plus ? PLUS_SHADER_NOTE : "");
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
