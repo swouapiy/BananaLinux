@@ -679,8 +679,10 @@
 				regulator-min-microvolt = <900000>;
 				regulator-name = "vdd_logic";
 				regulator-ramp-delay = <6001>;
+				/* off asleep, as the stock Android's tree has it (its sleep mode 0x5ec: ARMOFF_LOGOFF, PMIC_LP) and
+				 * Rockchip's RK3568 EVB and mainline's RGxx3 do: was on at 0.9 V, ROCKNIX's port */
 				regulator-state-mem {
-					regulator-on-in-suspend;
+					regulator-off-in-suspend;
 					regulator-suspend-microvolt = <900000>;
 				};
 			};
