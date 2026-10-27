@@ -1828,6 +1828,36 @@ static void rec_sock_read(int fd)
 	}
 }
 
+/* the kernel's errors in the recording, while it records: /dev/kmsg's lines of priority err or worse, as they come
+ * (a driver failing next to the press that set it off); the same line again is counted, not repeated */
+static int kmsg_open(void)
+{
+	return open("/dev/kmsg", O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+}
+static void kmsg_read(int fd, int fresh)
+{
+	static char last[200];
+	static int repeats;
+	char b[1024];
+	ssize_t n;
+	if (fresh) lseek(fd, 0, SEEK_END);	/* (the recording just started: from now on, not the boot's) */
+	for (;;) {
+		n = read(fd, b, sizeof b - 1);
+		if (n < 0 && errno == EPIPE) continue;	/* (lines overwritten before they were read: on with the next) */
+		if (n <= 0) break;
+		b[n] = 0;
+		char *msg = strchr(b, ';');
+		if (!msg || (atoi(b) & 7) > 3) continue;	/* (the priority before the first comma; 3: err) */
+		msg++;
+		msg[strcspn(msg, "\n")] = 0;
+		if (!strcmp(msg, last)) { repeats++; continue; }
+		if (repeats) rec("kernel", "(the line before, %d more times)", repeats);
+		repeats = 0;
+		snprintf(last, sizeof last, "%s", msg);
+		rec("kernel", "%s", msg);
+	}
+}
+
 /* the recorder: the charger plugged in or pulled out (a uevent, and each minute) */
 static void rec_charger(void)
 {
@@ -1922,6 +1952,7 @@ int main(int argc, char **argv)
 	sound_start();		/* the volumes and the route, in a child (above) */
 	int uev = uevent_open();
 	int recsock = rec_sock_open();	/* (the recorder's events from banana-ui) */
+	int kmsg = kmsg_open(), kmsg_on = 0;	/* (the kernel's errors, while recording) */
 	sd2_scan();	/* a card already in the second slot at boot */
 	load_drivers_present();
 	leds_update();
@@ -1933,10 +1964,15 @@ int main(int argc, char **argv)
 	boot_mark("bananad: buttons live");
 
 	for (;;) {
-		struct pollfd pf[MAXDEV + 3];
+		struct pollfd pf[MAXDEV + 4];
 		int n = 0;
 		for (int i = 0; i < ndev; i++) pf[n++] = (struct pollfd){ devfd[i], POLLIN, 0 };
-		int ino_at = -1, uev_at = -1, rs_at = -1;
+		int ino_at = -1, uev_at = -1, rs_at = -1, km_at = -1;
+		if (kmsg >= 0 && recst.on) {
+			if (!kmsg_on) kmsg_read(kmsg, 1);
+			km_at = n; pf[n++] = (struct pollfd){ kmsg, POLLIN, 0 };
+		}
+		kmsg_on = kmsg >= 0 && recst.on;
 		if (ino >= 0) { ino_at = n; pf[n++] = (struct pollfd){ ino, POLLIN, 0 }; }
 		if (uev >= 0) { uev_at = n; pf[n++] = (struct pollfd){ uev, POLLIN, 0 }; }
 		if (recsock >= 0) { rs_at = n; pf[n++] = (struct pollfd){ recsock, POLLIN, 0 }; }
@@ -2001,6 +2037,7 @@ int main(int argc, char **argv)
 		}
 		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_read(uev)) { leds_update(); rec_charger(); charger_note(); }
 		if (rs_at >= 0 && (pf[rs_at].revents & POLLIN)) rec_sock_read(recsock);
+		if (km_at >= 0 && (pf[km_at].revents & POLLIN)) kmsg_read(kmsg, 0);
 		save_settings(now);
 		if (ino_at >= 0 && (pf[ino_at].revents & POLLIN)) {
 			char buf[4096];
