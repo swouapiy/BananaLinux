@@ -453,9 +453,22 @@ struct HealthNotice
 		until = now + 12000;
 		return true;
 	}
+	// boot-guard went back to the version before an update that didn't start (its mark, moved to /run): said once
+	void showRollback(double now)
+	{
+		title = "The update didn't start";
+		body = "Banana went back to the version before it by itself. banana/logs/updates.log has the details.";
+		until = now + 15000;
+	}
 	// true when a new notice came
 	bool check(double now)
 	{
+		if (access("/run/banana/rolled-back", F_OK) == 0)
+		{
+			unlink("/run/banana/rolled-back");
+			showRollback(now);
+			return true;
+		}
 		struct stat st;
 		if (stat("/run/banana/health-notice", &st) != 0) return false;
 		long long m = (long long)st.st_mtim.tv_sec * 1000000000LL + st.st_mtim.tv_nsec;
@@ -541,6 +554,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			cs >> lib.testPower.percent >> ch;
 			lib.testPower.charging = ch == "charging";
 			if (low.check(lib.power(), shutdownPercent(o.data), now)) logf("battery %d%%: notice %s", lib.testPower.percent, low.showing(now) ? low.title.c_str() : "hidden");
+		}
+		else if (op == "rollbacknotice")
+		{
+			// rollbacknotice: boot-guard's notice after it went back to the version before (/run/banana/rolled-back)
+			health.showRollback(now);
+			logf("notice: %s", health.title.c_str());
 		}
 		else if (op == "healthnotice")
 		{
