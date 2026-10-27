@@ -2,12 +2,28 @@
 # The boot, to read on a computer: logs/boot.txt (the milestones rcS and banana-ui marked, seconds since the kernel
 # started, with the kernel's own: when it started init) and logs/dmesg.txt (the kernel's log; the previous boot's
 # in dmesg.1.txt). Run by rcS 20 s after boot and by rcK at shutdown, so the file is complete either way.
+# The kernel keeps its last 1 MB (log_buf_len): the shutdown's run keeps the boot's own lines, saved by the first
+# run, and adds only those after them, so a long session (sleep timings fill it fast) doesn't push the boot out.
 L=/data/banana/logs
 mkdir -p $L 2>/dev/null || exit 0
-# (rotated on this boot's first run: the one before kept, a boot that crashed before its shutdown among them)
-[ -f /run/banana/dmesg-saved ] || mv -f $L/dmesg.txt $L/dmesg.1.txt 2>/dev/null
-dmesg > $L/dmesg.txt 2>/dev/null
-touch /run/banana/dmesg-saved
+B=/run/banana/dmesg-boot.txt
+if [ ! -f $B ]; then
+    # (rotated on this boot's first run: the one before kept, a boot that crashed before its shutdown among them)
+    mv -f $L/dmesg.txt $L/dmesg.1.txt 2>/dev/null
+    dmesg > $B 2>/dev/null
+    cp $B $L/dmesg.txt 2>/dev/null
+else
+    # the lines after the boot's last one, by their timestamp; a gap if the kernel dropped some in between
+    last=$(sed -n 's/^\[ *\([0-9]*\.[0-9]*\)\].*/\1/p' $B | tail -n 1)
+    { cat $B
+      dmesg 2>/dev/null | awk -v last="${last:-0}" -v first=1 '
+        match($0, /^\[ *[0-9]+\.[0-9]+\]/) { t = substr($0, 2, RLENGTH - 2) + 0
+            if (t <= last) { seen = 1; next }
+            if (first && !seen) print "--- (the kernel dropped lines here: its log was full) ---"
+            first = 0 }
+        { print }'
+    } > $L/dmesg.txt.new 2>/dev/null && mv -f $L/dmesg.txt.new $L/dmesg.txt
+fi
 {
     date
     cat /proc/cmdline
