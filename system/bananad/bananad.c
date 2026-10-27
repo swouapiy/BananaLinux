@@ -331,6 +331,61 @@ static int wake_inputs(void)
 	return why;
 }
 
+/* the kernel's side of a wake, as Android's wakeup reasons: the interrupt that woke it (/sys/power/pm_wakeup_irq,
+ * PM_SLEEP_DEBUG; named from /proc/interrupts) and the wakeup sources whose event count went up across the sleep.
+ * For sleep.log: a press that never woke it shows as no wake at all, one that woke it as the PMIC's interrupt */
+#define WSRC_MAX 48
+static struct { char dir[24], name[40]; int count; } wsrc[WSRC_MAX];
+static int nwsrc;
+static int wsrc_count(const char *dir, const char *what)
+{
+	char p[300];
+	snprintf(p, sizeof p, "/sys/class/wakeup/%s/%s", dir, what);
+	return read_int(p, -1);
+}
+static void wake_sources_snapshot(void)
+{
+	nwsrc = 0;
+	DIR *d = opendir("/sys/class/wakeup");
+	struct dirent *e;
+	while (d && nwsrc < WSRC_MAX && (e = readdir(d))) {
+		if (e->d_name[0] == '.' || strlen(e->d_name) >= sizeof wsrc[0].dir) continue;
+		char p[300];
+		snprintf(wsrc[nwsrc].dir, sizeof wsrc[0].dir, "%s", e->d_name);
+		snprintf(p, sizeof p, "/sys/class/wakeup/%s/name", e->d_name);
+		read_str(p, wsrc[nwsrc].name, sizeof wsrc[0].name);
+		wsrc[nwsrc].count = wsrc_count(e->d_name, "event_count");
+		nwsrc++;
+	}
+	if (d) closedir(d);
+}
+static void wake_sources_fired(char *out, size_t n)
+{
+	size_t len = 0;
+	out[0] = 0;
+	int irq = read_int("/sys/power/pm_wakeup_irq", -1);
+	if (irq >= 0) {
+		char name[64] = "", ln[512], want[16];
+		snprintf(want, sizeof want, "%d:", irq);
+		FILE *f = fopen("/proc/interrupts", "r");
+		while (f && fgets(ln, sizeof ln, f)) {
+			char *t = ln + strspn(ln, " ");
+			if (strncmp(t, want, strlen(want))) continue;
+			ln[strcspn(ln, "\n")] = 0;
+			char *last = strrchr(ln, ' ');
+			snprintf(name, sizeof name, "%s", last ? last + 1 : "");
+			break;
+		}
+		if (f) fclose(f);
+		len += snprintf(out + len, n - len, "irq %d%s%s", irq, name[0] ? " " : "", name);
+	}
+	for (int i = 0; i < nwsrc && len < n; i++) {
+		int c = wsrc_count(wsrc[i].dir, "event_count");
+		if (c > wsrc[i].count && wsrc[i].count >= 0)
+			len += snprintf(out + len, n - len, "%s%s", len ? ", " : "", wsrc[i].name[0] ? wsrc[i].name : wsrc[i].dir);
+	}
+}
+
 /* ---- sleep ------------------------------------------------------------------------------------------------------
  * Closing the lid: the game is paused, the pre-sleep hooks run (Wi-Fi down), the card is flushed (this kernel skips
  * its own sync), an RTC alarm is set for the battery check, and the SoC suspends to RAM. Opening the lid: the game
@@ -478,6 +533,7 @@ static void suspend_now(const char *why)
 		char rt[32] = "";
 		read_str("/sys/class/rtc/rtc0/since_epoch", rt, sizeof rt);
 		long rtc0 = atol(rt);
+		wake_sources_snapshot();
 		int r = write_file("/sys/power/state", "mem");
 		int err = errno;
 		if (!r && test_wake >= 0) {
@@ -495,12 +551,17 @@ static void suspend_now(const char *why)
 		read_str("/sys/class/rtc/rtc0/wakealarm", pending, sizeof pending);
 		int wc1 = read_int("/sys/class/rtc/rtc0/device/power/wakeup_count", -1);
 		int rtc_fired = alarm && ((wc0 >= 0 && wc1 > wc0) || !pending[0]);
+		char kwake[200];
+		wake_sources_fired(kwake, sizeof kwake);
 		if (alarm) {
 			read_str("/sys/class/rtc/rtc0/since_epoch", rt, sizeof rt);
 			double slept = (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
 			/* (an RTC whose clock doesn't run never reaches its alarm: "moved 0 s" over a long sleep says so) */
-			sleep_log("woke after %.0f s: %s; the RTC's clock moved %ld s", slept,
-				rtc_fired ? "the RTC's alarm" : "not the RTC's alarm (a button, the lid)", atol(rt) - rtc0);
+			sleep_log("woke after %.0f s: %s; the RTC's clock moved %ld s%s%s", slept,
+				rtc_fired ? "the RTC's alarm" : "not the RTC's alarm (a button, the lid)", atol(rt) - rtc0,
+				kwake[0] ? "; the kernel: " : "", kwake);
+		} else if (kwake[0]) {
+			sleep_log("woke: the kernel: %s", kwake);
 		}
 		rtc_alarm(0);
 		cycles++;
