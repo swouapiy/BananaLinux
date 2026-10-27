@@ -23,21 +23,23 @@ echo 1 > $CH/online
 [ $r = 1 ] && ok "a restart: exit 1" || bad "exit $r"
 [ ! -e /data/banana/.restart ] && [ ! -e /data/banana/.charge-next ] && ok "both marks used up" || bad "marks left: $(ls -a /data/banana)"
 
-echo "charging 3. turned off with the charger in: the panels dark, one CPU, amber; the power button held starts it"
+echo "charging 3. turned off with the charger in: the panels dark, amber, asleep; a short press sleeps on, held starts it"
 : > /data/banana/.charge-next
 ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0      # an old press, waiting: not for the charging
-"$W/bananad" --charge & CB=$!
-sleep 0.7
-kill -0 $CB 2>/dev/null && ok "charging (an old press didn't start it)" || bad "bananad --charge gone"
+BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" --charge & CB=$!
+asleep && ok "asleep while charging (an old press didn't start it)" || bad "not asleep"
 [ -e /run/banana/charging ] && ok "/run/banana/charging while it charges" || bad "no /run/banana/charging"
-[ "$(cat $L/amber:charging/brightness)" != 0 ] && [ "$(cat $L/green:power/brightness)" = 0 ] && ok "amber on, green off" ||
+[ "$(cat $L/amber:charging/brightness)" = 255 ] && [ "$(cat $L/green:power/brightness)" = 0 ] && ok "amber on at full (lit asleep), green off" ||
     bad "amber $(cat $L/amber:charging/brightness), green $(cat $L/green:power/brightness)"
+[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +600 ] && ok "a look in 10 min (+600)" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && [ "$(cat /sys/class/backlight/backlight1/bl_power)" = 4 ] && ok "both panels dark" || bad "bl_power not 4"
 [ "$(cat /sys/devices/system/cpu/cpu1/online)$(cat /sys/devices/system/cpu/cpu3/online)" = 00 ] &&
-    [ "$(cat /sys/devices/system/cpu/cpufreq/policy0/scaling_governor)" = powersave ] && ok "one CPU, powersave" || bad "CPUs as they were"
-ev $EV_KEY $KEY_POWER 1; sleep 0.4; ev $EV_KEY $KEY_POWER 0; sleep 0.5
-kill -0 $CB 2>/dev/null && ok "a short press: still charging" || bad "a short press started it"
-ev $EV_KEY $KEY_POWER 1; sleep 1.4
+    [ "$(cat /sys/devices/system/cpu/cpufreq/policy0/scaling_governor)" = powersave ] && ok "one CPU, powersave (for its looks)" || bad "CPUs as they were"
+ev $EV_KEY $KEY_POWER 1; wake; sleep 0.3; ev $EV_KEY $KEY_POWER 0     # a short press wakes it
+for i in $(seq 40); do [ -e /run/test/wake.asleep ] && break; sleep 0.1; done
+asleep && ok "a short press: asleep again, still charging" || bad "awake after a short press"
+kill -0 $CB 2>/dev/null || bad "a short press started it"
+ev $EV_KEY $KEY_POWER 1; wake; sleep 1.4                              # held: it starts
 finish
 ev $EV_KEY $KEY_POWER 0
 [ $r = 0 ] && ok "held a second: exit 0, the boot goes on" || bad "exit $r"
@@ -46,14 +48,17 @@ ev $EV_KEY $KEY_POWER 0
 grep -q "charging while off (turned off with the charger in): battery [0-9]*%" /data/banana/logs/charging.log &&
     grep -q "the power button: starting" /data/banana/logs/charging.log && ok "charging.log" || bad "charging.log: $(cat /data/banana/logs/charging.log)"
 
-echo "charging 4. full: green instead of amber; the charger pulled out turns it off"
-echo 100 > /sys/class/power_supply/battery/capacity
+echo "charging 4. full: green instead of amber at the 10-minute look; the charger pulled out turns it off"
 : > /data/banana/.charge-next
-"$W/bananad" --charge & CB=$!
-sleep 0.7
-[ "$(cat $L/green:power/brightness)" != 0 ] && [ "$(cat $L/amber:charging/brightness)" = 0 ] && ok "full: green on, amber off" ||
+BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" --charge & CB=$!
+asleep && ok "asleep" || bad "not asleep"
+echo 100 > /sys/class/power_supply/battery/capacity
+: > /sys/class/rtc/rtc0/wakealarm; wake                               # the look: full meanwhile
+asleep && ok "asleep again after the look" || bad "awake after the look"
+[ "$(cat $L/green:power/brightness)" = 255 ] && [ "$(cat $L/amber:charging/brightness)" = 0 ] && ok "full: green on, amber off" ||
     bad "green $(cat $L/green:power/brightness), amber $(cat $L/amber:charging/brightness)"
-echo 0 > $CH/online
+grep -q "full after" /data/banana/logs/charging.log && ok "charging.log: full" || bad "full not logged"
+echo 0 > $CH/online; wake                                             # the cable out woke it
 finish
 [ $r = 3 ] && ok "the charger out: exit 3 (rcS turns it off)" || bad "exit $r"
 [ "$(cat $L/green:power/brightness)$(cat $L/amber:charging/brightness)" = 00 ] && ok "the LEDs off" || bad "LEDs left on"

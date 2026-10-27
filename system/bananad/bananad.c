@@ -1283,7 +1283,8 @@ static int charge_mode(void)
 	led_path("power", green, sizeof green);
 	led_path("status", red, sizeof red);
 	led_path("charging", amber, sizeof amber);
-	int level = cfg.led_brightness > 0 ? cfg.led_brightness : 128;	/* (the LEDs are all it shows) */
+	/* the LEDs are all it shows, and at full: asleep, a PWM LED stays lit only at 100% (retain-state-suspended) */
+	int level = 255;
 	led_set(red, "off", level);
 	/* the power button: every input device that has it */
 	struct pollfd pf[16];
@@ -1306,7 +1307,7 @@ static int charge_mode(void)
 	struct input_event ev;
 	for (int i = 0; i < n; i++) while (read(pf[i].fd, &ev, sizeof ev) > 0) {}	/* (what came before isn't for us) */
 	double t0 = mono(), held = 0, look = 0;
-	int full = -1, out = 0, r = -1;
+	int full = -1, out = 0, r = -1, slept = 0, cant_sleep = 0;
 	while (r < 0) {
 		poll(pf, n, held ? 100 : look ? 2000 : 0);	/* (the first look at once) */
 		double now = mono();
@@ -1330,7 +1331,34 @@ static int charge_mode(void)
 			led_set(green, f ? "on" : "off", level);
 			if (f) charge_log("full after %.0f min", (now - t0) / 60);
 		}
+		/* nothing to wait for awake: asleep, as a phone charging while off, until the power button, the cable
+		 * coming out or the next look in 10 minutes (the LED amber or green). Not while the cable looks out (its
+		 * second look comes awake), nor after a suspend that failed (awake then, as before) */
+		if (held || out || cant_sleep) continue;
+		if (!slept) { hooks("pre", 0); sleep_mode(); }	/* (USB and Wi-Fi off, as for a sleep) */
+		rtc_alarm(600);
+		int sr = write_file("/sys/power/state", "mem");
+		int err = errno;
+		if (!sr && test_wake >= 0) {
+			char c;
+			int fd = open(test_asleep, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+			if (fd >= 0) close(fd);
+			while (read(test_wake, &c, 1) < 0 && errno == EINTR) {}
+			unlink(test_asleep);
+		}
+		rtc_alarm(0);
+		if (sr) { cant_sleep = 1; charge_log("it can't sleep while charging (%s): awake instead", strerror(err)); }
+		slept++;
+		look = 0;	/* (the look at once after the wake) */
+		/* the power button held: the press that woke it may be over before its event is read, or still going */
+		for (int i = 0; i < n; i++) {
+			unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = { 0 };
+			if (ioctl(pf[i].fd, EVIOCGKEY(sizeof keys), keys) >= 0 &&
+			    (keys[KEY_POWER / (8 * sizeof(long))] & (1UL << (KEY_POWER % (8 * sizeof(long))))) && !held)
+				held = mono();
+		}
 	}
+	if (slept && !r) hooks("post", 0);	/* (starting: USB and Wi-Fi back) */
 	for (int i = 0; i < n; i++) close(pf[i].fd);
 	unlink("/run/banana/charging");
 	battery_state(bat, sizeof bat, &pct, &charging);
@@ -1785,6 +1813,10 @@ static void rec_minute(void)
 int main(int argc, char **argv)
 {
 	openlog("bananad", LOG_PID, LOG_DAEMON);
+	if (getenv("BANANAD_TEST_WAKE")) {
+		test_wake = open(getenv("BANANAD_TEST_WAKE"), O_RDWR | O_CLOEXEC);
+		snprintf(test_asleep, sizeof test_asleep, "%s.asleep", getenv("BANANAD_TEST_WAKE"));
+	}
 	if (argc > 1 && !strcmp(argv[1], "--charge")) {	/* rcS's, before the menu: charging while off (above) */
 		load_conf("/etc/banana/bananad.conf");
 		load_conf("/data/banana/bananad.conf");
@@ -1792,10 +1824,6 @@ int main(int argc, char **argv)
 		return charge_mode();
 	}
 	test_lid = getenv("BANANAD_TEST_LID");
-	if (getenv("BANANAD_TEST_WAKE")) {
-		test_wake = open(getenv("BANANAD_TEST_WAKE"), O_RDWR | O_CLOEXEC);
-		snprintf(test_asleep, sizeof test_asleep, "%s.asleep", getenv("BANANAD_TEST_WAKE"));
-	}
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();

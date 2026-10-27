@@ -210,7 +210,10 @@ or by bananad), rcK leaves `banana/.charge-next` and restarts instead of powerin
 0xf5 over I2C: a charger plugged in, not the power key) or the mark makes it a charger's start, and a restart's own
 mark (`banana/.restart`, rcK's) keeps a restart from being taken for one, since the RK817 remembers what first
 started it. Then, as a phone does: both panels dark, one CPU on `powersave`, the amber LED until the battery is full
-and the green one after; the power button held a second goes on with the boot, the charger pulled out turns it off.
+and the green one after, and asleep in between (the sleep hooks' `pre` first: USB and Wi-Fi off): a look at the
+battery every 10 minutes (the RTC), the LEDs at full so they stay lit asleep (`retain-state-suspended`). The power
+button wakes it, and held a second goes on with the boot (the `post` hooks first); a short press sleeps on. The
+charger pulled out turns it off. A suspend that fails leaves it charging awake, as before.
 Each one is in `banana/logs/charging.log` (why, the battery at the start, full, the end).
 
 ## What it costs
