@@ -544,6 +544,8 @@ namespace banana
 		add(DEV, "gear", "Sleep timing log", "How long each part of the handheld takes to sleep and to wake.", power, "sleep_debug",
 			{ "Off", "On" }, { "no", "yes" });
 		items.back().hints = { "Not logged.", "Written to banana/logs/sleep-devices.log after each wake." };
+		add(DEV, "moon", "Night test", "A night's data on battery: 2 hours of wakes, 2 hours asleep with the light, 2 without, then off. The report goes to banana/logs/night-test.txt. Press A twice.",
+			"", "night_test", { "" }, { "" }, Item::ACTION);
 		add(DEV, "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About brings it back). Press A twice.",
 			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 	}
@@ -857,6 +859,17 @@ namespace banana
 				setConfValue(data + "/settings.conf", "developer", "off");
 				toRow("about");	// (the Developer row gone: System's About, where the seven A's are)
 				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
+				return MOVED;
+			}
+			if (it.key == "night_test")
+			{
+				// the helper does it all (usr/libexec/banana/night-test); A twice again stops it
+				armed = -1;
+				bool running = !readLine("/run/banana/night-test-status").empty();
+				spawn("/usr/libexec/banana/night-test", running ? "stop" : "start");
+				recordEvent("settings", running ? "night test stopped" : "night test started");
+				if (running) toast("Night test stopped", "What it had so far is in banana/logs/night-test.txt.", 0x6ad07a, 1, 4000);
+				else toast("Night test started", "Close the lid and leave it on battery. The report: banana/logs/night-test.txt.", 0x6ad07a, 1, 5000);
 				return MOVED;
 			}
 			if (it.key == "switch")
@@ -1470,6 +1483,11 @@ namespace banana
 			help = "For working on Banana from a computer: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
 				", with your keys in banana/ssh/authorized_keys on the card.";
 		if (cur.key == "switch" && !message.empty()) help = message;
+		if (cur.key == "night_test")
+		{
+			std::string st = readLine("/run/banana/night-test-status");
+			if (!st.empty()) help = "Running: " + st + ". Press A twice to stop it. The report: banana/logs/night-test.txt.";
+		}
 		if (cur.key == "share")
 		{
 			std::string at = ip.empty() ? "<address>" : ip;

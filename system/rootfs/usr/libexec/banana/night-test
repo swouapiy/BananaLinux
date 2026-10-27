@@ -1,0 +1,145 @@
+#!/bin/sh
+# The night test (Settings > System > Developer options > Night test): a night's data, on battery, for the morning.
+#   1. wake stress, 2 h: the RTC wakes the handheld every 2 min, a full wake (the panels, the sound, the menu), each
+#      looked at (the sound cards, the inputs, the panels; Wi-Fi every 10th), then asleep again
+#   2. asleep with the power light on, 2 h: what it draws
+#   3. asleep with the light off, 2 h: what it draws
+#   4. turned off: what it draws off is battery-while-off.txt's line at the next power-on
+# Its report: banana/logs/night-test.txt. bananad does the sleeping and the waking (its night-test hook: the alarm
+# from /run/banana/night-test, that wake a full one, the next sleep on /run/banana/night-test-sleep); this only
+# decides when, and looks. Stops at 10% (turned off), and A on the row again stops it.
+#   night-test start | stop | status
+# (tests: NT_STRESS, NT_SLEEP, NT_EVERY, NT_MIN seconds/percent; NT_NOOFF=1 doesn't turn off at the end)
+R=/run/banana
+L=/data/banana/logs/night-test.txt
+CONF=/data/banana/bananad.conf
+STRESS=${NT_STRESS:-7200} SLEEP=${NT_SLEEP:-7200} EVERY=${NT_EVERY:-120} MIN=${NT_MIN:-10}
+B=; for d in /sys/class/power_supply/*; do [ "$(cat $d/type 2>/dev/null)" = Battery ] && { B=$d; break; }; done
+
+say() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> $L; }
+status() { echo "$*" > $R/night-test-status; }
+pct() { cat $B/capacity 2>/dev/null || echo 0; }
+q() { cat $B/charge_now 2>/dev/null || echo 0; }
+mv_() { echo $(( $(cat $B/voltage_avg 2>/dev/null || cat $B/voltage_now 2>/dev/null || echo 0) / 1000 )); }
+charger() { for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && return 0; done; return 1; }
+bananad_hup() { kill -HUP $(pidof bananad) 2>/dev/null; }
+# the light while asleep, as bananad.conf says (the card's file; put back at the end)
+led_sleep() {
+    grep -v '^ *led_sleep *=' $CONF 2>/dev/null > $CONF.nt; echo "led_sleep = $1" >> $CONF.nt; mv -f $CONF.nt $CONF
+    bananad_hup
+}
+
+# a sleep asked of bananad, and its wake waited for: the newest "awake (...)" line in sleep.log after the request
+SL=/data/banana/logs/sleep.log
+woke=
+sleep_once() {   # sleep_once <alarm seconds>
+    echo $1 > $R/night-test
+    size=$(wc -c < $SL 2>/dev/null || echo 0)
+    : > $R/night-test-sleep
+    bananad_hup     # (its loop may be in a minute's wait: a signal ends it, and it looks for the request)
+    woke=
+    # (frozen while asleep; the loop goes on after the wake)
+    for i in $(seq 900); do
+        sleep 1
+        [ -e $R/night-test-sleep ] && continue          # not asleep yet
+        now=$(wc -c < $SL 2>/dev/null || echo 0)
+        [ $now -lt $size ] && size=0                    # (sleep.log rotated meanwhile)
+        woke=$(tail -c +$((size + 1)) $SL 2>/dev/null | grep 'awake (' | tail -n 1)
+        [ -n "$woke" ] && return 0
+    done
+    return 1
+}
+
+finish() {   # finish <why>
+    rm -f $R/night-test $R/night-test-sleep
+    [ -n "$LED0" ] && led_sleep $LED0
+    say "$1"
+    rm -f $R/night-test.pid $R/night-test-status $R/night-test-led0
+}
+
+phase_sleep() {   # phase_sleep <name> <seconds>: asleep the whole time but for its last wake, what it drew
+    name=$1; end=$(( $(date +%s) + $2 )); t0=$(date +%s); q0=$(q); p0=$(pct); v0=$(mv_); plugged=
+    status "$name, until $(date -d @$end '+%H:%M' 2>/dev/null || echo "+$2 s")"
+    while [ $(date +%s) -lt $end ]; do
+        charger && plugged=1
+        [ $(pct) -le $MIN ] && return 1
+        left=$(( end - $(date +%s) ))
+        [ $left -gt 0 ] || break
+        sleep_once $left || { say "  $name: no wake seen within 15 min of a sleep's alarm"; break; }
+    done
+    t1=$(date +%s); q1=$(q); s=$((t1 - t0))
+    if [ -n "$plugged" ]; then say "$name: NOT VALID (a charger was plugged in)"
+    elif [ $s -ge 600 ] && [ "$q0" != 0 ]; then
+        t=$(( ((q0 - q1) * 36 + s / 2) / s ))
+        say "$name: ${p0}% $v0 mV -> $(pct)% $(mv_) mV, $(( (q0 - q1) / 1000 )) mAh in $((s / 3600)).$((s % 3600 / 360)) h: $((t / 10)).$((t % 10 < 0 ? -t % 10 : t % 10)) mA on average"
+    else say "$name: too short to measure ($s s)"; fi
+    return 0
+}
+
+run() {
+    : > $R/night-test.pid; echo $$ > $R/night-test.pid
+    LED0=$(sed -n 's/^ *led_sleep *= *//p' $CONF 2>/dev/null | tail -n 1); LED0=${LED0:-on}
+    echo $LED0 > $R/night-test-led0     # (for a stop from the menu)
+    {
+        echo
+        echo "=== the night test, $(date '+%Y-%m-%d %H:%M'): $(cat /etc/banana/board 2>/dev/null), slot $(cat $R/slot 2>/dev/null), battery $(pct)% $(mv_) mV$(charger && echo ', ON THE CHARGER: the drain parts will say not valid')"
+        echo "  wake stress $((STRESS / 60)) min (a wake every $EVERY s), asleep with the light on $((SLEEP / 60)) min, with it off $((SLEEP / 60)) min, then off"
+    } >> $L
+    # ---- 1. wake stress ----
+    cards0=$(grep -c '^ *[0-9]' /proc/asound/cards 2>/dev/null); inputs0=$(ls /dev/input/event* 2>/dev/null | wc -l)
+    panels0=$(cat /sys/class/drm/*-DSI-*/status 2>/dev/null | grep -c '^connected')
+    wifi0=$(cat /sys/class/net/wlan0/operstate 2>/dev/null)
+    fail0=$(cat /sys/power/suspend_stats/fail 2>/dev/null || echo 0)
+    end=$(( $(date +%s) + STRESS )); n=0; bad=0; worst=0; total=0; q0=$(q); t0=$(date +%s)
+    status "wake stress, until $(date -d @$end '+%H:%M' 2>/dev/null || echo "+$STRESS s")"
+    while [ $(date +%s) -lt $end ]; do
+        [ $(pct) -le $MIN ] && { finish_low; return; }
+        if ! sleep_once $EVERY; then say "  wake $((n + 1)): no wake seen within 15 min"; bad=$((bad + 1)); break; fi
+        n=$((n + 1))
+        case "$woke" in *"awake (night test)"*) ;; *) say "  wake $n: not the test's alarm: ${woke#* * }" ;; esac
+        ms=$(echo "$woke" | sed -n 's/.*back \([0-9]*\)\.[0-9]* ms after the kernel.*/\1/p'); ms=${ms:-0}
+        total=$((total + ms)); [ $ms -gt $worst ] && worst=$ms
+        sleep 2   # (the post hooks: USB, Wi-Fi's first steps)
+        why=
+        [ "$(grep -c '^ *[0-9]' /proc/asound/cards 2>/dev/null)" = "$cards0" ] || why="$why sound cards $(grep -c '^ *[0-9]' /proc/asound/cards) (was $cards0);"
+        [ "$(ls /dev/input/event* 2>/dev/null | wc -l)" = "$inputs0" ] || why="$why inputs $(ls /dev/input/event* | wc -l) (was $inputs0);"
+        [ "$(cat /sys/class/drm/*-DSI-*/status 2>/dev/null | grep -c '^connected')" = "$panels0" ] || why="$why panels connected $(cat /sys/class/drm/*-DSI-*/status | grep -c '^connected') (was $panels0);"
+        if [ $((n % 10)) = 0 ] && [ "$wifi0" = up ]; then
+            for i in $(seq 30); do [ "$(cat /sys/class/net/wlan0/operstate 2>/dev/null)" = up ] && break; sleep 1; done
+            [ "$(cat /sys/class/net/wlan0/operstate 2>/dev/null)" = up ] || why="$why Wi-Fi not back in 30 s;"
+        fi
+        [ -n "$why" ] && { bad=$((bad + 1)); say "  wake $n: FAILED:$why"; }
+    done
+    fail1=$(cat /sys/power/suspend_stats/fail 2>/dev/null || echo 0)
+    s=$(( $(date +%s) - t0 )); used=$(( ($(q) - q0) / -1000 ))
+    say "wake stress: $n wakes, $bad failed, suspends failed $((fail1 - fail0)); back after ${worst} ms at worst, $([ $n -gt 0 ] && echo $((total / n)) || echo 0) ms on average; $used mAh in $((s / 60)) min"
+    # ---- 2, 3. asleep, the light on, then off ----
+    led_sleep on;  phase_sleep "asleep, the light on" $SLEEP  || { finish_low; return; }
+    led_sleep off; phase_sleep "asleep, the light off" $SLEEP || { finish_low; return; }
+    # ---- 4. off ----
+    finish "turned off at $(pct)% $(mv_) mV: what it draws off is battery-while-off.txt's line at the next power-on"
+    [ "${NT_NOOFF:-0}" = 1 ] || poweroff
+}
+finish_low() {
+    finish "stopped at $(pct)%: the battery is low (under $MIN%); turned off"
+    [ "${NT_NOOFF:-0}" = 1 ] || poweroff
+}
+
+case $1 in
+start)
+    [ -n "$B" ] || { echo "no battery" >&2; exit 1; }
+    [ -f $R/night-test.pid ] && kill -0 $(cat $R/night-test.pid) 2>/dev/null && exit 0
+    mkdir -p /data/banana/logs
+    setsid "$0" run < /dev/null > /dev/null 2>&1 &
+    ;;
+run) run ;;
+stop)
+    p=$(cat $R/night-test.pid 2>/dev/null)
+    [ -n "$p" ] && kill $p 2>/dev/null
+    LED0=$(cat $R/night-test-led0 2>/dev/null)
+    finish "stopped from the menu"
+    ;;
+status) cat $R/night-test-status 2>/dev/null ;;
+*) echo "usage: night-test start | stop | status" >&2; exit 1 ;;
+esac
+exit 0

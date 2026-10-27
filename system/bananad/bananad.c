@@ -696,6 +696,11 @@ static void panel_off_again(void)
 
 static int charger_online(void);
 static int in_suspend;	/* suspend_now is running: a shutdown from it is a turn-off from sleep (shutdown_now) */
+/* the night test (usr/libexec/banana/night-test, from Developer options): while /run/banana/night-test holds a number
+ * of seconds, the sleep's alarm is that one, and its wake a full wake (the helper looks, then asks for the next sleep
+ * with /run/banana/night-test-sleep); the battery check, turning off when idle and the lid's sleep wait meanwhile */
+static int night_test_every(void) { return read_int("/run/banana/night-test", 0); }
+
 static void suspend_now(const char *why)
 {
 	double t0 = mono();
@@ -739,6 +744,8 @@ static void suspend_now(const char *why)
 		/* on the charger: no turning off, and a look every 10 minutes for the charging light (amber until full) */
 		if (charger_online()) secs = secs > 0 && secs < 600 ? secs : 600;
 		else if (off_in > 0 && (secs <= 0 || off_in < secs)) secs = (int)off_in + (off_in > (int)off_in);
+		int night = night_test_every();
+		if (night > 0) secs = night;
 		time_t alarm = rtc_alarm(secs);
 		double t_in = mono();
 		struct timespec b0, b1;
@@ -803,6 +810,7 @@ static void suspend_now(const char *why)
 		cycles++;	/* the suspends that happened: a failed one doesn't count as "slept again" (#101) */
 		asleep += (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
 		/* why it woke: the battery check's alarm, or someone (lid, power button) */
+		if (rtc_fired && night > 0) { woke = "night test"; break; }	/* (a full wake: the helper's look) */
 		if (rtc_fired) {
 			rtc_wakes++;
 			leds_update();	/* (the charging light out once the battery is full) */
@@ -2135,6 +2143,7 @@ int main(int argc, char **argv)
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
+		if (wait > 1 && night_test_every() > 0) wait = 1;	/* (the night test's request for the next sleep looked for) */
 		if (recst.on && sel_down && !sel_marked && wait > 0.1) wait = 0.1;	/* (Select held: the marker at 2 s) */
 		if (sound_child > 0 && wait > 0.05) wait = 0.05;	/* the sound's setup running: its end looked for (the first second or so) */
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
@@ -2206,7 +2215,9 @@ int main(int argc, char **argv)
 			shutdown_now("idle");
 		}
 		/* started or woken with the lid shut */
-		if (lid_closed && cfg.lid_sleep && !lid_retry_off && now - last_input > 5) suspend_now("lid still closed");
+		if (!access("/run/banana/night-test-sleep", F_OK)) { unlink("/run/banana/night-test-sleep"); suspend_now("night test"); }
+		else if (lid_closed && cfg.lid_sleep && !lid_retry_off && now - last_input > 5 && night_test_every() <= 0)
+			suspend_now("lid still closed");
 
 		if (now >= next_battery) {
 			next_battery = now + 60;
