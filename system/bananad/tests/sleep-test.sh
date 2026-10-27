@@ -501,6 +501,9 @@ stop
 # more scenarios, a file per topic (tests/sleep-test.d), run here in turn with the helpers above
 for t in "$HERE"/tests/sleep-test.d/*.sh; do [ -f "$t" ] && . "$t"; done
 
+# more scenarios, a file per topic (tests/sleep-test.d), run here in turn with the helpers above
+for t in "$HERE"/tests/sleep-test.d/*.sh; do [ -f "$t" ] && . "$t"; done
+
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
 [ $fail = 0 ]

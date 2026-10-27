@@ -558,9 +558,11 @@ static void panel_off_again(void)
 }
 
 static int charger_online(void);
+static int in_suspend;	/* suspend_now is running: a shutdown from it is a turn-off from sleep (shutdown_now) */
 static void suspend_now(const char *why)
 {
 	double t0 = mono();
+	in_suspend = 1;
 	pid_t game = pid_of("/run/banana/game.pid");
 	pid_t pg = game ? getpgid(game) : 0;
 	if (pg > 0) kill(-pg, SIGSTOP);	/* DraStic's dynarec mustn't run on while the clocks drop (ROCKNIX's finding) */
@@ -713,6 +715,7 @@ static void suspend_now(const char *why)
 	sleep_log("awake (%s) after %.0f s asleep%s%s, game and menu back %.1f ms after the kernel", woke, asleep,
 		rtc_wakes ? ", battery checked" : "", cycles - rtc_wakes > 1 ? ", slept again with the lid shut" : "",
 		(t_back - t_wake) * 1000);
+	in_suspend = 0;
 }
 
 static void shutdown_now(const char *why)
@@ -720,6 +723,8 @@ static void shutdown_now(const char *why)
 	static int once;	/* (the reasons can line up: an idle turn-off and the battery in the same pass) */
 	if (once++) return;
 	say("shutting down (%s)", why);
+	/* turned off from sleep: the hooks hear "off" (95-battery: what the sleep cost, which a wake would have logged) */
+	if (in_suspend) { in_suspend = 0; hooks("off", 0); }
 	rec("power", "shutting down (%s)", why);
 	rec_flush();
 	pid_t game = pid_of("/run/banana/game.pid");
