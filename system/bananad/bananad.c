@@ -148,6 +148,29 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "idle_in_games")) cfg.idle_in_games = !strcmp(v, "yes") || !strcmp(v, "1");
 	}
 	fclose(f);
+	/* a value out of its range, a typo or an old file's, is brought back into it (and said so): power_long_ms = 0
+	 * made a tap a shutdown, battery_shutdown_percent = 100 turned it off at once */
+	#define RANGE(field, lo, hi, name) do { if (!(cfg.field >= (lo) && cfg.field <= (hi))) {	/* (NaN too) */ \
+		double was = cfg.field; cfg.field = cfg.field < (lo) ? (lo) : (hi); \
+		say("%s: %s = %g is out of %g..%g: %g", path, name, was, (double)(lo), (double)(hi), (double)cfg.field); } } while (0)
+	RANGE(volume_step, 1, 50, "volume_step");
+	RANGE(brightness_step, 1, 50, "brightness_step");
+	RANGE(autosleep_min, 0, 1440, "autosleep_minutes");
+	RANGE(power_long_ms, 500, 10000, "power_long_ms");
+	RANGE(battery_off_pct, 0, 20, "battery_shutdown_percent");
+	RANGE(led_brightness, 0, 255, "led_brightness");
+	RANGE(led_low, 0, 100, "led_low_percent");
+	RANGE(led_critical, 0, cfg.led_low, "led_critical_percent");
+	RANGE(sleep_check_hours, 0, 48, "sleep_check_hours");
+	RANGE(sleep_poweroff_pct, 0, 20, "sleep_poweroff_percent");
+	RANGE(dim_min, 0, 1440, "dim_minutes");
+	RANGE(dim_pct, 5, 100, "dim_percent");
+	RANGE(poweroff_min, 0, 10080, "poweroff_minutes");
+	#undef RANGE
+	if (strcmp(cfg.mem_sleep, "deep") && strcmp(cfg.mem_sleep, "s2idle")) {
+		say("%s: mem_sleep = %s isn't deep or s2idle: deep", path, cfg.mem_sleep);
+		snprintf(cfg.mem_sleep, sizeof cfg.mem_sleep, "deep");
+	}
 }
 
 /* the time zone the settings screen keeps in banana-ui's settings.conf (a POSIX rule), for sleep.log's times */
