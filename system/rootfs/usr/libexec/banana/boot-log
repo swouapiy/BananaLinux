@@ -7,11 +7,11 @@ mkdir -p $L 2>/dev/null || exit 0
 # The battery when the handheld was turned off and when it came on again (#34: does it charge while off?):
 # logs/battery-while-off.txt, a line a boot. rcK runs this with "off" to note it at shutdown.
 bat() {
-    B=/sys/class/power_supply/battery; c=0
+    P=/sys/class/power_supply/battery; c=0
     for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && c=1; done
     # (the rk817 has no voltage_now: the average, and at boot the one it measured as the handheld came on)
-    v=$(cat $B/voltage_avg 2>/dev/null); [ "$1" = boot ] && v=$(cat $B/voltage_boot 2>/dev/null || echo $v)
-    echo "$(date +%s) $(cat $B/capacity 2>/dev/null) ${v:-0} $c $(cat $B/charge_now 2>/dev/null || echo 0)"
+    v=$(cat $P/voltage_avg 2>/dev/null); [ "$1" = boot ] && v=$(cat $P/voltage_boot 2>/dev/null || echo $v)
+    echo "$(date +%s) $(cat $P/capacity 2>/dev/null) ${v:-0} $c $(cat $P/charge_now 2>/dev/null || echo 0)"
 }
 # (the power-on line first, once a boot, also when it turns off again before rcS's run: a start for charging)
 if [ ! -f /run/banana/battery-noted ] && [ -f $L/battery-off.txt ]; then
