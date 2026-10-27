@@ -58,6 +58,11 @@ rollback() {   # rollback <now|clean> <why>
 
 case $1 in
 early)
+    # a rollback's mark, for the menu's notice (once: moved off /boot)
+    if [ -f "$BOOT/rolled-back" ]; then
+        mkdir -p "$RUN"; cp "$BOOT/rolled-back" "$RUN/rolled-back" 2>/dev/null
+        boot_rw; rm -f "$BOOT/rolled-back"; boot_ro
+    fi
     [ -f "$TRIAL" ] || exit 0
     read -r new prev starts < "$TRIAL"
     [ -n "$new" ] && [ -n "$prev" ] || { boot_rw; rm -f "$TRIAL"; boot_ro; exit 0; }

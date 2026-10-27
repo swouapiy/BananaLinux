@@ -49,6 +49,10 @@ echo "4. a second start of the trial (the first never reached the menu: turned o
 card b b "b a 1"; run early || true
 [ "$(default)" = a ] && [ "$(restarts)" = now ] && ok "DEFAULT a, restarted at once (now)" || bad "default $(default), restarts '$(restarts)'"
 grep -q "its last start didn't reach the menu" "$R/boot/rolled-back" && ok "the reason noted" || bad "rolled-back: $(cat "$R/boot/rolled-back" 2>/dev/null)"
+# the next start (slot a, the one before): the mark handed to the menu's notice, once
+echo a > "$R/run/banana/slot"; rm -f "$T/restarts"; run early
+[ -f "$R/run/banana/rolled-back" ] && [ ! -e "$R/boot/rolled-back" ] && ok "the next start: the mark moved to /run for the menu's notice" ||
+    bad "rolled-back: /boot $(ls "$R/boot/rolled-back" 2>&1), /run $(ls "$R/run/banana/rolled-back" 2>&1)"
 
 echo "5. a trial for the other slot (DEFAULT changed by hand): cleared, nothing else"
 card a a "b a"; run early; settle
