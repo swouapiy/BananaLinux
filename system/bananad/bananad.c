@@ -716,7 +716,7 @@ static void suspend_now(const char *why)
 		double t_in = mono();
 		struct timespec b0, b1;
 		clock_gettime(CLOCK_BOOTTIME, &b0);	/* BOOTTIME counts the time asleep, MONOTONIC doesn't */
-		if (cycles == 0) sleep_log("sleep (%s): %.0f ms to suspend%s", why, (t_in - t0) * 1000, game ? ", game paused" : "");
+		if (cycles == 0 && failures == 0) sleep_log("sleep (%s): %.0f ms to suspend%s", why, (t_in - t0) * 1000, game ? ", game paused" : "");
 		/* the RTC's wakeup count and clock now, to tell its alarm's wake from a button's, and that its clock runs */
 		rec_flush();	/* (the recording on the card before the sleep) */
 		int wc0 = read_int("/sys/class/rtc/rtc0/device/power/wakeup_count", -1);
@@ -754,7 +754,6 @@ static void suspend_now(const char *why)
 			sleep_log("woke: the kernel: %s", kwake);
 		}
 		rtc_alarm(0);
-		cycles++;
 		int pressed = wake_inputs();	/* (what woke it, or came in while it tried) */
 		if (r) {
 			/* it didn't suspend: devices one at a time, then the lighter s2idle, then give up and blank the panels.
@@ -774,6 +773,7 @@ static void suspend_now(const char *why)
 			lid_retry_off = 1;	/* ...and not tried again every 5 s with the lid still shut */
 			break;
 		}
+		cycles++;	/* the suspends that happened: a failed one doesn't count as "slept again" (#101) */
 		asleep += (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
 		/* why it woke: the battery check's alarm, or someone (lid, power button) */
 		if (rtc_fired) {
