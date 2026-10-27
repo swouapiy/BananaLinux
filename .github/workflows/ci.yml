@@ -17,11 +17,11 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30     # (about 10 normally; a test that hangs fails here, not after GitHub's six hours)
+    timeout-minutes: 60     # (about 10 normally, 30+ when the runner's Ubuntu mirror crawls; a hung test fails here, not after six hours)
     steps:
       - uses: actions/checkout@v4
       - name: Packages
-        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu clang
+        run: sudo apt-get update && sudo apt-get install -y -o Acquire::Retries=3 libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu clang
       - name: banana-ui (headless test, both panel sizes)
         run: make test
       - name: Fuzz the readers of the card's files (themes, expressions, zips, ROM banners, Banana's own files)
@@ -43,7 +43,7 @@ jobs:
       - name: The boot's hardware check (against a made-up handheld's /proc and /sys; dash, then BusyBox as on the handheld)
         run: |
           sh system/tests/health-test.sh
-          sudo apt-get install -y busybox-static
+          sudo apt-get install -y -o Acquire::Retries=3 busybox-static
           mkdir -p /tmp/bb; for a in sh awk sed grep cat ls mkdir rm touch mv sleep printf date cut tr head tail env timeout; do ln -sf /bin/busybox /tmp/bb/$a; done
           PATH=/tmp/bb:$PATH busybox sh system/tests/health-test.sh
       - name: A new system on trial, and the boot's breadcrumbs (against a made-up card; dash, then BusyBox)
