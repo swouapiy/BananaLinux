@@ -1462,7 +1462,12 @@ static int charge_mode(void)
 	char bat[256] = "";
 	int pct = -1, charging = 0;
 	battery_state(bat, sizeof bat, &pct, &charging);
-	charge_log("charging while off (%s): battery %d%%", why, pct);
+	char amb[300], bp[320];
+	led_path("charging", amb, sizeof amb);
+	snprintf(bp, sizeof bp, "%s/brightness", amb);
+	int lit = amb[0] ? read_int(bp, -1) : -1;	/* (U-Boot lights it with a charger in, uboot-patches/004) */
+	charge_log("charging while off (%s): battery %d%%, the charging light %s", why, pct,
+		lit > 0 ? "already on (U-Boot)" : lit == 0 ? "off until now" : "not found");
 	close(open("/run/banana/charging", O_WRONLY | O_CREAT | O_CLOEXEC, 0644));	/* (for a boot's own waits) */
 	backlights_power(0);
 	cpus_low(1);
