@@ -12,7 +12,8 @@ pre)
     charger && { rm -f $F; exit 0; }
     now > $F
     ;;
-post)
+post|off)    # off: turned off from sleep (the battery check, or asleep long enough)
+    how=; [ "$1" = off ] && how=', then turned off'
     [ -f $F ] || exit 0
     read -r t0 q0 p0 v0 < $F; rm -f $F
     charger && exit 0   # plugged in meanwhile: the counter went up
@@ -20,11 +21,11 @@ post)
     s=$((t1 - t0)); [ $s -ge 60 ] || exit 0     # a sleep of seconds says nothing
     [ "$q0" != - ] && [ "$q1" != - ] || exit 0
     used=$(( (q0 - q1) / 1000 ))                # mAh
-    # the average current, mA: used over hours, to a tenth
-    ma=$(( (q0 - q1) * 36 / s / 10 )); tenth=$(( (q0 - q1) * 36 / s % 10 ))
-    printf '%s battery while asleep: %s%% %s mV -> %s%% %s mV, %s mAh in %d.%d h: %d.%d mA on average\n' \
+    # the average current, mA: used over hours, to the nearest tenth
+    t=$(( ((q0 - q1) * 36 + s / 2) / s )); ma=$((t / 10)); tenth=$((t % 10))
+    printf '%s battery while asleep: %s%% %s mV -> %s%% %s mV, %s mAh in %d.%d h: %d.%d mA on average%s\n' \
         "$(date '+%Y-%m-%d %H:%M:%S')" "$p0" $((v0 / 1000)) "$p1" $((v1 / 1000)) $used $((s / 3600)) $((s % 3600 / 360)) \
-        $ma ${tenth#-} >> /data/banana/logs/sleep.log
+        $ma ${tenth#-} "$how" >> /data/banana/logs/sleep.log
     ;;
 esac
 exit 0
