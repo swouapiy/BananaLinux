@@ -7,7 +7,7 @@ happens inside the display subsystem's resume callback, so every device
 after it and all of user space wait for it: on the handheld the screens
 took 2.7 s to come back after a key press.
 
-Queue the restore on system_unbound_wq and return at once, as phones do
+Queue the restore on system_dfl_wq and return at once, as phones do
 (their display comes up in parallel with the rest of the resume). The
 rest of the system resumes and thaws meanwhile; a commit from user space
 waits on the modeset locks the restore holds. A suspend flushes a restore
@@ -70,7 +70,7 @@ diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_drv.c b/drivers/gpu/drm/rockc
 +		return 0;
 +
 +	rockchip_drm_resuming = drm;
-+	queue_work(system_unbound_wq, &rockchip_drm_resume_work);
++	queue_work(system_dfl_wq, &rockchip_drm_resume_work);
 +
 +	return 0;
  }
