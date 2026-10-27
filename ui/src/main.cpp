@@ -39,6 +39,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <iterator>
 #include <future>
 #include <list>
 #include <sys/stat.h>
@@ -256,6 +257,7 @@ struct Options
 	std::string systems = "/etc/banana/systems.conf", roms = "/data/roms", data = "/data/banana";
 	std::string top = "DSI-2", touch = "fe5e0000.i2c";
 	std::string headless, script;
+	long repeat = 1;	// --repeat: the script run this many times over (the soak test)
 	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
 	int w = 640, h = 480;
 };
@@ -538,6 +540,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		if (low.showing(now)) settings.notice(low.title, low.body, low.percent);
 		else if (health.showing(now)) settings.notice(health.title, health.body, -1);
 	};
+	for (long pass = 0; pass < o.repeat; pass++, ss.clear(), ss.seekg(0))
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -547,6 +550,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
+		else if (op == "rss")
+		{
+			// rss: the memory in use now (the soak test reads these over a long run for a leak)
+			std::ifstream f("/proc/self/status");
+			std::string l;
+			while (std::getline(f, l)) if (l.compare(0, 6, "VmRSS:") == 0) logf("rss %s", l.c_str() + 6 + strspn(l.c_str() + 6, " \t"));
+		}
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -1085,7 +1095,16 @@ int main(int argc, char** argv)
 		else if (a == "--roms") o.roms = next();
 		else if (a == "--data") o.data = next();
 		else if (a == "--headless") o.headless = next();
-		else if (a == "--script") o.script = next();
+		else if (a == "--repeat") o.repeat = std::max(1L, atol(next().c_str()));
+		else if (a == "--script")
+		{
+			o.script = next();
+			if (!o.script.empty() && o.script[0] == '@')	// @file: a script too long for the command line (the soak test's)
+			{
+				std::ifstream f(o.script.substr(1));
+				o.script.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+			}
+		}
 		else if (a == "--theme") o.theme = next();
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
