@@ -1416,6 +1416,16 @@ static void rec_mark(void)
 	static int marks;
 	rec("MARK", "*** marker %d ***", ++marks);
 	rec_flush();
+	/* the kernel's log as it is now, beside the session (<session>-marker-N-dmesg.txt): what the drivers said about
+	 * the moment marked, before later lines push it out */
+	size_t l = strlen(recst.path);
+	if (l > 4 && !strcmp(recst.path + l - 4, ".txt")) {
+		char cmd[300];
+		snprintf(cmd, sizeof cmd, "dmesg > '%.*s-marker-%d-dmesg.txt'", (int)(l - 4), recst.path, marks);
+		spawn_bg((char *const[]){ "/bin/sh", "-c", cmd, NULL });
+		const char *base = strrchr(recst.path, '/') ? strrchr(recst.path, '/') + 1 : recst.path;
+		rec("MARK", "the kernel's log saved: %.*s-marker-%d-dmesg.txt", (int)(strlen(base) - 4), base, marks);
+	}
 	char green[300] = "";
 	led_path("power", green, sizeof green);
 	if (green[0]) {
