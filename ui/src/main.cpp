@@ -1818,8 +1818,10 @@ int main(int argc, char** argv)
 	recordEvent("menu", "quit");
 	bottomIdle.setOwned(false, nowMs());	// the backlight and the marker back as they were
 	worker.finish();
-	// not straight after a game: a shutdown from it (the power button held) gives rcK's 3 s to its saves instead
-	if (shuttingDown && disp.isOpen() && settings["splash"] != "off" && nowMs() - gameEnded > 2000)
+	// not straight after a game: a shutdown from it (the power button held) gives rcK's 3 s to its saves instead;
+	// not when it turns off from sleep either (bananad's mark): the panels are dark, nobody would see it
+	if (shuttingDown && disp.isOpen() && settings["splash"] != "off" && nowMs() - gameEnded > 2000 &&
+		access("/run/banana/quiet-shutdown", F_OK) != 0)
 	{
 		logf("shutdown animation");
 		playOutro(disp, be, o, variant, sound);

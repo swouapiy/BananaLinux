@@ -810,7 +810,12 @@ static void shutdown_now(const char *why)
 	if (once++) return;
 	say("shutting down (%s)", why);
 	/* turned off from sleep: the hooks hear "off" (95-battery: what the sleep cost, which a wake would have logged) */
-	if (in_suspend) { in_suspend = 0; hooks("off", 0); }
+	if (in_suspend) {
+		in_suspend = 0;
+		hooks("off", 0);
+		/* the panels are dark: banana-ui's shutdown animation would play unseen, a second and a half of shutdown */
+		close(open("/run/banana/quiet-shutdown", O_WRONLY | O_CREAT | O_CLOEXEC, 0644));
+	}
 	rec("power", "shutting down (%s)", why);
 	rec_flush();
 	pid_t game = pid_of("/run/banana/game.pid");

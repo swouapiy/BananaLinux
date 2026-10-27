@@ -25,6 +25,8 @@ echo 1980000 > $B/charge_now; echo 3 > $B/capacity                   # 20 mAh us
 : > /sys/class/rtc/rtc0/wakealarm; wake                               # the battery check's alarm
 for i in $(seq 30); do [ $POWEROFF = 1 ] && break; sleep 0.1; done
 [ $POWEROFF = 1 ] && ok "turned off at 3%" || bad "not turned off"
+[ -e /run/banana/quiet-shutdown ] && ok "marked for banana-ui: no shutdown animation from sleep" || bad "no /run/banana/quiet-shutdown"
+rm -f /run/banana/quiet-shutdown
 grep -q 'battery while asleep: 4% 3800 mV -> 3% 3800 mV, 20 mAh in 2.0 h: 10.0 mA on average, then turned off$' /data/banana/logs/sleep.log &&
     ok "logged: $(grep 'then turned off' /data/banana/logs/sleep.log | tail -n1 | cut -c21-)" || bad "not logged: $(grep 'battery while' /data/banana/logs/sleep.log | tail -n1)"
 stop
