@@ -13,15 +13,20 @@ bat() {
     v=$(cat $B/voltage_avg 2>/dev/null); [ "$1" = boot ] && v=$(cat $B/voltage_boot 2>/dev/null || echo $v)
     echo "$(date +%s) $(cat $B/capacity 2>/dev/null) ${v:-0} $c $(cat $B/charge_now 2>/dev/null || echo 0)"
 }
-if [ "$1" = off ]; then bat > $L/battery-off.txt 2>/dev/null; sync
-elif [ ! -f /run/banana/dmesg-saved ] && [ -f $L/battery-off.txt ]; then
+# (the power-on line first, once a boot, also when it turns off again before rcS's run: a start for charging)
+if [ ! -f /run/banana/battery-noted ] && [ -f $L/battery-off.txt ]; then
     read -r t0 p0 v0 c0 q0 < $L/battery-off.txt
     set -- $(bat boot)
+    m=$(( ($1 - t0) / 60 )); g=$(( ($5 - ${q0:-0}) / 1000 ))
+    # what it drew while off, on battery all along, as sleep.log's "battery while asleep" (from 10 min on)
+    a=; [ "$c0" = 0 ] && [ "$4" = 0 ] && [ $m -ge 10 ] && [ $g -le 0 ] && a=", $(( -g * 60 / m )) mA on average"
     { tail -n 19 $L/battery-while-off.txt 2>/dev/null
-      echo "$(date '+%F %T'): off $(( ($1 - t0) / 60 )) min, battery ${p0}% $((v0 / 1000)) mV -> ${2}% $(($3 / 1000)) mV at power-on, gauge $(( ($5 - ${q0:-0}) / 1000 )) mAh (charger at shutdown: $([ "$c0" = 1 ] && echo in || echo out), now: $([ "$4" = 1 ] && echo in || echo out))"
+      echo "$(date '+%F %T'): off $m min, battery ${p0}% $((v0 / 1000)) mV -> ${2}% $(($3 / 1000)) mV at power-on, gauge $g mAh$a (charger at shutdown: $([ "$c0" = 1 ] && echo in || echo out), now: $([ "$4" = 1 ] && echo in || echo out))"
     } > $L/battery-while-off.txt.new 2>/dev/null && mv -f $L/battery-while-off.txt.new $L/battery-while-off.txt
     rm -f $L/battery-off.txt
 fi
+touch /run/banana/battery-noted 2>/dev/null
+[ "$1" = off ] && { bat > $L/battery-off.txt 2>/dev/null; sync; }
 # (rotated on this boot's first run: the one before kept, a boot that crashed before its shutdown among them)
 [ -f /run/banana/dmesg-saved ] || mv -f $L/dmesg.txt $L/dmesg.1.txt 2>/dev/null
 dmesg > $L/dmesg.txt 2>/dev/null
