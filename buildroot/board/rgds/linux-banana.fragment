@@ -176,3 +176,8 @@ CONFIG_EXTCON=y
 # CONFIG_USB_DWC2 is not set
 # the name before init sets it (ROCKNIX fills its @DEVICENAME@ in at build time; Banana is "banana")
 CONFIG_DEFAULT_HOSTNAME="banana"
+# the sound's underruns and DMA position errors reported (bananad turns /proc/asound/*/pcm*p/xrun_debug on while
+# the flight recorder records): to tell a crackle that is the sound running dry from one that isn't
+CONFIG_SND_DEBUG=y
+CONFIG_SND_VERBOSE_PROCFS=y
+CONFIG_SND_PCM_XRUN_DEBUG=y

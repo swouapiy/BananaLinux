@@ -562,9 +562,35 @@ static void rec_start(void)
 	if (fd >= 0) { if (write(fd, recst.path, strlen(recst.path)) < 0) {} close(fd); }
 }
 /* recorder on or off, as bananad.conf says now */
+/* the kernel's word on each sound underrun or overrun ("XRUN: pcmC0D0p", and a DMA position gone wrong), while it
+ * records: a crackle marked then shows whether the sound ran dry (/proc/asound/cardN/pcmNp/xrun_debug, kernel
+ * SND_PCM_XRUN_DEBUG; what Android's audio dumps count as underruns) */
+static void xrun_debug(int on)
+{
+	DIR *d = opendir("/proc/asound");
+	struct dirent *e;
+	while (d && (e = readdir(d))) {
+		if (strncmp(e->d_name, "card", 4)) continue;
+		char p[300];
+		snprintf(p, sizeof p, "/proc/asound/%s", e->d_name);
+		DIR *c = opendir(p);
+		struct dirent *f;
+		while (c && (f = readdir(c))) {
+			size_t n = strlen(f->d_name);
+			if (strncmp(f->d_name, "pcm", 3) || n < 5 || f->d_name[n - 1] != 'p') continue;
+			char q[600];
+			snprintf(q, sizeof q, "%s/%s/xrun_debug", p, f->d_name);
+			write_file(q, on ? "1" : "0");
+		}
+		if (c) closedir(c);
+	}
+	if (d) closedir(d);
+}
+
 static void rec_apply(void)
 {
 	if (cfg.recorder && !recst.on) {
+		xrun_debug(1);
 		recst.on = 1;
 		rec_start();
 		recst.flush_at = mono() + 30;
@@ -574,6 +600,7 @@ static void rec_apply(void)
 		rec_flush();
 		recst.on = 0;
 		unlink("/run/banana/recording");
+		xrun_debug(0);
 	}
 }
 
@@ -977,6 +1004,7 @@ static void audio_route(void)
 static void audio_setup(void)
 {
 	audio_find_cards();
+	if (recst.on) xrun_debug(1);	/* (cards that came after the recorder started) */
 	if (card_codec < 0) { audio_route(); return; }	/* no sound card at all (QEMU): nothing to set */
 	char c[16];
 	snprintf(c, sizeof c, "%d", card_codec);
@@ -1945,8 +1973,10 @@ static void kmsg_read(int fd, int fresh)
 		if (n <= 0) break;
 		b[n] = 0;
 		char *msg = strchr(b, ';');
-		if (!msg || (atoi(b) & 7) > 3) continue;	/* (the priority before the first comma; 3: err) */
+		if (!msg) continue;
 		msg++;
+		/* (the priority before the first comma; 3: err. And the sound's underruns, warnings: xrun_debug above) */
+		if ((atoi(b) & 7) > 3 && strncmp(msg, "XRUN: ", 6)) continue;
 		msg[strcspn(msg, "\n")] = 0;
 		if (!strcmp(msg, last)) { repeats++; continue; }
 		if (repeats) rec("kernel", "(the line before, %d more times)", repeats);
