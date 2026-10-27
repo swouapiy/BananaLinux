@@ -261,9 +261,9 @@
 		green_led: led-0 {
 			retain-state-suspended;	/* lit while asleep (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_GREEN>;
-			/* off until bananad sets the LEDs: on, green lit at the driver's probe, so a start for charging while
-			 * off (amber) flashed green first */
-			default-state = "off";
+			/* as U-Boot left it (lit for a power-button start, off for charging, uboot-patches/004) until bananad
+			 * sets the LEDs: on, green lit at the driver's probe, so a start for charging flashed green first */
+			default-state = "keep";
 			function = LED_FUNCTION_POWER;
 			max-brightness = <255>;
 			pwms = <&pwm5 0 25000 0>;

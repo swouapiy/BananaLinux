@@ -30,4 +30,5 @@ sync
 # the LEDs off: switched off, the handheld shows nothing (bananad first, so it doesn't put them back)
 killall bananad 2>/dev/null
 for l in /sys/class/leds/*; do echo none > "$l/trigger"; echo 0 > "$l/brightness"; done 2>/dev/null
-[ -n "$CHARGE" ] && reboot -f
+# (the boot mode flag says so to U-Boot, which then leaves the power LED off: the PMIC still says power button)
+[ -n "$CHARGE" ] && { devmem 0xfdc20200 32 0x5242C30B 2>/dev/null; reboot -f; }
