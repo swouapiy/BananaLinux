@@ -657,6 +657,8 @@ static void suspend_now(const char *why)
 	const char *woke = "?";
 	int charger0 = charger_online();
 	for (;;) {
+		/* asked to stop (rcK, a shutdown over SSH) between two sleeps: awake, so the main loop goes (not asleep again) */
+		if (stopping) { woke = "asked to stop"; break; }
 		/* a power press or the lid opened while the suspend got under way (the hooks, the sync): called off, the
 		 * screens back, instead of a press lost and a second one needed. With the lid shut and lid sleep on, asleep
 		 * all the same (the button pressed in a bag) */
@@ -696,7 +698,7 @@ static void suspend_now(const char *why)
 			char c;
 			int fd = open(test_asleep, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);	/* (write_file doesn't create) */
 			if (fd >= 0) close(fd);
-			while (read(test_wake, &c, 1) < 0 && errno == EINTR && !stopping) {}	/* (stopped asleep: rcK, the test) */
+			while (!stopping && read(test_wake, &c, 1) < 0 && errno == EINTR) {}	/* (stopped asleep: rcK, the test) */
 			unlink(test_asleep);
 		}
 		clock_gettime(CLOCK_BOOTTIME, &b1);
