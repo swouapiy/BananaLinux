@@ -4,7 +4,7 @@ Subject: [PATCH] rockchip: the RG DS LEDs lit from U-Boot as it starts (power: g
 diff -ruN a/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi b/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi
 --- a/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi	2026-10-27 09:29:34
 +++ b/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi	2026-10-27 13:33:00
-@@ -40,3 +40,51 @@
+@@ -40,3 +40,55 @@
  &vcc_sd_h {
  	bootph-pre-ram;
  };
@@ -25,12 +25,16 @@ diff -ruN a/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi b/arch/arm/dts/rk3566-qua
 +		banana-power {
 +			label = "banana-power";
 +			max-brightness = <255>;
++			/* the brightness "on" lights it at (U-Boot's led_pwm: 0, dark, without it) */
++			u-boot,default-brightness = <255>;
 +			pwms = <&pwm5 0 25000 0>;
 +		};
 +
 +		banana-charging {
 +			label = "banana-charging";
 +			max-brightness = <255>;
++			/* the brightness "on" lights it at (U-Boot's led_pwm: 0, dark, without it) */
++			u-boot,default-brightness = <255>;
 +			pwms = <&pwm6 0 25000 0>;
 +		};
 +	};
