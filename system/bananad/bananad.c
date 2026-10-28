@@ -604,12 +604,12 @@ static void rec_apply(void)
 	}
 }
 
-/* a button's name, as the RG DS's buttons are */
+/* a button's name, as printed on the RG DS (its B is BTN_SOUTH, its A BTN_EAST: the Nintendo layout) */
 static const char *key_name(int code)
 {
 	switch (code) {
 	case KEY_POWER: return "power"; case KEY_VOLUMEUP: return "volume-up"; case KEY_VOLUMEDOWN: return "volume-down";
-	case BTN_SOUTH: return "a"; case BTN_EAST: return "b"; case BTN_NORTH: return "x"; case BTN_WEST: return "y";
+	case BTN_SOUTH: return "b"; case BTN_EAST: return "a"; case BTN_NORTH: return "x"; case BTN_WEST: return "y";
 	case BTN_TL: return "l"; case BTN_TR: return "r"; case BTN_TL2: return "l2"; case BTN_TR2: return "r2";
 	case BTN_SELECT: return "select"; case BTN_START: return "start"; case BTN_MODE: return "f"; case BTN_Z: return "back";
 	case BTN_THUMBL: return "l3"; case BTN_THUMBR: return "r3";
