@@ -131,6 +131,19 @@ check(not os.path.exists(T + "/run/bshare-request"), "the request gone after the
 setting("off")
 s4, _ = post("prepare-upload", files(("o1", "x.gba", b"x")))
 check(s4 == 403, "Receive off: 403")
+open(T + "/run/bshare-receiving", "w").close()     # Bshare's Receive page open: asked, Options' off or not
+th = threading.Thread(target=ask); th.start()
+for i in range(50):
+    if os.path.exists(T + "/run/bshare-request"): break
+    time.sleep(0.1)
+check(os.path.exists(T + "/run/bshare-request"), "off, but the Receive page open: the menu asked")
+req = dict(l.split("\t", 1) for l in open(T + "/run/bshare-request").read().splitlines())
+open(T + "/run/bshare-answer", "w").write("decline " + req["id"] + "\n")
+th.join()
+os.remove(T + "/run/bshare-receiving")
+os.makedirs(T + "/data/bananads", exist_ok=True)
+open(T + "/data/bananads/bananads.conf", "w").write("firmware.nickname = Swou\n")
+with urllib.request.urlopen(base + "info", timeout=5) as r: check(json.loads(r.read())["alias"] == "Swou", "the DS's name shown, at once")
 print("bshare (receiving): %d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
 EOF
@@ -175,7 +188,7 @@ echo "bshare 5. sending: a file and a folder to the made-up app; declined"
 cmp -s "$T/send/shot.png" "$T/out/shot.png" && ok "the screenshot arrived whole" || bad "shot.png"
 [ "$(cat "$T/out/Saves/a.sav" "$T/out/Saves/b.sav" 2>/dev/null)" = "save
 save2" ] && ok "the folder's files, in their folder" || bad "Saves/: $(ls -R "$T/out")"
-grep -q '"alias": "RG DS Plus"' "$T/out/info.json" && ok "the handheld named itself" || bad "info: $(cat "$T/out/info.json")"
+grep -q '"alias": "Swou"' "$T/out/info.json" && ok "the handheld named itself (its DS name)" || bad "info: $(cat "$T/out/info.json")"
 grep -q "^done	My Mac	3	3	" "$T/run/bshare-send" && ok "bshare-send: done, 3 of 3" || bad "bshare-send: $(cat "$T/run/bshare-send")"
 touch "$T/decline"
 "$B" send mac-fp "$T/send/shot.png" 2>>"$T/send.log" && bad "declined but exit 0" || ok "declined: exit 1"

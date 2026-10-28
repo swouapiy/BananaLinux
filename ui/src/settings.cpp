@@ -3137,7 +3137,7 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_DOWNLOADS ? "downloads" : entry == ENTRY_BSHARE ? "bshare" : "phone", 50, 56, 3);
+		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_DOWNLOADS ? "downloads" : "phone", 50, 56, 3);
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
@@ -4507,8 +4507,6 @@ namespace banana
 			return SEARCH;
 		case ENTRY_DOWNLOADS:
 			return finishDownloadsEntry();
-		case ENTRY_BSHARE:
-			return finishBshareEntry();
 		}
 		return NONE;
 	}

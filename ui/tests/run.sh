@@ -385,8 +385,8 @@ for size in 640x480 1024x768; do
     # job's runner at work beside the menu (its progress, the retry's countdown, X Stop and Y Cancel tapped), and the
     # chips tapped on the other pages
     # Bshare's pages (settings_bshare.cpp) against a stand-in helper (its arguments noted, a send's state written): a
-    # device's request accepted into a folder chosen on the card (Location), Receive turned to Ask, a game marked with Y
-    # in roms/gb (the first folder) and sent with START to a device seen
+    # device's request accepted into a folder chosen on the card (Location), a game in roms/gb (the first folder) sent
+    # to a device seen, Options' Receive when closed turned to Ask
     blog=$OUT/$size-bshare.log; BRUN=$OUT/bsrun
     rm -rf "$BRUN"; mkdir -p "$BRUN"; : > "$blog"; sed -i '/^bshare_/d' "$FX/data/settings.conf"
     printf '#!/bin/sh\necho "$@" >> "%s/args"\n[ "$1" = send ] && printf "sending\\tMy Mac\\t1\\t2\\t500\\t1000\\n" > "%s/bshare-send"\nexit 0\n' "$BRUN" "$BRUN" > "$BRUN/helper"
@@ -396,16 +396,20 @@ for size in 640x480 1024x768; do
     run_bs() { BANANA_BSHARE="$BRUN/helper" BSHARE_RUN="$BRUN" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$blog" ||
         { echo "FAIL $size: banana-ui (bshare) exited $?"; fail=1; }; }
-    run_bs "homeid bshare; shot bs-tile; press a; wait 1; shot bs-request; press down; press a; shot bs-location; press a; shot bs-card; \
-        press a; shot bs-located; press up; press a; wait 1; shot bs-accepted"
+    # a request there as the app opens: its Receive page at Accept; Location: the card itself, chosen; then Accept
+    run_bs "homeid bshare; shot bs-tile; press a; wait 1; shot bs-request; press down; press down; press a; shot bs-location; press a; shot bs-card; \
+        press a; shot bs-located; press up; press up; press a; wait 1; shot bs-accepted"
     grep -q "press a: banana:bshare open" "$blog" || { echo "FAIL $size: bshare: the tile didn't open its page"; fail=1; }
     grep -q "^accept abc123 $FX$" "$BRUN/bshare-answer" 2>/dev/null || { echo "FAIL $size: bshare: no accept into the card ($(cat "$BRUN/bshare-answer" 2>/dev/null))"; fail=1; }
     rm -f "$BRUN/bshare-request"
-    run_bs "homeid bshare; press a; wait 1; shot bs-home; press right; shot bs-ask; press down; press a; shot bs-browse; press a; \
-        press down; press a; press a; shot bs-gb; press y; shot bs-marked; press start; wait 1; shot bs-devices; press a; wait 1; shot bs-status"
-    grep -q '^bshare_receive = ask$' "$FX/data/settings.conf" || { echo "FAIL $size: bshare: Receive didn't turn to Ask"; fail=1; }
+    # Send: Device (My Mac), Files (roms/gb's game, A picks it), START done, START sends; then Options' Receive when
+    # closed to Ask
+    run_bs "homeid bshare; press a; wait 1; shot bs-home; press down; press a; shot bs-send; press a; shot bs-devices; press a; \
+        press down; press a; press a; press down; press a; press a; press a; shot bs-files; press start; shot bs-send-ready; press start; wait 1; \
+        shot bs-status; press b; press b; press down; press a; press right; shot bs-options"
     for i in $(seq 30); do grep -q "^send " "$BRUN/args" && break; sleep 0.1; done    # (the helper started on its own)
     grep -q "^send mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" || { echo "FAIL $size: bshare: no send to My Mac: $(cat "$BRUN/args")"; fail=1; }
+    grep -q '^bshare_receive = ask$' "$FX/data/settings.conf" || { echo "FAIL $size: bshare: Options' Receive when closed didn't turn to Ask"; fail=1; }
     grep -q "^serve$" "$BRUN/args" || { echo "FAIL $size: bshare: the helper wasn't started to serve"; fail=1; }
     sed -i '/^bshare_/d' "$FX/data/settings.conf"
 

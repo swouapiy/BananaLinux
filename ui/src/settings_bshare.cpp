@@ -1,13 +1,14 @@
 // banana-ui: Bshare, the shelf's tile. Files between this handheld and phones or computers with LocalSend on the same
-// Wi-Fi (as the settings' pages: a list on the bottom panel, what is chosen explained on the top one).
-//   home      a device asking to send (Accept, Location, Decline), then Receive, Send files, Name, Received files,
-//             About Bshare
-//   location  a folder on the cards for what is being received (instead of the usual places)
-//   browse    the cards: A opens a folder, Y marks a file or a folder, START sends what is marked
-//   devices   the phones and computers seen: A sends to one
-//   status    the send: waiting for the other side, the files going, done; Stop
-// banana-bshare does the network (bshare.cpp): its "serve" runs while Receive is on or this page is open, its "send"
-// for each send. They talk through /run/banana's bshare-* files; this reads and draws them.
+// Wi-Fi (as the settings' pages: a list on the bottom panel, what is chosen explained on the top one). The user's plan:
+//   home      Receive, Send, Options
+//   receive   seen as the DS's name while open; a device asking: Accept, Decline; Location (a folder of the cards'
+//             for the files instead of the usual places: games into their system's folder, the rest into
+//             banana/received)
+//   send      Device (one seen, LocalSend open), Files (the cards: A opens a folder or picks a file, Y picks a folder),
+//             Send (START too): then its progress, Stop
+//   options   Receive when closed (Off, Ask, Quick save), About Bshare
+// banana-bshare does the network (bshare.cpp): its "serve" runs while the app is open or Options lets it receive, its
+// "send" for each send. They talk through /run/banana's bshare-* files; this reads and draws them.
 #include "settings.h"
 #include "settings_defaults.h"
 #include "settings_draw.h"
@@ -117,7 +118,8 @@ namespace banana
 		}
 	}
 
-	// Receive on (Ask or Quick save): the helper serving from the start, as the menu comes up; off: stopped
+	// Options' Receive when closed on (Ask or Quick save): the helper serving from the start, as the menu comes up; off:
+	// stopped
 	void Settings::bshareServe(bool want)
 	{
 		pid_t p = servePid();
@@ -130,10 +132,21 @@ namespace banana
 		return getConfValue(data + "/settings.conf", "bshare_receive", "off") != "off";
 	}
 
+	// the files of a send, for its row: "Peel Quest.gba", "Saves", "3 files and folders"
+	static std::string picked(const std::set<std::string>& m)
+	{
+		if (m.empty()) return "Choose";
+		if (m.size() == 1) return fetch::baseName(*m.begin());
+		return std::to_string(m.size()) + " files and folders";
+	}
+
 	struct Settings::Bshare
 	{
-		enum Sub { HOME, LOCATION, BROWSE, DEVICES, STATUS, SUBS };
-		enum Kind { K_ACCEPT, K_LOCATION, K_DECLINE, K_RECEIVE, K_SEND, K_SENDING, K_NAME, K_RECEIVED, K_ABOUT, K_HERE, K_ITEM, K_PEER, K_STOP };
+		// home: Receive, Send, Options. receive: Accept and Decline (a device asking), Location. send: Device, Files,
+		// Send. Under them: the folder for Location, the devices, the cards' files, a send's progress
+		enum Sub { HOME, RECEIVE, LOCATION, SEND, DEVICES, FILES, STATUS, OPTIONS, SUBS };
+		enum Kind { K_RECEIVE, K_SEND, K_OPTIONS, K_ACCEPT, K_DECLINE, K_LOCATION, K_DEVICE, K_FILES, K_GO, K_SENDING,
+			K_BACKGROUND, K_ABOUT, K_HERE, K_ITEM, K_PEER, K_STOP };
 		struct Row { std::string label, value, icon; Kind kind; int index = -1; bool choice = false, mark = false, warn = false; };
 		struct Item { std::string name, path; bool dir = false; long long size = 0; };
 		struct Peer { std::string fp, alias, model, type; };
@@ -142,49 +155,58 @@ namespace banana
 		Sub sub = HOME;
 		int sel[SUBS] = {}, top[SUBS] = {};
 		std::string message;
-		// the request of a device asking to send (bshare-request), and where its files go (empty: the usual places)
-		std::string reqId, reqFrom, reqModel, reqFirst, location;
+		// a device asking to send (bshare-request), and the folder its files go to (empty: the usual places)
+		std::string reqId, reqFrom, reqFirst, location;
 		long long reqFiles = 0, reqBytes = 0;
 		double reqSince = 0;
 		std::string receiveLine;	// bshare-receive, as last read
-		// browse / location: the folder shown ("" the cards), its entries, what is marked
+		// the folders shown (Location's, Files'): "" the cards
 		std::string dir;
 		std::vector<Item> items;
-		std::set<std::string> marked;
 		std::vector<nas::Card> cards;
-		// devices, and the send
+		// the send: the device and the files chosen, the helper sending
 		std::vector<Peer> peers;
-		std::vector<std::string> sendWhat;
-		std::string sendTo;	// the device chosen (shown until the helper's first word)
+		std::string deviceFp, deviceName;
+		std::set<std::string> marked;
 		pid_t sender = 0;
-		std::string sendLine;
-		long long received = 0;
+		std::string sendLine, sendTo;
 		double lookedAt = 0;
 
 		std::string conf() const { return ui->data + "/settings.conf"; }
-		std::string receive() const { return getConfValue(conf(), "bshare_receive", "off"); }
-		std::string alias() const
+		std::string background() const { return getConfValue(conf(), "bshare_receive", "off"); }
+		static const char* backgroundName(const std::string& v) { return v == "ask" ? "Ask" : v == "auto" ? "Quick save" : "Off"; }
+		std::string name() const
 		{
-			std::string a = getConfValue(conf(), "bshare_name", "");
-			if (!a.empty()) return a;
+			std::string n = ui->dsName();
+			if (!n.empty()) return n;
 			std::string b = readAll("/etc/banana/board");
-			return b.compare(0, 4, "rgds") == 0 && b.compare(0, 9, "rgds-plus") != 0 ? "RG DS" : "RG DS Plus";
+			return b.compare(0, 9, "rgds-plus") == 0 || b.empty() ? "RG DS Plus" : "RG DS";
 		}
-		static const char* receiveName(const std::string& v) { return v == "ask" ? "Ask" : v == "auto" ? "Quick save" : "Off"; }
+		std::string receivingMark() const { return bsRun() + "/bshare-receiving"; }
 
 		void open()
 		{
 			sub = HOME;
 			message.clear();
 			cards = nas::cards(ui->romRoot);
-			received = countFiles(ui->data + "/received");
-			Settings::bshareServe(true);	// (seen while the page is open, to send; stopped on close if Receive is off)
+			Settings::bshareServe(true);	// (seen while the app is open: to send, and to receive on its Receive page)
 			poll(true);
 		}
 
 		void close()
 		{
-			Settings::bshareServe(receive() != "off");
+			unlink(receivingMark().c_str());
+			location.clear();
+			Settings::bshareServe(background() != "off");
+		}
+
+		// the Receive page open: the helper asks the menu for any request (Options' setting or not)
+		void enter(Sub s)
+		{
+			if (s == RECEIVE) ::close(::open(receivingMark().c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0644));
+			else if (s == HOME || s == SEND || s == OPTIONS) unlink(receivingMark().c_str());
+			sub = s;
+			message.clear();
 		}
 
 		// the helper's files read again: a request, the receive's and the send's state, the devices
@@ -194,34 +216,27 @@ namespace banana
 			if (!force && t - lookedAt < 400) return false;
 			lookedAt = t;
 			bool changed = false;
-			std::string req = readAll(bsRun() + "/bshare-request"), id, from, model, first;
+			std::string id, from, first;
 			long long nf = 0, nb = 0;
-			std::stringstream in(req);
+			std::stringstream in(readAll(bsRun() + "/bshare-request"));
 			std::string l;
 			while (std::getline(in, l))
 			{
 				auto c = fields(l);
 				if (c.size() < 2) continue;
-				if (c[0] == "id") id = c[1]; else if (c[0] == "from") from = c[1]; else if (c[0] == "model") model = c[1];
+				if (c[0] == "id") id = c[1]; else if (c[0] == "from") from = c[1]; else if (c[0] == "first") first = c[1];
 				else if (c[0] == "files") nf = atoll(c[1].c_str()); else if (c[0] == "bytes") nb = atoll(c[1].c_str());
-				else if (c[0] == "first") first = c[1];
 			}
 			if (id != reqId)
 			{
-				reqId = id; reqFrom = from; reqModel = model; reqFirst = first; reqFiles = nf; reqBytes = nb;
+				reqId = id; reqFrom = from; reqFirst = first; reqFiles = nf; reqBytes = nb;
 				reqSince = t;
-				location.clear();
-				if (!id.empty() && sub != LOCATION) { sub = HOME; sel[HOME] = top[HOME] = 0; }
-				if (id.empty() && sub == LOCATION) sub = HOME;	// (answered elsewhere, or a minute gone)
+				// a request: its page, at Accept (from the app's other pages too, but not mid-way through a folder)
+				if (!id.empty() && sub != LOCATION && sub != FILES && sub != DEVICES) { enter(RECEIVE); sel[RECEIVE] = top[RECEIVE] = 0; }
 				changed = true;
 			}
 			std::string rl = readAll(bsRun() + "/bshare-receive");
-			if (rl != receiveLine)
-			{
-				if (receiveLine.size() && rl.compare(0, 4, "done") == 0) received = countFiles(ui->data + "/received");
-				receiveLine = rl;
-				changed = true;
-			}
+			if (rl != receiveLine) { receiveLine = rl; changed = true; }
 			std::string sl = readAll(bsRun() + "/bshare-send");
 			if (sl != sendLine) { sendLine = sl; changed = true; }
 			if (sender > 0 && waitpid(sender, nullptr, WNOHANG) == sender) { sender = 0; changed = true; }
@@ -245,10 +260,9 @@ namespace banana
 			std::string a = (yes ? "accept " : "decline ") + reqId + (yes && !location.empty() ? " " + location : "") + "\n";
 			std::string p = bsRun() + "/bshare-answer", t = p + ".new";
 			if (FILE* f = fopen(t.c_str(), "w")) { fputs(a.c_str(), f); fclose(f); rename(t.c_str(), p.c_str()); }
-			message = yes ? "Receiving from " + reqFrom + "..." : "Declined.";
+			message = yes ? "Receiving from " + reqFrom + "..." : "Declined: nothing was saved.";
 			reqId.clear();
-			sub = HOME;
-			sel[HOME] = top[HOME] = 0;
+			sel[RECEIVE] = top[RECEIVE] = 0;
 		}
 
 		// ---- the folders -------------------------------------------------------------------------------------------
@@ -259,6 +273,7 @@ namespace banana
 			if (d.empty())
 			{
 				for (auto& c : cards) items.push_back({ c.label, c.root, true, 0 });
+				sel[sub] = top[sub] = 0;
 				return;
 			}
 			DIR* h = opendir(d.c_str());
@@ -298,6 +313,15 @@ namespace banana
 			list(fetch::parentPath(dir));
 		}
 
+		bool sending() const { return sender > 0 || sendLine.compare(0, 7, "sending") == 0 || sendLine.compare(0, 7, "waiting") == 0; }
+		bool deviceThere() const { for (auto& p : peers) if (p.fp == deviceFp) return true; return false; }
+
+		static std::string kindOf(const Peer& p)
+		{
+			return p.type == "desktop" || p.type == "laptop" ? "Computer" : p.type == "mobile" && p.model.compare(0, 5, "RG DS") == 0 ? "Handheld" :
+				p.type == "mobile" ? "Phone" : p.type == "web" ? "Browser" : "Device";
+		}
+
 		// ---- the rows ----------------------------------------------------------------------------------------------
 		std::vector<Row> rows() const
 		{
@@ -306,28 +330,41 @@ namespace banana
 			switch (sub)
 			{
 			case HOME:
+				add("Receive", "", K_RECEIVE).icon = "bshare-receive";
+				add("Send", sending() ? "Sending" : "", K_SEND).icon = "bshare-send";
+				add("Options", "", K_OPTIONS);
+				break;
+			case RECEIVE:
 				if (!reqId.empty())
 				{
 					add("Accept", "", K_ACCEPT).icon = "bshare-receive";
-					add("Location", location.empty() ? "Usual places" : shown(location), K_LOCATION);
 					add("Decline", "", K_DECLINE);
 				}
-				{ Row& x = add("Receive", receiveName(receive()), K_RECEIVE); x.choice = true; x.icon = "bshare-receive"; }
-				add("Send files", "", K_SEND).icon = "bshare-send";
-				if (sender > 0 || sendLine.compare(0, 7, "sending") == 0 || sendLine.compare(0, 7, "waiting") == 0)
-				{
-					auto c = fields(sendLine);
-					add("Sending", c.size() >= 4 ? c[2] + " of " + c[3] : "...", K_SENDING);
-				}
-				add("Name", alias(), K_NAME);
-				add("Received files", files(received), K_RECEIVED);
-				add("About Bshare", "", K_ABOUT);
+				add("Location", location.empty() ? "Usual places" : shown(location), K_LOCATION);
 				break;
 			case LOCATION:
 				if (!dir.empty()) add("This folder", "", K_HERE).icon = "bshare-receive";
 				for (size_t i = 0; i < items.size(); i++) add(items[i].name, "Folder", K_ITEM).index = (int)i;
 				break;
-			case BROWSE:
+			case SEND:
+			{
+				std::string dev = deviceFp.empty() ? "Choose" : deviceThere() ? deviceName : deviceName + " (gone)";
+				add("Device", dev, K_DEVICE).warn = !deviceFp.empty() && !deviceThere();
+				add("Files", picked(marked), K_FILES);
+				add("Send", "", K_GO).icon = "bshare-send";
+				if (sending()) add("Sending", "", K_SENDING);
+				break;
+			}
+			case DEVICES:
+				for (size_t i = 0; i < peers.size(); i++)
+				{
+					std::string k = kindOf(peers[i]);
+					Row& x = add(peers[i].alias, k, K_PEER);
+					x.index = (int)i;
+					x.icon = k == "Computer" ? "bshare-computer" : k == "Handheld" ? "bshare-handheld" : "bshare-phone";
+				}
+				break;
+			case FILES:
 				for (size_t i = 0; i < items.size(); i++)
 				{
 					Row& x = add(items[i].name, items[i].dir ? "Folder" : fetch::bytes(items[i].size), K_ITEM);
@@ -335,19 +372,12 @@ namespace banana
 					x.mark = marked.count(items[i].path) > 0;
 				}
 				break;
-			case DEVICES:
-				for (size_t i = 0; i < peers.size(); i++)
-				{
-					const Peer& p = peers[i];
-					std::string kind = p.type == "desktop" || p.type == "laptop" ? "Computer" : p.type == "mobile" && p.model.compare(0, 5, "RG DS") == 0 ? "Handheld" :
-						p.type == "mobile" ? "Phone" : p.type == "web" ? "Browser" : "Device";
-					Row& x = add(p.alias, kind, K_PEER);
-					x.index = (int)i;
-					x.icon = kind == "Computer" ? "bshare-computer" : kind == "Handheld" ? "bshare-handheld" : "bshare-phone";
-				}
-				break;
 			case STATUS:
 				if (sender > 0) add("Stop", "", K_STOP);
+				break;
+			case OPTIONS:
+				add("Receive when closed", backgroundName(background()), K_BACKGROUND).choice = true;
+				add("About Bshare", "", K_ABOUT);
 				break;
 			default:
 				break;
@@ -355,56 +385,36 @@ namespace banana
 			return r;
 		}
 
-		Result go(Sub s)
-		{
-			sub = s;
-			message.clear();
-			return MOVED;
-		}
-
 		Result activate(const Row& row)
 		{
 			switch (row.kind)
 			{
+			case K_RECEIVE: enter(RECEIVE); sel[RECEIVE] = top[RECEIVE] = 0; return MOVED;
+			case K_SEND: enter(SEND); sel[SEND] = top[SEND] = 0; return MOVED;
+			case K_OPTIONS: enter(OPTIONS); return MOVED;
 			case K_ACCEPT: answer(true); return CHANGED;
 			case K_DECLINE: answer(false); return CHANGED;
-			case K_LOCATION: sub = LOCATION; list(""); message.clear(); return MOVED;
-			case K_RECEIVE: return change(1);
-			case K_SEND: sub = BROWSE; marked.clear(); list(""); message.clear(); return MOVED;
-			case K_SENDING: return go(STATUS);
-			case K_NAME:
-				ui->startEntry(ENTRY_BSHARE, "Bshare's name", "How phones and computers see this handheld in LocalSend.", BSHARE, alias());
-				return MOVED;
-			case K_RECEIVED: case K_ABOUT: return NONE;
-			case K_HERE: location = dir; return go(HOME);
+			case K_LOCATION: sub = LOCATION; message.clear(); list(""); return MOVED;
+			case K_HERE: location = dir; sub = RECEIVE; message.clear(); return MOVED;
+			case K_DEVICE: sub = DEVICES; message.clear(); sel[DEVICES] = top[DEVICES] = 0; return MOVED;
+			case K_FILES: sub = FILES; message.clear(); list(""); return MOVED;
+			case K_GO: return send();
+			case K_SENDING: sub = STATUS; message.clear(); return MOVED;
+			case K_BACKGROUND: return change(1);
+			case K_ABOUT: return NONE;
 			case K_ITEM:
 			{
 				const Item& it = items[row.index];
 				if (it.dir) { list(it.path); return MOVED; }
+				if (sub == FILES) { if (!marked.erase(it.path)) marked.insert(it.path); return MOVED; }	// (A on a file: picked)
 				return NONE;
 			}
 			case K_PEER:
-			{
-				std::vector<std::string> a = { helper(), "send", peers[row.index].fp };
-				sendTo = peers[row.index].alias;
-				for (auto& w : sendWhat) a.push_back(w);
-				unlink((bsRun() + "/bshare-send").c_str());
-				sendLine.clear();
-				pid_t p = fork();
-				if (p == 0)
-				{
-					int nul = ::open("/dev/null", O_RDWR);
-					if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
-					std::vector<char*> v;
-					for (auto& s : a) v.push_back((char*)s.c_str());
-					v.push_back(nullptr);
-					execv(v[0], v.data());
-					_exit(127);
-				}
-				sender = p > 0 ? p : 0;
-				marked.clear();
-				return go(STATUS);
-			}
+				deviceFp = peers[row.index].fp;
+				deviceName = peers[row.index].alias;
+				sub = SEND;
+				message.clear();
+				return MOVED;
 			case K_STOP:
 				if (sender > 0) kill(sender, SIGTERM);
 				return CHANGED;
@@ -412,25 +422,42 @@ namespace banana
 			return NONE;
 		}
 
-		Result change(int dir)
+		// Send (or START on the Send page): the device and the files chosen, then the helper sends them
+		Result send()
 		{
-			static const char* const V[] = { "off", "ask", "auto" };
-			std::string v = receive();
-			int i = v == "ask" ? 1 : v == "auto" ? 2 : 0;
-			i = (i + dir + 3) % 3;
-			setConfValue(conf(), "bshare_receive", V[i]);
-			return CHANGED;	// (the helper reads it at each request; it runs anyway while this page is open)
+			if (sending()) { message = "A send is under way: Sending shows it."; return MOVED; }
+			if (deviceFp.empty() || !deviceThere()) { message = "Choose a device first: a phone or computer with LocalSend open."; sel[SEND] = 0; return MOVED; }
+			if (marked.empty()) { message = "Choose the files first."; sel[SEND] = 1; return MOVED; }
+			std::vector<std::string> a = { helper(), "send", deviceFp };
+			for (auto& w : marked) a.push_back(w);
+			sendTo = deviceName;
+			unlink((bsRun() + "/bshare-send").c_str());
+			sendLine.clear();
+			pid_t p = fork();
+			if (p == 0)
+			{
+				int nul = ::open("/dev/null", O_RDWR);
+				if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
+				std::vector<char*> v;
+				for (auto& s : a) v.push_back((char*)s.c_str());
+				v.push_back(nullptr);
+				execv(v[0], v.data());
+				_exit(127);
+			}
+			sender = p > 0 ? p : 0;
+			marked.clear();
+			sub = STATUS;
+			message.clear();
+			return MOVED;
 		}
 
-		// START in the browser: what is marked (or the file picked) goes to a device
-		Result sendMarked(const Row* cur)
+		Result change(int d)
 		{
-			sendWhat.assign(marked.begin(), marked.end());
-			if (sendWhat.empty() && cur && cur->kind == K_ITEM && !items[cur->index].dir) sendWhat.push_back(items[cur->index].path);
-			if (sendWhat.empty()) { message = "Mark files or folders with Y first, then START sends them."; return MOVED; }
-			Settings::bshareServe(true);
-			sel[DEVICES] = top[DEVICES] = 0;
-			return go(DEVICES);
+			static const char* const V[] = { "off", "ask", "auto" };
+			std::string v = background();
+			int i = v == "ask" ? 1 : v == "auto" ? 2 : 0;
+			setConfValue(conf(), "bshare_receive", V[(i + d + 3) % 3]);
+			return CHANGED;	// (the helper reads it at each request; closing the app starts or stops it)
 		}
 
 		Result back()
@@ -438,13 +465,16 @@ namespace banana
 			switch (sub)
 			{
 			case HOME: ui->close(); return CLOSED;
-			case LOCATION: case BROWSE:
-				if (dir.empty()) return go(HOME);
+			case LOCATION:
+				if (dir.empty()) { sub = RECEIVE; message.clear(); return MOVED; }
 				up();
 				return MOVED;
-			case DEVICES: sub = BROWSE; return MOVED;
-			case STATUS: return go(HOME);
-			default: return go(HOME);
+			case FILES:
+				if (dir.empty()) { sub = SEND; message.clear(); return MOVED; }
+				up();
+				return MOVED;
+			case DEVICES: case STATUS: sub = SEND; message.clear(); return MOVED;
+			default: enter(HOME); return MOVED;
 			}
 		}
 
@@ -478,7 +508,8 @@ namespace banana
 			case Key::B: return back();
 			case Key::A: return cur ? activate(*cur) : NONE;
 			case Key::Y:
-				if (sub == BROWSE && cur && cur->kind == K_ITEM && !dir.empty())
+				// Files: a folder (or a file) marked to go as it is
+				if (sub == FILES && cur && cur->kind == K_ITEM && !dir.empty())
 				{
 					const std::string& p = items[cur->index].path;
 					if (!marked.erase(p)) marked.insert(p);
@@ -486,7 +517,8 @@ namespace banana
 				}
 				return NONE;
 			case Key::START:
-				if (sub == BROWSE) return sendMarked(cur);	// (START, not X: away from Y's marking, the user's choice)
+				if (sub == SEND) return send();	// (Send's confirmation, as its row)
+				if (sub == FILES) { sub = SEND; message.clear(); return MOVED; }	// (done choosing)
 				return NONE;
 			default:
 				return NONE;
@@ -509,7 +541,7 @@ namespace banana
 				float ry = 82 + i * 64;
 				if (dy < ry || dy > ry + 56) continue;
 				int at = t + i;
-				if (sub == BROWSE && dx < 70 && !dir.empty()) { s = at; return press(Key::Y); }	// (the tick's place)
+				if (sub == FILES && dx < 70 && !dir.empty()) { s = at; return press(Key::Y); }	// (the tick's place)
 				if (at != s) { s = at; return MOVED; }
 				if (r[at].choice) return press(dx < 320 ? Key::LEFT : Key::RIGHT);
 				return press(Key::A);
@@ -525,88 +557,88 @@ namespace banana
 		}
 
 		// ---- the top panel -----------------------------------------------------------------------------------------
-		struct Top { std::string label = "Bshare", title, accent, help, hint; double a = -1, b = -1; std::string aLabel, bLabel; };
+		struct Top { std::string label = "Bshare", title, accent, help, hint; double a = -1; std::string aLabel; };
 
 		Top topPanel(const std::vector<Row>& r) const
 		{
 			Top t;
 			const Row* cur = sel[sub] < (int)r.size() ? &r[sel[sub]] : nullptr;
-			std::string me = alias();
-			auto rc = fields(receiveLine);
+			auto rc = fields(receiveLine.substr(0, receiveLine.find('\n')));
+			if (cur) { t.title = cur->label; t.accent = cur->value; }
 			switch (sub)
 			{
 			case HOME:
 				if (!cur) break;
-				t.title = cur->label;
-				t.accent = cur->value;
-				switch (cur->kind)
-				{
-				case K_ACCEPT: case K_DECLINE: case K_LOCATION:
+				if (cur->kind == K_RECEIVE) { t.help = "Get files from a phone or computer with LocalSend."; t.hint = "Seen as " + name() + " while this page is open."; }
+				if (cur->kind == K_SEND) t.help = "Send files or folders to a phone or computer with LocalSend open.";
+				if (cur->kind == K_OPTIONS) t.help = "Receiving while Bshare is closed, and about Bshare.";
+				break;
+			case RECEIVE:
+				t.label = "Receive";
+				if (!reqId.empty())
 				{
 					int left = std::max(0, 60 - (int)((steadyMs() - reqSince) / 1000));
 					t.title = reqFrom + " wants to send";
 					t.accent = files(reqFiles) + ", " + fetch::bytes(reqBytes) + "  ·  " + std::to_string(left) + " s";
 					t.help = "First: " + reqFirst + ".";
-					t.hint = cur->kind == K_DECLINE ? "Nothing is saved, and the other side is told." :
-						!location.empty() ? "Everything goes into " + shown(location) + "." :
-						cur->kind == K_LOCATION ? "A picks a folder on the cards for all of them." :
+					t.hint = cur && cur->kind == K_DECLINE ? "Nothing is saved." : !location.empty() ? "Everything goes into " + shown(location) + "." :
 						"Games go into their system's folder, everything else into banana/received.";
-					break;
 				}
-				case K_RECEIVE:
+				else
 				{
-					std::string v = receive();
-					t.help = "Phones and computers with LocalSend can send files to this handheld.";
-					t.hint = v == "ask" ? "Seen as " + me + " on your Wi-Fi. You accept each transfer here." :
-						v == "auto" ? "Seen as " + me + ". Files are saved without asking: only on a network you trust." :
-						"Not seen by other devices.";
+					t.title = "Ready";
+					t.accent = "Seen as " + name();
+					t.help = "Open LocalSend on your phone or computer, on the same Wi-Fi, and send to " + name() + ".";
+					t.hint = !location.empty() ? "Files go into " + shown(location) + "." : "Games go into their system's folder, everything else into banana/received. Location changes that.";
 					if (rc.size() >= 6 && rc[0] == "receiving")
-						t.hint = "Receiving from " + rc[1] + ": " + rc[2] + " of " + rc[3] + " files, " + fetch::bytes(atoll(rc[4].c_str())) + " of " + fetch::bytes(atoll(rc[5].c_str())) + ".";
-					break;
-				}
-				case K_SEND: t.help = "Pick files or folders on the cards, then send them to a phone or computer with LocalSend open."; break;
-				case K_SENDING: t.help = "A shows the send."; break;
-				case K_NAME: t.help = "How phones and computers see this handheld in LocalSend. A changes it."; break;
-				case K_RECEIVED:
-					t.help = "Games go straight into their system's folder. Everything else goes into banana/received on the card.";
-					if (rc.size() >= 4 && rc[0] == "done") t.hint = "Last: " + files(atoll(rc[2].c_str())) + " from " + rc[1] + ".";
-					break;
-				case K_ABOUT:
-					t.title = "About Bshare";
-					t.help = "Bshare works with LocalSend, the free and open-source app by Tien Do Nam and its contributors (localsend.org). "
-						"It is Banana's own small version of LocalSend's open protocol: get LocalSend on your phone or computer, on the same Wi-Fi.";
-					break;
-				default: break;
+					{
+						t.title = "Receiving from " + rc[1];
+						t.accent = rc[2] + " of " + rc[3] + " files";
+						long long tot = atoll(rc[5].c_str());
+						if (tot > 0) { t.a = (double)atoll(rc[4].c_str()) / tot; t.aLabel = fetch::bytes(atoll(rc[4].c_str())) + " of " + fetch::bytes(tot); }
+						t.hint.clear();
+					}
+					else if (rc.size() >= 4 && (rc[0] == "done" || rc[0] == "partly")) t.hint = "Last: " + files(atoll(rc[2].c_str())) + " from " + rc[1] + ".";
 				}
 				break;
 			case LOCATION:
 				t.label = "Location";
 				t.title = dir.empty() ? "The cards" : shown(dir);
-				t.help = "A opens a folder. This folder: everything being received goes here.";
+				t.accent.clear();
+				t.help = "A opens a folder. This folder: everything received goes here.";
 				break;
-			case BROWSE:
-				t.label = "Send files";
-				t.title = cur ? cur->label : dir.empty() ? "The cards" : shown(dir);
-				t.accent = cur ? cur->value : "";
-				t.help = "A opens a folder. Y marks a file or a folder. START sends what is marked.";
-				if (!marked.empty()) t.hint = std::to_string(marked.size()) + " marked.";
+			case SEND:
+				t.label = "Send";
+				if (cur && cur->kind == K_DEVICE) t.help = "A phone or computer with LocalSend open, on the same Wi-Fi.";
+				if (cur && cur->kind == K_FILES) t.help = marked.empty() ? "Files or folders on the cards." : std::to_string(marked.size()) + " chosen. A changes them.";
+				if (cur && cur->kind == K_GO)
+				{
+					t.help = !deviceFp.empty() && !marked.empty() ? picked(marked) + " to " + deviceName + ". It asks there before taking them." : "Choose a device and the files first.";
+					t.accent.clear();
+				}
+				if (cur && cur->kind == K_SENDING) t.help = "A shows it.";
 				break;
 			case DEVICES:
-				t.label = "Send files";
+				t.label = "Device";
 				t.title = cur ? cur->label : "Looking for devices";
-				t.accent = cur ? cur->value : "";
-				t.help = "Phones and computers with LocalSend open, on the same Wi-Fi. They ask there before taking the files.";
+				t.help = "Phones and computers with LocalSend open, on the same Wi-Fi.";
+				break;
+			case FILES:
+				t.label = "Files";
+				if (!cur) t.title = dir.empty() ? "The cards" : shown(dir);
+				t.help = "A opens a folder or picks a file. Y picks a whole folder. START: done.";
+				if (!marked.empty()) t.hint = std::to_string(marked.size()) + " chosen.";
 				break;
 			case STATUS:
 			{
-				auto c = fields(sendLine);
-				t.label = "Send files";
+				auto c = fields(sendLine.substr(0, sendLine.find('\n')));
+				t.label = "Send";
 				std::string who = c.size() >= 2 ? c[1] : sendTo;
 				std::string what = c.empty() ? (sender > 0 ? "waiting" : "") : c[0];
 				t.title = what == "waiting" ? "Waiting for " + who : what == "sending" ? "Sending to " + who : what == "done" ? "Sent to " + who :
 					what == "declined" ? who + " said no" : what == "busy" ? who + " is busy" : what == "stopped" ? "Stopped" : what == "partly" ? "Partly sent" : what.empty() ? "" : "It didn't work";
-				if (c.size() >= 6) t.accent = c[2] + " of " + c[3] + " files";
-				t.help = what == "waiting" ? "The other side asks its user first." : what == "sending" ? "You can close this page: it carries on." :
+				t.accent = c.size() >= 6 ? c[2] + " of " + c[3] + " files" : "";
+				t.help = what == "waiting" ? "It asks there first." : what == "sending" ? "You can leave: it carries on." :
 					what == "done" ? "All the files arrived." : what == "declined" ? "Nothing was sent." : what == "error" ? "The device couldn't be reached. Is LocalSend open, on the same Wi-Fi?" : "";
 				if (c.size() >= 6 && atoll(c[5].c_str()) > 0)
 				{
@@ -615,6 +647,19 @@ namespace banana
 				}
 				break;
 			}
+			case OPTIONS:
+				t.label = "Options";
+				if (cur && cur->kind == K_BACKGROUND)
+				{
+					std::string v = background();
+					t.help = "Whether devices can send to " + name() + " while Bshare is closed.";
+					t.hint = v == "ask" ? "A notification asks; Bshare's Receive page answers." : v == "auto" ? "Files are saved without asking: only on a network you trust." :
+						"Only while Bshare's Receive page is open.";
+				}
+				if (cur && cur->kind == K_ABOUT)
+					t.help = "Bshare works with LocalSend, the free and open-source app by Tien Do Nam and its contributors (localsend.org). "
+						"It is Banana's own small version of LocalSend's open protocol: get LocalSend on your phone or computer, on the same Wi-Fi.";
+				break;
 			default: break;
 			}
 			if (!message.empty()) t.help = message;
@@ -625,11 +670,14 @@ namespace banana
 		{
 			switch (sub)
 			{
-			case HOME: return reqId.empty() ? "Bshare" : "A transfer";
+			case HOME: return "Bshare";
+			case RECEIVE: return "Receive";
 			case LOCATION: return dir.empty() ? "Location" : shown(dir);
-			case BROWSE: return dir.empty() ? "Send files" : shown(dir);
-			case DEVICES: return "Send " + files((long long)sendWhat.size()) + " to";
+			case SEND: return "Send";
+			case DEVICES: return "Device";
+			case FILES: return dir.empty() ? "Files" : shown(dir);
 			case STATUS: return "Sending";
+			case OPTIONS: return "Options";
 			default: return "";
 			}
 		}
@@ -637,7 +685,7 @@ namespace banana
 		std::string emptyText() const
 		{
 			if (sub == DEVICES) return "Looking... Open LocalSend on the other device.";
-			if (sub == BROWSE || sub == LOCATION) return "An empty folder.";
+			if (sub == FILES || sub == LOCATION) return "An empty folder.";
 			return "";
 		}
 
@@ -648,17 +696,21 @@ namespace banana
 			std::string a;
 			switch (sub)
 			{
-			case HOME:
-				a = !cur ? "" : cur->kind == K_ACCEPT ? "Accept" : cur->kind == K_DECLINE ? "Decline" : cur->kind == K_RECEIVE ? "Change" :
-					cur->kind == K_NAME ? "Edit" : cur->kind == K_RECEIVED || cur->kind == K_ABOUT ? "" : "Open";
+			case HOME: case OPTIONS:
+				a = !cur ? "" : cur->kind == K_BACKGROUND ? "Change" : cur->kind == K_ABOUT ? "" : "Open";
 				break;
+			case RECEIVE: a = !cur ? "" : cur->kind == K_ACCEPT ? "Accept" : cur->kind == K_DECLINE ? "Decline" : "Choose"; break;
 			case LOCATION: a = !cur ? "" : cur->kind == K_HERE ? "Choose" : "Open"; break;
-			case BROWSE:
-				if (!dir.empty()) cs.push_back({ Key::Y, "Y", "Mark" });
+			case SEND:
 				cs.push_back({ Key::START, "START", "Send" });
-				a = cur && items[cur->index].dir ? "Open" : "";
+				a = !cur ? "" : cur->kind == K_GO ? "Send" : cur->kind == K_SENDING ? "Open" : "Choose";
 				break;
-			case DEVICES: a = cur ? "Send" : ""; break;
+			case DEVICES: a = cur ? "Choose" : ""; break;
+			case FILES:
+				if (!dir.empty()) cs.push_back({ Key::Y, "Y", "Pick folder" });
+				cs.push_back({ Key::START, "START", "Done" });
+				a = !cur ? "" : items[cur->index].dir ? "Open" : marked.count(items[cur->index].path) ? "Unpick" : "Pick";
+				break;
 			case STATUS: a = cur ? "Stop" : ""; break;
 			default: break;
 			}
@@ -693,7 +745,7 @@ namespace banana
 			ui->box("screen", false, 0, 0, 640, 480);
 			ui->box("bubble", false, 18, 14, 604, 54);
 			std::string count = r.empty() ? "" : std::to_string(sel[sub] + 1) + " / " + std::to_string(r.size());
-			if (sub == BROWSE && !marked.empty()) count = std::to_string(marked.size()) + " marked";
+			if (sub == FILES && !marked.empty()) count = std::to_string(marked.size()) + " chosen";
 			float cw = ui->text(count, true, 17, 0, 0, p.muted, false, 0, true);
 			ui->text(ui->fit(header(), true, 22, 540 - cw), true, 22, 38, 28, p.ink);
 			ui->text(count, true, 17, 602 - cw, 31, p.muted);
@@ -732,28 +784,10 @@ namespace banana
 			be->endScreen();
 		}
 
-		bool update(double)
-		{
-			return poll();
-		}
+		bool update(double) { return poll(); }
 
-		int wake(double) const
-		{
-			// the files are looked at twice a second while the page is open: a request's countdown, the send's progress
-			return 500;
-		}
-
-		Result entered(const std::string& text)
-		{
-			std::string v = text;
-			while (!v.empty() && v.back() == ' ') v.pop_back();
-			setConfValue(conf(), "bshare_name", v);
-			// (the helper says its name as it starts: started again with the new one)
-			pid_t p = servePid();
-			if (p) { kill(p, SIGTERM); for (int i = 0; i < 20 && kill(p, 0) == 0; i++) usleep(50000); }
-			Settings::bshareServe(true);
-			return CHANGED;
-		}
+		// the files looked at twice a second while the app is open: a request's countdown, a transfer's progress
+		int wake(double) const { return 500; }
 	};
 
 	void Settings::openBshare()
@@ -774,13 +808,4 @@ namespace banana
 	void Settings::renderBshare() { if (bs) bs->render(); }
 	bool Settings::updateBshare(double t) { return bs && bs->update(t); }
 	int Settings::bshareWake(double t) const { return bs && page == BSHARE ? bs->wake(t) : -1; }
-
-	Settings::Result Settings::finishBshareEntry()
-	{
-		std::string text = pw;
-		pw.clear();
-		page = BSHARE;
-		message.clear();
-		return bs ? bs->entered(text) : MOVED;
-	}
 }

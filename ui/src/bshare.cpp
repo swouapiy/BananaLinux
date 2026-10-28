@@ -12,8 +12,9 @@
 //   bshare-send      what is being sent: the same for a send (send)
 // Received files: a game (its extension one system's alone, systems.conf's ext) into that system's folder, anything
 // else into banana/received, folders kept. Each transfer is a line in banana/logs/bshare.log.
-// Receive (Settings' bshare_receive, read at each request): off (refused), ask (the menu asks), auto (saved at
-// once, LocalSend's "Quick Save"). The handheld announces itself over plain HTTP: LocalSend's apps talk to it in it;
+// Receiving: while Bshare's Receive page is open (bshare-receiving there), the menu asks; with it closed, as Options'
+// bshare_receive says (read at each request): off (refused), ask (the menu asks), auto (saved at once, LocalSend's
+// "Quick Save"). The name shown is the DS's (Settings > Nintendo DS > DS name), else the model. The handheld announces itself over plain HTTP: LocalSend's apps talk to it in it;
 // it talks HTTPS to theirs (self-signed certificates, as LocalSend's own apps accept them).
 #include "json.h"
 #include <algorithm>
@@ -144,8 +145,7 @@ namespace
 		std::string board = readFile("/etc/banana/board");
 		while (!board.empty() && (board.back() == '\n' || board.back() == ' ')) board.pop_back();
 		m.model = board == "rgds" ? "RG DS" : "RG DS Plus";
-		m.alias = conf(data + "/banana/settings.conf", "bshare_name", "");
-		if (m.alias.empty()) m.alias = m.model;
+		m.alias = m.model;	// (the DS's name instead, read each time: dsName)
 		// the same fingerprint from one start to the next (LocalSend's apps know a device by it)
 		std::string idf = data + "/banana/bshare.id";
 		m.fingerprint = readFile(idf);
@@ -158,9 +158,22 @@ namespace
 		return m;
 	}
 
+	// the name LocalSend's apps show: the DS's own (Settings > Nintendo DS > DS name, as the DS emulators keep it; read
+	// each time, so a new one shows at once), else the handheld's model
+	std::string dsName(const Me& m)
+	{
+		std::string n = conf(data + "/bananads/bananads.conf", "firmware.nickname", "");
+		if (n.empty())
+		{
+			n = conf(data + "/drastic/config/drastic.cfg", "firmware.username", "");
+			if (n == conf("/usr/share/drastic/config/drastic.cfg", "firmware.username", "Dr DraStic")) n.clear();	// (DraStic's own default)
+		}
+		return n.empty() ? m.alias : n;
+	}
+
 	std::string infoJson(const Me& m, bool announce, bool withAnnounce)
 	{
-		std::string j = "{\"alias\":\"" + esc(m.alias) + "\",\"version\":\"2.0\",\"deviceModel\":\"" + esc(m.model) +
+		std::string j = "{\"alias\":\"" + esc(dsName(m)) + "\",\"version\":\"2.0\",\"deviceModel\":\"" + esc(m.model) +
 			"\",\"deviceType\":\"mobile\",\"fingerprint\":\"" + esc(m.fingerprint) + "\",\"port\":" + std::to_string(port) +
 			",\"protocol\":\"http\",\"download\":false";
 		if (withAnnounce) j += std::string(",\"announce\":") + (announce ? "true" : "false");
@@ -469,7 +482,9 @@ namespace
 	// a device asks to send: refused, asked (the menu), or taken at once; its files' places chosen now
 	void prepareUpload(Req& r, const Me& m)
 	{
-		std::string mode = conf(data + "/banana/settings.conf", "bshare_receive", "ask");
+		// Options' receiving while Bshare is closed; its Receive page open (bshare-receiving, the menu's): asked anyway
+		std::string mode = conf(data + "/banana/settings.conf", "bshare_receive", "off");
+		if (mode == "off" && access((run + "/bshare-receiving").c_str(), F_OK) == 0) mode = "ask";
 		std::string body = bodyText(r);
 		JPtr j = parseJson(body);
 		const JVal* info = j ? j->get("info") : nullptr;
@@ -712,7 +727,7 @@ namespace
 		writeFile(run + "/bshare-peers", "");
 		std::string joinedOn;	// the address the group was joined on: a new one (Wi-Fi back) joins and announces again
 		double lookAt = 0;
-		logLine("on, as " + m.alias + " (port " + std::to_string(port) + ")");
+		logLine("on, as " + dsName(m) + " (port " + std::to_string(port) + ")");
 		while (!stopping)
 		{
 			if (now() >= lookAt)
