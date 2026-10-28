@@ -1165,3 +1165,32 @@ settings		Takes the Developer options row away again (A seven times on System > 
 settings		Unknown	未知
 settings		Not installed	未安装
 settings		No card	无存储卡
+settings		The theme, brightness, volume and sounds, and which systems show.	主题、亮度、音量和声音，以及显示哪些系统。
+settings		When the handheld dims, sleeps and turns off, the lid and the LEDs.	掌机何时变暗、睡眠和关机，以及翻盖和指示灯。
+settings		The DS emulator, and how DS games look, sound and run.	DS 模拟器，以及 DS 游戏的画面、声音和运行方式。
+settings		RetroArch's games: the game panel, achievements, shaders and sound.	RetroArch 游戏：游戏面板、成就、着色器和声音。
+settings		Wi-Fi, Bluetooth, file sharing and your home server.	Wi-Fi、蓝牙、文件共享和你的家庭服务器。
+settings		Language, time zone, updates, box art, hotkeys and resets.	语言、时区、更新、封面、快捷键和重置。
+settings		Makes the two screens' whites match: on a test pattern, one screen is adjusted to look like the other. Now: 	让两块屏幕的白色一致：在测试图上调整其中一块，使其与另一块相同。当前：
+settings		Your Pokémon on the second screen, in Ruby, Sapphire, Emerald, FireRed and LeafGreen. Inspired by PokeDaisy by Lidor Itzhari.	在第二屏幕上显示你的宝可梦，适用于红宝石、蓝宝石、绿宝石、火红和叶绿。灵感来自 Lidor Itzhari 的 PokeDaisy。
+settings		Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.	将所有模拟器设置恢复为默认值。你的游戏和存档不受影响。按两次 A。
+settings		Copies the server's games to the card and syncs saves both ways, in the background. Your own files are never replaced or deleted.	在后台将服务器上的游戏复制到存储卡，并双向同步存档。你自己的文件不会被替换或删除。
+settings		Six hours on battery (wakes, then asleep with and without the light), then off. Report in banana/logs/night-test.txt. Press A twice.	使用电池六小时（唤醒，然后在亮灯和不亮灯状态下睡眠），然后关机。报告位于 banana/logs/night-test.txt。按两次 A。
+settings		A shows each file. It keeps going while you play, and with the lid closed it finishes before sleeping.	按 A 查看每个文件。游戏时下载会继续；合上盖子时会在睡眠前完成。
+settings		A computer or NAS that shares a folder (SMB, SFTP or FTP). Games you download go straight into their system's folder.	共享文件夹的电脑或 NAS（SMB、SFTP 或 FTP）。下载的游戏会直接放入对应系统的文件夹。
+settings		Archives already on the cards (.zip, .7z, .rar): unpack or delete them.	存储卡上已有的压缩包（.zip、.7z、.rar）：解压或删除。
+settings		What happens to archives after a download, and hidden files.	下载后如何处理压缩包，以及隐藏文件。
+settings		What happens to a .zip or .7z once it's downloaded.	.zip 或 .7z 下载完成后如何处理。
+settings		Always unpacked into the game's folder.	总是解压到游戏文件夹。
+settings		Kept as it is.	保持原样。
+settings		You choose each time, on the download's page.	每次在下载页面上选择。
+settings		Whether an archive is deleted once it's unpacked.	解压后是否删除压缩包。
+settings		Always deleted, with all its parts.	总是删除，包括所有分卷。
+settings		Always kept.	总是保留。
+settings		You choose each time.	每次选择。
+settings		For an archive with a single folder inside.	针对内部只有一个文件夹的压缩包。
+settings		Its files go straight into the folder you chose.	其中的文件直接放入你选择的文件夹。
+settings		The folder is kept, with its files inside.	保留该文件夹及其中的文件。
+settings		Files and folders whose names start with a dot, on your servers.	服务器上名称以点开头的文件和文件夹。
+settings		Shown.	显示。
+settings		Hidden, as on most computers.	隐藏，与大多数电脑一样。

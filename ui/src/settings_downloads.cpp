@@ -1430,7 +1430,7 @@ namespace banana
 		}
 
 		// ---- what the top panel says ------------------------------------------------------------------------------
-		struct Top { std::string icon = "downloads", label = "Downloads", title, accent, help; bool meters = false; double file = 0, all = 0; std::string fileLabel; };
+		struct Top { std::string icon = "downloads", label = "Downloads", title, accent, help, hint; bool meters = false; double file = 0, all = 0; std::string fileLabel; };
 
 		Top topPanel(const std::vector<Row>& r)
 		{
@@ -1441,7 +1441,7 @@ namespace banana
 			case HOME:
 				if (!cur) break;
 				t.title = cur->label;
-				if (cur->kind == K_JOB) { t.title = job.title; t.accent = jobState(false); t.help = "A shows each file. The download carries on while you play or the menu shows anything else; with the lid closed it finishes before the handheld sleeps."; }
+				if (cur->kind == K_JOB) { t.title = job.title; t.accent = jobState(false); t.help = "A shows each file. It keeps going while you play, and with the lid closed it finishes before sleeping."; }
 				else if (cur->kind == K_SERVER)
 				{
 					const fetch::ServerRec& s = servers[cur->index];
@@ -1449,9 +1449,9 @@ namespace banana
 					t.help = "A opens its folders, Y changes it or deletes it.";
 					if (s.protocol == "ftp" && !s.tls && !s.guest) t.help += " Plain FTP sends the password unencrypted.";
 				}
-				else if (cur->kind == K_ADD) t.help = "A NAS, or a computer sharing a folder: over SMB (Windows' and macOS's file sharing, most NAS), SFTP (SSH) or FTP. Games go straight into their system's folder on the card, archives unpacked.";
-				else if (cur->kind == K_LOCAL) t.help = "Archives already on the cards (.zip, .7z, .rar): unpacked where they are or into a system's folder, or deleted.";
-				else t.help = "Unpacking after a download, the archive deleted after, an archive's single folder unwrapped, hidden files.";
+				else if (cur->kind == K_ADD) t.help = "A computer or NAS that shares a folder (SMB, SFTP or FTP). Games you download go straight into their system's folder.";
+				else if (cur->kind == K_LOCAL) t.help = "Archives already on the cards (.zip, .7z, .rar): unpack or delete them.";
+				else t.help = "What happens to archives after a download, and hidden files.";
 				break;
 			case EDIT:
 				t.label = existingServer ? "Change a server" : "Add a server";
@@ -1563,10 +1563,23 @@ namespace banana
 				if (cur)
 					switch (cur->kind)
 					{
-					case O_UNPACK: t.help = "Ask: Download's page asks each time. Always or Never: it doesn't ask."; break;
-					case O_DELETE: t.help = "An archive unpacked is deleted after (all its parts): ask each time, always or never."; break;
-					case O_UNWRAP: t.help = "An archive holding a single folder: its contents go into the folder chosen, not the folder itself."; break;
-					default: t.help = "Files and folders whose names start with a dot, on the servers."; break;
+					// the sentence, then what the choice shown does (as Settings' rows have it)
+					case O_UNPACK:
+						t.help = "What happens to a .zip or .7z once it's downloaded.";
+						t.hint = cur->value == "Always" ? "Always unpacked into the game's folder." : cur->value == "Never" ? "Kept as it is." : "You choose each time, on the download's page.";
+						break;
+					case O_DELETE:
+						t.help = "Whether an archive is deleted once it's unpacked.";
+						t.hint = cur->value == "Always" ? "Always deleted, with all its parts." : cur->value == "Never" ? "Always kept." : "You choose each time.";
+						break;
+					case O_UNWRAP:
+						t.help = "For an archive with a single folder inside.";
+						t.hint = cur->value == "On" ? "Its files go straight into the folder you chose." : "The folder is kept, with its files inside.";
+						break;
+					default:
+						t.help = "Files and folders whose names start with a dot, on your servers.";
+						t.hint = cur->value == "On" ? "Shown." : "Hidden, as on most computers.";
+						break;
 					}
 				break;
 			default:
@@ -1614,7 +1627,8 @@ namespace banana
 			ui->text(ui->fit(t.label, true, 17, 420), true, 17, 170, 62, p.muted, true, 1.4f);
 			ui->text(ui->fit(t.title.empty() ? " " : t.title, true, 30, 420), true, 30, 170, 88, p.ink);
 			if (!t.accent.empty()) ui->text(ui->fit(t.accent, true, 22, 420), true, 22, 170, 130, p.accent);
-			ui->wrapped(t.help, 20, 50, 196, 540, t.meters ? 4 : 10, message.empty() ? p.muted : p.ink);
+			ui->wrapped(t.help, 20, 50, 196, 540, t.meters ? 4 : t.hint.empty() ? 10 : 3, message.empty() ? p.muted : p.ink);
+			if (!t.hint.empty() && message.empty()) ui->wrapped(t.hint, 20, 50, Settings::HINT_TOP, 540, 5, p.ink);	// (as Settings' hints)
 			if (t.meters)
 			{
 				ui->meter(50, 316, 540, t.file);

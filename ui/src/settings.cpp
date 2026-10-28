@@ -679,7 +679,7 @@ namespace banana
 		hint({ "It dims. A touch or any button brings it back.", "It goes dark. A touch or any button brings it back.", "It stays as it is." });
 		add(O, "picture", "Game panel idle time", "How long the game panel waits before it dims or turns off.",
 			menu, "bottom_idle_seconds", { "After 10 s", "After 30 s", "After 1 minute" }, { "10", "30", "60" });
-		add(O, "gamepad", "Pokémon companion", "Your Pokémon on the second screen, for Ruby, Sapphire, Emerald, FireRed and LeafGreen (English). Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.",
+		add(O, "gamepad", "Pokémon companion", "Your Pokémon on the second screen, in Ruby, Sapphire, Emerald, FireRed and LeafGreen. Inspired by PokeDaisy by Lidor Itzhari.",
 			menu, "pokemon_companion", { "Off", "On" }, { "off", "on" });
 		hint({ "The second screen stays as it is.", "The party with levels, HP and moves, and in a battle the foe, its types and how each move does." });
 		add(O, "gamepad", "Game companion", "Pages about other Game Boy Advance games on the second screen. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.",
@@ -778,7 +778,7 @@ namespace banana
 		add(S, "gear", "First-time setup", "Runs the first-start steps again: Wi-Fi, the time zone and the RetroAchievements account.", "", "setup", {}, {}, Item::PAGE);
 		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults. Your games and saves are untouched. Press A twice.",
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "Reset emulator settings", "Puts the emulators' settings back to their defaults: the DS emulator, Quick resume, each system's emulator, and RetroArch's shader, audio latency, VSync and hotkeys. Press A twice.",
+		add(S, "gear", "Reset emulator settings", "Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "About", "The handheld and its software: the model, the versions, the storage, the battery and the network.", "", "about", {}, {}, Item::PAGE);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
@@ -828,7 +828,7 @@ namespace banana
 		// sections with tiles: the grid is the groups in order)
 		const char* HS = "Home server";
 		add(HS, "phone", "Server", "", "", "hs_server", {}, {}, Item::PAGE);
-		add(HS, "phone", "Sync now", "Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.",
+		add(HS, "phone", "Sync now", "Copies the server's games to the card and syncs saves both ways, in the background. Your own files are never replaced or deleted.",
 			"", "hs_sync", {}, {}, Item::PAGE);
 		add(HS, "phone", "Games", "What comes from the server.",
 			menu, "homesync_roms", { "Download", "Saves only" }, { "on", "off" });
@@ -881,7 +881,7 @@ namespace banana
 		add(DEV, "gear", "Sleep timing log", "How long each part of the handheld takes to sleep and to wake.", power, "sleep_debug",
 			{ "Off", "On" }, { "no", "yes" });
 		items.back().hints = { "Not logged.", "Written to banana/logs/sleep-devices.log after each wake." };
-		add(DEV, "moon", "Night test", "A night's data on battery: 2 hours of wakes, 2 hours asleep with the light, 2 without, then off. The report goes to banana/logs/night-test.txt. Press A twice.",
+		add(DEV, "moon", "Night test", "Six hours on battery (wakes, then asleep with and without the light), then off. Report in banana/logs/night-test.txt. Press A twice.",
 			"", "night_test", { "" }, { "" }, Item::ACTION);
 		add(DEV, "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About > Version brings it back). Press A twice.",
 			"", "dev_hide", { "" }, { "" }, Item::ACTION);
@@ -2101,9 +2101,24 @@ namespace banana
 		char n[32];
 		snprintf(n, sizeof n, "%d settings", groupEnd(g0) - groupStart(g0));
 		text(n, true, 22, 170, 130, p.accent);
-		std::string all;
-		for (int i = groupStart(g0); i < groupEnd(g0); i++) all += (all.empty() ? "" : ", ") + lang::tr(items[i].label);
-		wrapped(all + ".", 20, 50, 196, 540, 7, p.muted);
+		// what the group is for, in a line, as Android's settings list says it (its rows' names, all of them, read as a
+		// wall of text: the user, 2026-10-28)
+		static const std::pair<const char*, const char*> ABOUT[] = {
+			{ "Display & sound", "The theme, brightness, volume and sounds, and which systems show." },
+			{ "Sleep & power", "When the handheld dims, sleeps and turns off, the lid and the LEDs." },
+			{ "Nintendo DS", "The DS emulator, and how DS games look, sound and run." },
+			{ "Other systems", "RetroArch's games: the game panel, achievements, shaders and sound." },
+			{ "Network", "Wi-Fi, Bluetooth, file sharing and your home server." },
+			{ "System", "Language, time zone, updates, box art, hotkeys and resets." },
+		};
+		std::string about;
+		for (auto& a : ABOUT) if (groups[g0] == a.first) about = a.second;
+		if (about.empty())	// (a group without a line: its rows' names)
+		{
+			for (int i = groupStart(g0); i < groupEnd(g0); i++) about += (about.empty() ? "" : ", ") + lang::tr(items[i].label);
+			about += ".";
+		}
+		wrapped(about, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
 		be->beginScreen(1);
@@ -2185,8 +2200,7 @@ namespace banana
 		if (cur.key == "colors")
 		{
 			ScreenColors c = ScreenColors::load(data + "/screen-colors.conf");
-			help = std::string("The two screens rarely show the same white. This corrects one of them towards the other: the same test pattern on both, "
-				"and red, green, blue, gamma, brightness and black for the one corrected (the handheld has one colour table, so one screen). Now: ") +
+			help = std::string("Makes the two screens' whites match: on a test pattern, one screen is adjusted to look like the other. Now: ") +
 				(c.neutral() ? "no correction." : c.screen == 0 ? "the top screen corrected." : "the bottom screen corrected.");
 		}
 		if (cur.key == "share_account")
