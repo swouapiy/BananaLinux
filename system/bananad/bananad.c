@@ -2258,8 +2258,9 @@ static void kmsg_read(int fd, int fresh)
 		char *msg = strchr(b, ';');
 		if (!msg) continue;
 		msg++;
-		/* (the priority before the first comma; 3: err. And the sound's underruns, warnings: xrun_debug above) */
-		if ((atoi(b) & 7) > 3 && strncmp(msg, "XRUN: ", 6)) continue;
+		/* (the priority before the first comma; 3: err. And the sound's underruns, warnings: xrun_debug above, after the
+		 * device's name: "asoc-audio-graph-card2 sound-speakers: XRUN: pcmC1D0p:0") */
+		if ((atoi(b) & 7) > 3 && !strstr(msg, "XRUN: ")) continue;
 		msg[strcspn(msg, "\n")] = 0;
 		if (!strcmp(msg, last)) { repeats++; continue; }
 		if (repeats) rec("kernel", "(the line before, %d more times)", repeats);
