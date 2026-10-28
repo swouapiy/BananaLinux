@@ -1763,7 +1763,9 @@ static int charge_mode(void)
 	struct input_event ev;
 	for (int i = 0; i < n; i++) while (read(pf[i].fd, &ev, sizeof ev) > 0) {}	/* (what came before isn't for us) */
 	double t0 = mono(), held = 0, look = 0;
-	int full = -1, out = 0, r = -1, slept = 0, cant_sleep = 0;
+	int full = -1, out = 0, r = -1, slept = 0, cant_sleep = 0, wc_missed = 0;
+	char wc[32] = "", woke[200] = "";	/* (the wakeup count at the look; what woke the last sleep, for the log) */
+	write_file("/sys/class/rtc/rtc0/device/power/wakeup", "enabled");	/* (the looks' alarm: before main() sets it) */
 	while (r < 0) {
 		poll(pf, n, held ? 100 : look ? 2000 : 0);	/* (the first look at once) */
 		double now = mono();
@@ -1774,6 +1776,9 @@ static int charge_mode(void)
 		if (held && now - held >= 1.0 && !lid_shut_now()) { r = 0; break; }	/* (not with the lid shut: open it first) */
 		if (now < look) continue;
 		look = now + 2;
+		/* the kernel's wakeup count before the look, written back before the suspend: a cable pulled out between the
+		 * two (its event already in) calls the suspend off instead of being slept through (the kernel's way) */
+		read_str("/sys/power/wakeup_count", wc, sizeof wc);
 		out = charger_online() ? 0 : out + 1;
 		if (out >= 2) { r = 3; break; }	/* (one look missed: a cable wiggled) */
 		char st[32] = "", p[320];
@@ -1792,7 +1797,12 @@ static int charge_mode(void)
 		 * second look comes awake), nor after a suspend that failed (awake then, as before) */
 		if (held || out || cant_sleep) continue;
 		if (!slept) { hooks("pre", 0); sleep_mode(); }	/* (USB and Wi-Fi off, as for a sleep) */
-		rtc_alarm(600);
+		if (wc[0] && write_file("/sys/power/wakeup_count", wc) && wc_missed++ < 3) { look = 0; continue; }
+		wc_missed = 0;
+		/* the next look in 20 s: the cable's going wakes it at once (the RK817's interrupt), but should that ever be
+		 * missed, the lights still go out within 20 s. On the charger the looks cost the battery nothing */
+		rtc_alarm(20);
+		wake_sources_snapshot();
 		int sr = write_file("/sys/power/state", "mem");
 		int err = errno;
 		if (!sr && test_wake >= 0) {
@@ -1803,6 +1813,7 @@ static int charge_mode(void)
 			unlink(test_asleep);
 		}
 		rtc_alarm(0);
+		if (!sr) wake_sources_fired(woke, sizeof woke);
 		if (sr) { cant_sleep = 1; charge_log("it can't sleep while charging (%s): awake instead", strerror(err)); }
 		slept++;
 		look = 0;	/* (the look at once after the wake) */
@@ -1818,8 +1829,9 @@ static int charge_mode(void)
 	for (int i = 0; i < n; i++) close(pf[i].fd);
 	unlink("/run/banana/charging");
 	battery_state(bat, sizeof bat, &pct, &charging);
-	charge_log("%s after %.0f min: battery %d%%", r ? "the charger pulled out: turning off" : "the power button: starting",
-		(mono() - t0) / 60, pct);
+	charge_log("%s after %.0f min: battery %d%%%s%s%s", r ? "the charger pulled out: turning off" : "the power button: starting",
+		(mono() - t0) / 60, pct, r && slept ? " (the last wake: " : "", r && slept ? (woke[0] ? woke : "not known") : "",
+		r && slept ? ")" : "");
 	led_set(amber, "off", level);
 	led_set(green, r ? "off" : "on", level);
 	if (!r) cpus_low(0);	/* (the boot's banana-perf sets the governor it wants) */

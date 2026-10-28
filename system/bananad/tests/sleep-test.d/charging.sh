@@ -32,7 +32,7 @@ asleep && ok "asleep while charging (an old press didn't start it)" || bad "not 
 [ -e /run/banana/charging ] && ok "/run/banana/charging while it charges" || bad "no /run/banana/charging"
 [ "$(cat $L/amber:charging/brightness)" = 255 ] && [ "$(cat $L/green:power/brightness)" = 0 ] && ok "amber on at full (lit asleep), green off" ||
     bad "amber $(cat $L/amber:charging/brightness), green $(cat $L/green:power/brightness)"
-[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +600 ] && ok "a look in 10 min (+600)" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
+[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +20 ] && ok "a look in 20 s (+20: a missed unplug still seen)" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && [ "$(cat /sys/class/backlight/backlight1/bl_power)" = 4 ] && ok "both panels dark" || bad "bl_power not 4"
 [ "$(cat /sys/devices/system/cpu/cpu1/online)$(cat /sys/devices/system/cpu/cpu3/online)" = 00 ] &&
     [ "$(cat /sys/devices/system/cpu/cpufreq/policy0/scaling_governor)" = powersave ] && ok "one CPU, powersave (for its looks)" || bad "CPUs as they were"
@@ -52,7 +52,7 @@ grep -q "charging while off (turned off with the charger in): battery [0-9]*%" /
 grep -q "charging while off (turned off with the charger in): battery [0-9]*%, the charging light off until now" /data/banana/logs/charging.log &&
     ok "charging.log: whether U-Boot had lit the charging light (off here)" || bad "charging.log: $(grep 'charging while off' /data/banana/logs/charging.log | tail -n1)"
 
-echo "charging 4. full: green instead of amber at the 10-minute look; the charger pulled out turns it off"
+echo "charging 4. full: green instead of amber at the next look; the charger pulled out turns it off"
 : > /data/banana/.charge-next
 BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" --charge & CB=$!
 asleep && ok "asleep" || bad "not asleep"
@@ -66,6 +66,8 @@ echo 0 > $CH/online; wake                                             # the cabl
 finish
 [ $r = 3 ] && ok "the charger out: exit 3 (rcS turns it off)" || bad "exit $r"
 [ "$(cat $L/green:power/brightness)$(cat $L/amber:charging/brightness)" = 00 ] && ok "the LEDs off" || bad "LEDs left on"
+grep -q "the charger pulled out: turning off after [0-9]* min: battery [0-9]*% (the last wake: " /data/banana/logs/charging.log &&
+    ok "charging.log: what woke it last" || bad "charging.log: $(grep 'pulled out' /data/banana/logs/charging.log | tail -n1)"
 echo 50 > /sys/class/power_supply/battery/capacity
 
 echo "charging 5. the power button with the lid shut, no charger: off again at once (lid_start = yes: it starts)"
