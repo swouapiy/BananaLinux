@@ -155,8 +155,8 @@ boot() {    # boot <name>: start the VM (with the kernel and root the card's ext
     wait_for "banana-ui: the menu" 240 "$1: the menu is up" || { cat "$OUT/serial.log" | tail -n 30; kill $QEMU 2>/dev/null; return 1; }
     sleep 3
 }
-shutdown_from_settings() {  # Start (the groups) > L (wraps to the last, System) > A > Up (wraps to its last row, Shut
-    key s pgup ret up ret ret  # down) > A twice; the VM powers off
+shutdown_from_settings() {  # Start (the groups) > Y (the Power list: Sleep, Restart, Shut down) > Up (wraps to Shut
+    key s y up ret ret         # down) > A twice; the VM powers off. (System's last row is Hotkeys, or Developer options)
     for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || { ok "$1: shut down from the settings, the VM powered off"; wait $QEMU 2>/dev/null; return 0; }; sleep 0.5; done
     bad "$1: still running 60 s after the shutdown"; kill $QEMU 2>/dev/null; return 1
 }
@@ -287,8 +287,9 @@ add_update() { mkdir -p "$DATA/banana/updates"; make_update "$DATA/banana/update
 with_data add_update
 boot third
 grep -q "rcS: slot a booted" "$OUT/serial.log" && ok "the third boot ran slot a" || bad "the third boot didn't say it ran slot a"
-# Start > System (L from the first group) > Update (the row under Time zone) > the package > A again to confirm
-key s pgup ret down ret; sleep 1; shot third-updates; key ret ret
+# Start > System (L from the first group) > Update (two rows down: Language, Time zone) > the package (under Check for
+# updates and Beta channel) > A again to confirm
+key s pgup ret down down ret; sleep 1; shot third-updates; key down down ret ret
 wait_for "written to slot b" 300 "the update was written to slot b and checked"
 sleep 2; shot third-updated
 key ret            # Restart
@@ -303,9 +304,9 @@ grep -q "rcS: slot b booted" "$OUT/serial.log" && ok "the fourth boot ran slot b
 grep -q "boot-guard: slot b on trial" "$OUT/serial.log" && ok "the update's slot on trial" || bad "the update's slot wasn't on trial"
 wait_for "boot-guard: slot b started: kept" 30 "the update kept once its menu was up"
 shot fourth-menu
-# Start > System > Previous version (four rows under Time zone: Update, Box art, Box art from, Previous version;
-# checked headless) > A twice: back to slot a from the next boot
-key s pgup ret down down down down ret ret
+# Start > System > Previous version (seven rows down: Time zone, Update, Test versions, Update check, Box art, Box art
+# from, Previous version; checked headless) > A twice: back to slot a from the next boot
+key s pgup ret down down down down down down down ret ret
 for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || break; sleep 0.5; done
 kill -0 $QEMU 2>/dev/null && { bad "no restart from Previous version"; kill $QEMU; } || ok "restarted from Previous version"
 wait $QEMU 2>/dev/null || true
