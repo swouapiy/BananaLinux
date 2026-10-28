@@ -19,13 +19,17 @@ pre)
     touch /run/banana/wifi-unloaded
     [ -n "$H" ] && [ -e $M/$H ] && echo $H > $M/unbind 2>/dev/null && echo $H > /run/banana/wifi-host-unbound
     ;;
-post)
+post|off)
+    # off: turned off from sleep. The card and its controller back as an ordinary shutdown finds them, but not
+    # connected: shut down straight from the sleep's state, the handheld went on drawing ~200 mA "off" (2026-10-28,
+    # every time; 0 mA from the same sleep after a full wake)
     rm -f /run/banana/wifi-unloaded
     if [ -f /run/banana/wifi-host-unbound ]; then
         cat /run/banana/wifi-host-unbound > $M/bind 2>/dev/null
         rm -f /run/banana/wifi-host-unbound
     fi
     modprobe rtw88_8821cs 2>/dev/null
+    [ "$1" = off ] && { rm -f /run/banana/wifi-was-up; exit 0; }
     [ -f /run/banana/wifi-was-up ] && { rm -f /run/banana/wifi-was-up; /usr/libexec/banana/wifi up; }
     ;;
 esac

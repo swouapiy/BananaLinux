@@ -9,6 +9,9 @@ pre)
     touch /run/banana/bt-was-up
     /usr/libexec/banana/bluetooth down sleep
     ;;
+off)
+    rm -f /run/banana/bt-was-up     # (turned off from sleep: down already, rcK's down finds nothing to do)
+    ;;
 post)
     rm -f /run/banana/bt-was-up
     /usr/libexec/banana/bluetooth up >/dev/null 2>&1 &
