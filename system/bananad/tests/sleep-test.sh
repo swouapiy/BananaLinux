@@ -505,7 +505,7 @@ rm -rf /data/banana/logs/sessions; rm -f /run/banana/keyboard
 start "recorder = on"
 [ -e /run/banana/recording ] && ok "recording (/run/banana/recording, for the menu's dot)" || bad "no /run/banana/recording"
 F=$(cat /run/banana/recording 2>/dev/null)
-ev $EV_KEY 304 1; ev $EV_KEY 304 0                          # A
+ev $EV_KEY 304 1; ev $EV_KEY 304 0                          # B (BTN_SOUTH: the RG DS's B)
 tev 3 57 1  3 53 100  3 54 200  0 0 0                      # a touch: tracking id 1 at 100,200, then the report
 tev 3 57 -1  0 0 0                                          # its lift
 sleep 0.5
@@ -527,7 +527,7 @@ s.sendto(b'game\tstart: Peel Quest\n(nds, run-nds)', '/run/banana/recorder.sock'
 sleep 0.3
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "asleep" || bad "no sleep"
-grep -q "button .*a down" "$F" && grep -q "lid .*closed" "$F" && ok "flushed before the sleep: the button, the lid" || bad "not flushed before the sleep: $(tail -n 3 "$F" 2>/dev/null | tr '\n' '|')"
+grep -q "button .*b down" "$F" && grep -q "lid .*closed" "$F" && ok "flushed before the sleep: the button, the lid" || bad "not flushed before the sleep: $(tail -n 3 "$F" 2>/dev/null | tr '\n' '|')"
 grep -q "setting  Turn off when idle: 1 hour -> 5 minutes" "$F" && ok "banana-ui's event copied in (setting)" || bad "no setting line: $(grep -c setting "$F")"
 grep -q "game     start: Peel Quest (nds, run-nds)" "$F" && ok "its newline made a space: one line each" || bad "game line: $(grep game "$F")"
 grep -q "touch .*down 100,200" "$F" && grep -q "touch .*up 100,200" "$F" && ok "the touch, where (100,200)" || bad "touch lines: $(grep touch "$F" | tr '\n' '|')"
