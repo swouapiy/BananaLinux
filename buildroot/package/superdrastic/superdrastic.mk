@@ -6,7 +6,10 @@
 
 # Built from source (its build.sh, with Buildroot's GCC instead of clang). It links libdrm only; EGL/GLES (shaders),
 # ALSA, libcurl and zlib are loaded at run time when present.
-SUPERDRASTIC_VERSION = 07fe8dd0e348d511ca7ceb8f30315006d26627e6
+# (7e71ebe, 0.4.2's: 0.5.0's 07fe8dd is on a branch not pushed to GitHub yet, so its download fails the image build. 0.4.2's
+# has the resume state on SIGUSR1 that turning off after sleeping uses; not Low latency's DSFLIP_LOWLAT nor 0.5.0's menu
+# changes. 07fe8dd again once it is published)
+SUPERDRASTIC_VERSION = 7e71ebe9dc5eade1682902d0ee3df74530afd313
 SUPERDRASTIC_SITE = https://github.com/JorreFog/SuperDrastic.git
 SUPERDRASTIC_SITE_METHOD = git
 SUPERDRASTIC_LICENSE = MIT

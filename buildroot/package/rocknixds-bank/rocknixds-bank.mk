@@ -4,8 +4,9 @@
 #
 ################################################################################
 
-# ROCKNIXDS's release build (self-contained .NET for linux-arm64, invariant globalization: no ICU)
-ROCKNIXDS_BANK_VERSION = 0.2.0
+# ROCKNIXDS's release build (self-contained .NET for linux-arm64, invariant globalization: no ICU). 0.1.0, the release
+# published: 0.5.0's bank-v0.2.0 isn't on GitHub yet (its download fails the image build); 0.2.0 again once it is
+ROCKNIXDS_BANK_VERSION = 0.1.0
 ROCKNIXDS_BANK_SOURCE = rocknixds-bank-$(ROCKNIXDS_BANK_VERSION)-aarch64.tar.gz
 ROCKNIXDS_BANK_SITE = https://github.com/JorreFog/ROCKNIXDS/releases/download/bank-v$(ROCKNIXDS_BANK_VERSION)
 ROCKNIXDS_BANK_LICENSE = MIT, GPL-3.0 (PKHeX.Core), MIT (.NET)
