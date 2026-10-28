@@ -189,7 +189,7 @@ namespace banana
 			while (dirent* e = readdir(d))
 			{
 				size_t l = strlen(e->d_name);
-				if (l > 11 && !strcmp(e->d_name + l - 11, ".update.tar")) n++;
+				if (l > 11 && e->d_name[0] != '.' && !strcmp(e->d_name + l - 11, ".update.tar")) n++;	// (not macOS's "._" copies)
 			}
 			closedir(d);
 		}
