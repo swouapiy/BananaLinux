@@ -1134,3 +1134,34 @@ settings		Recording	正在记录
 menu		Banana started without {several}. A restart may help; banana/logs/health.txt has the details.	Banana 启动时缺少 {several}。重启可能有帮助；详情见 banana/logs/health.txt。
 menu		The update didn't start	更新未能启动
 menu		Banana went back to the version before it by itself. banana/logs/updates.log has the details.	Banana 已自动回到之前的版本。详情见 banana/logs/updates.log。
+settings		The handheld and its software: the model, the versions, the storage, the battery and the network.	掌机及其软件：型号、版本、存储、电池和网络。
+settings		Device	设备
+settings		Version	版本
+settings		Kernel	内核
+settings		Processor	处理器
+settings		Memory	内存
+settings		Storage	存储
+settings		Second card	第二张存储卡
+settings		IP address	IP 地址
+settings		Wi-Fi MAC address	Wi-Fi MAC 地址
+settings		Up time	运行时间
+settings		The handheld, as its device tree names it.	掌机的型号，取自其设备树。
+settings		The version of Banana running, and its slot (a or b: Update writes the other one).	正在运行的 Banana 版本及其槽位（a 或 b：更新会写入另一个）。
+settings		The Linux kernel's version.	Linux 内核的版本。
+settings		RetroArch's version. It updates with Banana.	RetroArch 的版本。它随 Banana 一起更新。
+settings		The chip, and how many cores it has.	芯片型号及其核心数。
+settings		The memory in use now, of all there is.	当前已用内存与总内存。
+settings		The space left on the card, of all there is.	存储卡的剩余空间与总空间。
+settings		The space left on the card in the second slot, of all there is.	第二个卡槽中存储卡的剩余空间与总空间。
+settings		How full the battery is, and whether it is charging.	电池电量，以及是否正在充电。
+settings		The network the handheld is on.	掌机所连接的网络。
+settings		The handheld's address on the network: for File sharing and SSH.	掌机在网络中的地址：用于文件共享和 SSH。
+settings		The handheld's address on the network, once Wi-Fi is connected.	掌机在网络中的地址，Wi-Fi 连接后显示。
+settings		The Wi-Fi chip's own address, for a router that lets in only the devices it knows.	Wi-Fi 芯片自身的地址，用于只允许已知设备接入的路由器。
+settings		Whether Bluetooth is on.	蓝牙是否开启。
+settings		How long since the handheld started (time asleep included).	掌机自启动以来的时间（包括休眠时间）。
+settings		A seven times on System > About > Version brings them back.	在 系统 > 关于 > 版本 上按七次 A 可恢复。
+settings		Takes the Developer options row away again (A seven times on System > About > Version brings it back). Press A twice.	再次隐藏“开发者选项”一行（在 系统 > 关于 > 版本 上按七次 A 可恢复）。按两次 A。
+settings		Unknown	未知
+settings		Not installed	未安装
+settings		No card	无存储卡

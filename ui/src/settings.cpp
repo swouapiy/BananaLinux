@@ -780,7 +780,7 @@ namespace banana
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Reset emulator settings", "Puts the emulators' settings back to their defaults: the DS emulator, Quick resume, each system's emulator, and RetroArch's shader, audio latency, VSync and hotkeys. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "About", "", "", "about", {}, {}, Item::INFO);
+		add(S, "gear", "About", "The handheld and its software: the model, the versions, the storage, the battery and the network.", "", "about", {}, {}, Item::PAGE);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice, or hold the power button.", "", "poweroff", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Hotkeys", "The buttons that do something everywhere, in the menu and in each emulator.", "", "hotkeys", {}, {}, Item::PAGE);
@@ -851,6 +851,28 @@ namespace banana
 				hint({ "Its games and saves sync with the server.", "Its games stay as they are on this handheld." });
 			}
 		}
+		// the About page (System > About): a row per fact, its value on the right, read again whenever the page shows
+		// (refreshInfo). A seven times on Version unlocks the Developer options, as a phone's build number does
+		{
+			const char* AB = "About";
+			struct { const char* key; const char* label; const char* help; } rows[] = {
+				{ "ab_model", "Device", "The handheld, as its device tree names it." },
+				{ "ab_version", "Version", "The version of Banana running, and its slot (a or b: Update writes the other one)." },
+				{ "ab_kernel", "Kernel", "The Linux kernel's version." },
+				{ "ab_retroarch", "RetroArch", "RetroArch's version. It updates with Banana." },
+				{ "ab_chip", "Processor", "The chip, and how many cores it has." },
+				{ "ab_memory", "Memory", "The memory in use now, of all there is." },
+				{ "ab_storage", "Storage", "The space left on the card, of all there is." },
+				{ "ab_storage2", "Second card", "The space left on the card in the second slot, of all there is." },
+				{ "ab_battery", "Battery", "How full the battery is, and whether it is charging." },
+				{ "ab_wifi", "Wi-Fi", "The network the handheld is on." },
+				{ "ab_ip", "IP address", "The handheld's address on the network: for File sharing and SSH." },
+				{ "ab_mac", "Wi-Fi MAC address", "The Wi-Fi chip's own address, for a router that lets in only the devices it knows." },
+				{ "ab_bt", "Bluetooth", "Whether Bluetooth is on." },
+				{ "ab_uptime", "Up time", "How long since the handheld started (time asleep included)." },
+			};
+			for (auto& r : rows) add(AB, "gear", r.label, r.help, "", r.key, { "" }, { "" }, Item::INFO);
+		}
 		// the Developer options list: opened from that row, not a tile (DEV: no tile, as Power and Hotkeys)
 		add(DEV, "gear", "Flight recorder", "Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi.", power, "recorder",
 			{ "Off", "On" }, { "off", "on" });
@@ -861,7 +883,7 @@ namespace banana
 		items.back().hints = { "Not logged.", "Written to banana/logs/sleep-devices.log after each wake." };
 		add(DEV, "moon", "Night test", "A night's data on battery: 2 hours of wakes, 2 hours asleep with the light, 2 without, then off. The report goes to banana/logs/night-test.txt. Press A twice.",
 			"", "night_test", { "" }, { "" }, Item::ACTION);
-		add(DEV, "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About brings it back). Press A twice.",
+		add(DEV, "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About > Version brings it back). Press A twice.",
 			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 		addShelfRows();
 	}
@@ -963,20 +985,27 @@ namespace banana
 			std::getline(f, model, '\0');
 		}
 		int battery = -1;
+		bool charging = false;
 		if (DIR* d = opendir("/sys/class/power_supply"))
 		{
 			while (dirent* e = readdir(d))
 			{
 				std::string b = std::string("/sys/class/power_supply/") + e->d_name;
-				if (readLine(b + "/type") == "Battery") { battery = atoi(readLine(b + "/capacity").c_str()); break; }
+				if (readLine(b + "/type") == "Battery") battery = atoi(readLine(b + "/capacity").c_str());
+				else if (readLine(b + "/online") == "1") charging = true;	// (a charger: the rk817's gauge says Discharging)
 			}
 			closedir(d);
 		}
-		struct statvfs vf;
-		char space[64] = "";
-		if (statvfs("/data", &vf) == 0)
-			snprintf(space, sizeof space, "%.1f GB free of %.1f GB", vf.f_bavail * (double)vf.f_frsize / 1e9, vf.f_blocks * (double)vf.f_frsize / 1e9);
-		// Wi-Fi: the address, if there is one
+		// "12.3 of 59.4 GB free": a mounted card's space
+		auto space = [](const char* at) -> std::string
+		{
+			struct statvfs vf;
+			if (statvfs(at, &vf) != 0 || vf.f_blocks == 0) return "";
+			char b[64];
+			snprintf(b, sizeof b, "%.1f of %.1f GB free", vf.f_bavail * (double)vf.f_frsize / 1e9, vf.f_blocks * (double)vf.f_frsize / 1e9);
+			return b;
+		};
+		// Wi-Fi: the network, the address and the chip's MAC
 		wifiInfo = "Off";
 		ip.clear();
 		std::string state = readLine("/sys/class/net/wlan0/operstate");
@@ -993,17 +1022,68 @@ namespace banana
 			}
 			if (fd >= 0) ::close(fd);
 		}
-		std::ostringstream a;
-		a << "Banana " << (version.empty() ? "dev" : version) << (slot.empty() ? "" : " (slot " + slot + ")") << " on the " << (model.empty() ? "handheld" : model) << ". ";
-		if (battery >= 0) a << "Battery " << battery << "%. ";
-		if (space[0]) a << "Card: " << space << ". ";
-		// the kernel too (#70): its version as uname gives it
+		// the chip: the SoC from the device tree's compatible ("rockchip,rk3566"), the cores the kernel counts
+		std::string chip;
+		{
+			std::ifstream f("/proc/device-tree/compatible");
+			std::string c;
+			while (std::getline(f, c, '\0'))
+				if (c.compare(0, 11, "rockchip,rk") == 0)
+				{
+					std::string soc = c.substr(9);	// "rk3566" -> "RK3566"
+					for (char& ch : soc) ch = (char)toupper((unsigned char)ch);
+					chip = "Rockchip " + soc;
+					break;
+				}
+			long n = sysconf(_SC_NPROCESSORS_CONF);
+			if (n > 0) chip += (chip.empty() ? "" : ", ") + std::to_string(n) + " cores";
+		}
+		// the memory: in use (all but MemAvailable) of MemTotal
+		std::string mem;
+		{
+			std::ifstream f("/proc/meminfo");
+			std::string k;
+			long v, total = 0, avail = 0;
+			while (f >> k >> v) { if (k == "MemTotal:") total = v; else if (k == "MemAvailable:") avail = v; f.ignore(64, '\n'); }
+			char b[64];
+			if (total > 0) { snprintf(b, sizeof b, "%ld of %ld MB used", (total - avail) / 1024, total / 1024); mem = b; }
+		}
+		std::string uptime;
+		{
+			double up = 0;
+			std::ifstream("/proc/uptime") >> up;
+			long m = (long)(up / 60);
+			uptime = m >= 1440 ? std::to_string(m / 1440) + " d " + std::to_string(m / 60 % 24) + " h"
+				: m >= 60 ? std::to_string(m / 60) + " h " + std::to_string(m % 60) + " min" : std::to_string(m) + " min";
+		}
+		std::string mac = readLine("/sys/class/net/wlan0/address");
 		utsname un;
-		if (uname(&un) == 0) a << "Linux " << un.release << ".";
+		std::string kernel = uname(&un) == 0 ? un.release : "";
 		// RetroArch's version: it comes with BananaOS's updates (its Online Updater doesn't update RetroArch itself)
 		std::string ra = readLine("/usr/share/retroarch/version");
-		if (!ra.empty()) a << " RetroArch " << ra << ", updated with BananaOS.";
-		about = a.str();
+		std::string ssid = wstat.connected ? wstat.ssid : "";
+		std::string sd2 = access("/run/banana/sd2/slot", F_OK) == 0 ? space("/run/sd2") : "";
+		const std::map<std::string, std::string> v = {
+			{ "ab_model", model.empty() ? "Unknown" : model },
+			{ "ab_version", (version.empty() ? "dev" : version) + (slot.empty() ? "" : " (slot " + slot + ")") },
+			{ "ab_kernel", kernel.empty() ? "Unknown" : kernel },
+			{ "ab_retroarch", ra.empty() ? "Not installed" : ra },
+			{ "ab_chip", chip.empty() ? "Unknown" : chip },
+			{ "ab_memory", mem.empty() ? "Unknown" : mem },
+			{ "ab_storage", space("/data").empty() ? "Unknown" : space("/data") },
+			{ "ab_storage2", sd2.empty() ? "No card" : sd2 },
+			{ "ab_battery", battery < 0 ? "Unknown" : std::to_string(battery) + "%" + (charging ? ", charging" : "") },
+			{ "ab_wifi", state.empty() ? "Off" : !ssid.empty() ? ssid : state == "up" ? "Connected" : "Not connected" },
+			{ "ab_ip", ip.empty() ? "None" : ip },
+			{ "ab_mac", mac.empty() ? "Unknown" : mac },
+			{ "ab_bt", btOn() ? "On" : "Off" },
+			{ "ab_uptime", uptime },
+		};
+		for (Item& it : items)
+		{
+			auto f = v.find(it.key);
+			if (f != v.end() && !it.names.empty()) it.names[0] = f->second;
+		}
 	}
 
 	// the tiles: every group but the Developer list (opened from System's Developer row)
@@ -1177,9 +1257,9 @@ namespace banana
 	Settings::Result Settings::change(int dir)
 	{
 		Item& it = items[sel];
-		if (it.key == "about" && dir > 0 && !devOn)
+		if (it.key == "ab_version" && dir > 0 && !devOn)
 		{
-			// A seven times on About: the Developer tile (as a phone's build number); a count from the fourth
+			// A seven times on About > Version: the Developer options (as a phone's build number); a count from the fourth
 			if (++aboutTaps >= 7)
 			{
 				aboutTaps = 0;
@@ -1195,6 +1275,7 @@ namespace banana
 		{
 			if (dir <= 0) return NONE;
 			if (it.key == "scrape") { startScrape(); return MOVED; }
+			if (it.key == "about") { refreshInfo(); openSection("About"); aboutTaps = 0; return MOVED; }
 			if (it.key == "colors") { openColors(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
@@ -1234,8 +1315,8 @@ namespace banana
 				armed = -1;
 				devOn = false;
 				setConfValue(data + "/settings.conf", "developer", "off");
-				toRow("about");	// (the Developer row gone: System's About, where the seven A's are)
-				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
+				toRow("about");	// (the Developer row gone: System's About, whose Version takes the seven A's)
+				toast("Developer options hidden", "A seven times on System > About > Version brings them back.", 0x6ad07a, 1, 4000);
 				return MOVED;
 			}
 			if (it.key == "night_test")
@@ -1440,6 +1521,7 @@ namespace banana
 		case Key::RIGHT: case Key::A: return change(1);
 		case Key::B:
 			if (groups[g] == DEV) { toRow("developer"); return MOVED; }	// the Developer list: back to its row in System
+			if (groups[g] == "About") { toRow("about"); return MOVED; }	// the About page: back to its row in System
 			if (groups[g] == "Shown systems" || groups[g] == "Hotkeys" || groups[g] == "Home server" || groups[g] == "Home server systems") { std::string from = groups[g] == "Hotkeys" ? "hotkeys" : groups[g] == "Home server" ? "homesync" : groups[g] == "Home server systems" ? "hs_systems" : "shelves"; message.clear(); for (size_t i = 0; i < items.size(); i++) if (items[i].key == from) sel = (int)i; top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1); armed = -1; return MOVED; }
 			inGroups = true; gsel = g < gridCount() ? g : 0; armed = -1; return MOVED;	// back to the groups
 		case Key::START: mOpen = false; return CLOSED;
@@ -1448,7 +1530,7 @@ namespace banana
 	}
 
 	// the sections with no tile on the groups' grid (after the others): Power (Y there), Shown systems (a row's page)
-	static bool tileless(const std::string& section) { return section == "Power" || section == "Shown systems" || section == "Hotkeys" || section == "Home server" || section == "Home server systems" || section == DEV; }
+	static bool tileless(const std::string& section) { return section == "Power" || section == "Shown systems" || section == "Hotkeys" || section == "Home server" || section == "Home server systems" || section == DEV || section == "About"; }
 	int Settings::gridCount() const
 	{
 		int n = 0;
@@ -2067,7 +2149,7 @@ namespace banana
 	{
 		const Item& cur = items[i];
 		std::string help = cur.help;
-		if (cur.kind == Item::INFO && cur.key != "hk") help = about;
+		if (cur.key == "ab_ip" && ip.empty()) help = "The handheld's address on the network, once Wi-Fi is connected.";
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one.";
 		if (cur.key == "ssh")
 			help = "For working on Banana from a computer: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
@@ -2218,7 +2300,8 @@ namespace banana
 		icon(cur.icon, 50, HEAD_ICON_Y, 3);
 		text(cur.section, true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		textFit(cur.label, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true);
-		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at] : "";
+		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at]
+			: cur.kind == Item::INFO && !cur.names.empty() ? cur.names[0] : "";	// (About's value, Hotkeys' action)
 		if (!value.empty()) textFit(value, true, 22, 170, HEAD_VALUE_Y, 420, p.accent, true);
 		std::string help = helpOf(sel);
 		if (cur.key == "scrape" && scraping())
@@ -2268,7 +2351,7 @@ namespace banana
 			std::string v;
 			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) v = it.names[it.at];
 			else if (it.kind == Item::ACTION) v = armed == i ? "Press A again" : "";
-			else if (it.kind == Item::INFO) v = it.key == "hk" && !it.names.empty() ? it.names[0] : "";	// (Hotkeys: what it does)
+			else if (it.kind == Item::INFO) v = !it.names.empty() ? it.names[0] : "";	// (Hotkeys: what it does; About: the value)
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "bt_devices") v = btRow();

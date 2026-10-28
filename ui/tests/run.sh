@@ -568,5 +568,19 @@ PY
     done
     grep -q "setting	Dim when idle: .* -> " "$R" || { echo "FAIL: the recorder: no old -> new for the setting"; fail=1; }
 fi
+# System > About: a page of rows, each a name and its value (as a phone's About), and A seven times on its Version
+# unlocks the Developer options (as a phone's build number): System's last row then, and settings.conf says so
+AX=$OUT/fixture-about; rm -rf "$AX"; cp -r "$FX/data" "$AX"; sed -i '/^developer = /d' "$AX/settings.conf"
+"$HERE/banana-ui" --headless "$OUT/about-" --size 640x480 --assets "$HERE/assets/rnds" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$AX" \
+    --script "home 0; press start; press right; press right; press right; press right; press right; press a; press up; press up; press up; press up; \
+        press a; wait 400; shot page; press down; press a; press a; press a; press a; press a; press a; press a; wait 300; shot unlocked; \
+        press b; press up; wait 400; shot devrow" 2> "$OUT/about.log" || { echo "FAIL: banana-ui (About) exited $?"; fail=1; }
+grep -q '^developer = on' "$AX/settings.conf" || { echo "FAIL: About: seven A's on Version didn't unlock the Developer options"; fail=1; }
+for s in page unlocked devrow; do
+    f=$OUT/about-$s-bot.png
+    [ -s "$f" ] && [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL: About: $f missing or blank"; fail=1; }
+done
+cmp -s "$OUT/about-page-bot.png" "$OUT/about-devrow-bot.png" && { echo "FAIL: About: back on System showed the About page still"; fail=1; }
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"
 exit $fail

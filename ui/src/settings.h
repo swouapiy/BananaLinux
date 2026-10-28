@@ -171,7 +171,7 @@ namespace banana
 		void renderGroups();
 		bool downOnRow = false;
 		float downX = 0, downY = 0;
-		std::string about, wifiInfo, ip;
+		std::string wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
 		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, DOWNLOADS } page = LIST;
