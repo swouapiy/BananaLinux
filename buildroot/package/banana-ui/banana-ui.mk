@@ -13,7 +13,7 @@ BANANA_UI_DEPENDENCIES = freetype libdrm alsa-lib zlib host-pkgconf libcurl open
 
 define BANANA_UI_BUILD_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) -B -C $(@D) CXX="$(TARGET_CXX)" PKG_CONFIG="$(PKG_CONFIG_HOST_BINARY)" \
-		CXXFLAGS="$(TARGET_CXXFLAGS) -O2" LDFLAGS="$(TARGET_LDFLAGS)" banana-ui banana-scrape banana-sync banana-fetch
+		CXXFLAGS="$(TARGET_CXXFLAGS) -O2" LDFLAGS="$(TARGET_LDFLAGS)" banana-ui banana-scrape banana-sync banana-fetch banana-bshare
 	$(TARGET_MAKE_ENV) $(MAKE) -B -C $(@D) CC="$(TARGET_CC)" CFLAGS="$(TARGET_CFLAGS)" LDFLAGS="$(TARGET_LDFLAGS)" banana-leaseshim.so
 endef
 

@@ -37,11 +37,13 @@ ui:
 	$(MAKE) -C ui host
 	@if pkg-config --exists libcurl libssh2 libssl libcrypto zlib; then \
 		$(MAKE) -C ui banana-fetch SMB=$$(pkg-config --exists libsmb2 && echo 1 || echo 0); \
+		$(MAKE) -C ui banana-bshare; \
 	else echo "banana-fetch not built (libcurl, libssh2 and OpenSSL's dev packages): Downloads' tests are skipped"; fi
 
 test: ui
 	ui/tests/run.sh
 	@if [ -x ui/banana-fetch ]; then sh ui/tests/fetch-test.sh; fi
+	@if [ -x ui/banana-bshare ]; then sh ui/tests/bshare-test.sh; fi
 
 # ui/fuzz: themes, expressions, zips, DS ROM banners and Banana's own files on the card, under libFuzzer, ASan and UBSan
 fuzz:
