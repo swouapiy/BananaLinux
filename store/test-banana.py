@@ -33,6 +33,7 @@ def main(cli):
         os.makedirs(root + "/usr/share/banana/apps/dodakvarter")
         os.makedirs(root + "/usr/share/banana/apps/bank")
         os.makedirs(root + "/usr/share/banana/apps/downloads")     # (Downloads: banana-ui's own page, its tile's folder)
+        os.makedirs(root + "/usr/share/banana/apps/bshare")        # (Bshare: the same)
         with open(root + "/usr/share/banana/apps/dodakvarter/VERSION", "w") as f:
             f.write("0.3.0\n")
         # the Store as the package installs it: the tool, the catalog and its pictures beside it
@@ -131,6 +132,13 @@ def main(cli):
         o = run("install", "downloads")
         check(o.strip().splitlines()[-1] == "DONE 0.4.2" and "downloads" not in open(hidden).read().split(),
               "install Downloads: its system out of hidden-systems")
+        # Bshare (banana-ui's own page too): the same
+        r = row("bshare")
+        check(r[5:8] == ["0.4.2", "0.4.2", "installed"], "list: Bshare installed (the system's version): %s" % r[5:8])
+        o = run("remove", "bshare")
+        check(o.strip().endswith("DONE") and "bshare" in open(hidden).read().split(), "remove Bshare: its system in hidden-systems")
+        o = run("install", "bshare")
+        check(o.strip().splitlines()[-1] == "DONE 0.4.2" and "bshare" not in open(hidden).read().split(), "install Bshare: its system out of hidden-systems")
         env["RNDS_STORE_DEVICE"] = "rgds"
         check(row("bank")[7:8] == ["installed"] and row("ereaderds")[7:8] == ["unsupported"],
               "the RG DS: Poketool installed, eReaderDS not for it")

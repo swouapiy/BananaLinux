@@ -384,6 +384,31 @@ for size in 640x480 1024x768; do
     # on the card unpacked where it is (and deleted, as asked), an option changed, a server added with the keyboard; a
     # job's runner at work beside the menu (its progress, the retry's countdown, X Stop and Y Cancel tapped), and the
     # chips tapped on the other pages
+    # Bshare's pages (settings_bshare.cpp) against a stand-in helper (its arguments noted, a send's state written): a
+    # device's request accepted into a folder chosen on the card (Location), Receive turned to Ask, a game marked with Y
+    # in roms/gb (the first folder) and sent with START to a device seen
+    blog=$OUT/$size-bshare.log; BRUN=$OUT/bsrun
+    rm -rf "$BRUN"; mkdir -p "$BRUN"; : > "$blog"; sed -i '/^bshare_/d' "$FX/data/settings.conf"
+    printf '#!/bin/sh\necho "$@" >> "%s/args"\n[ "$1" = send ] && printf "sending\\tMy Mac\\t1\\t2\\t500\\t1000\\n" > "%s/bshare-send"\nexit 0\n' "$BRUN" "$BRUN" > "$BRUN/helper"
+    chmod +x "$BRUN/helper"
+    printf 'id\tabc123\nfrom\tPixel 8\nmodel\tPixel\nfiles\t3\nbytes\t12400000\nfirst\tPokemon Emerald.gba\n' > "$BRUN/bshare-request"
+    printf 'mac-fp\t10.0.0.5\t53317\thttps\tMy Mac\tMacBook\tdesktop\t1\nph-fp\t10.0.0.6\t53317\thttps\tPixel 8\tPixel\tmobile\t1\n' > "$BRUN/bshare-peers"
+    run_bs() { BANANA_BSHARE="$BRUN/helper" BSHARE_RUN="$BRUN" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$blog" ||
+        { echo "FAIL $size: banana-ui (bshare) exited $?"; fail=1; }; }
+    run_bs "homeid bshare; shot bs-tile; press a; wait 1; shot bs-request; press down; press a; shot bs-location; press a; shot bs-card; \
+        press a; shot bs-located; press up; press a; wait 1; shot bs-accepted"
+    grep -q "press a: banana:bshare open" "$blog" || { echo "FAIL $size: bshare: the tile didn't open its page"; fail=1; }
+    grep -q "^accept abc123 $FX$" "$BRUN/bshare-answer" 2>/dev/null || { echo "FAIL $size: bshare: no accept into the card ($(cat "$BRUN/bshare-answer" 2>/dev/null))"; fail=1; }
+    rm -f "$BRUN/bshare-request"
+    run_bs "homeid bshare; press a; wait 1; shot bs-home; press right; shot bs-ask; press down; press a; shot bs-browse; press a; \
+        press down; press a; press a; shot bs-gb; press y; shot bs-marked; press start; wait 1; shot bs-devices; press a; wait 1; shot bs-status"
+    grep -q '^bshare_receive = ask$' "$FX/data/settings.conf" || { echo "FAIL $size: bshare: Receive didn't turn to Ask"; fail=1; }
+    for i in $(seq 30); do grep -q "^send " "$BRUN/args" && break; sleep 0.1; done    # (the helper started on its own)
+    grep -q "^send mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" || { echo "FAIL $size: bshare: no send to My Mac: $(cat "$BRUN/args")"; fail=1; }
+    grep -q "^serve$" "$BRUN/args" || { echo "FAIL $size: bshare: the helper wasn't started to serve"; fail=1; }
+    sed -i '/^bshare_/d' "$FX/data/settings.conf"
+
     if [ -x "$HERE/banana-fetch" ]; then
         dlog=$OUT/$size-downloads.log; NAS=$OUT/nas; RUN=$OUT/run
         dlclean() {

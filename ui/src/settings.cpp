@@ -1133,6 +1133,7 @@ namespace banana
 		page = LIST;
 		wizard = false;
 		closeDownloads();
+		closeBshare();
 	}
 
 	void Settings::open()
@@ -1488,6 +1489,7 @@ namespace banana
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (page == DOWNLOADS) return pressDownloads(k);
+		if (page == BSHARE) return pressBshare(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
 		switch (k)
@@ -1624,6 +1626,7 @@ namespace banana
 		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == COLORS) return touchColors(cx, cy);
 		if (page == DOWNLOADS) return touchDownloads(cx, cy);
+		if (page == BSHARE) return touchBshare(cx, cy);
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
@@ -2323,6 +2326,7 @@ namespace banana
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (page == DOWNLOADS) { renderDownloads(); return; }
+		if (page == BSHARE) { renderBshare(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
@@ -2506,6 +2510,7 @@ namespace banana
 		bool changed = scrapeChanged;
 		changed |= btUpdate();
 		if (dl && updateDownloads(t)) changed = true;	// (also under the keyboard: a login answered)
+		if (bs && page == BSHARE && updateBshare(t)) changed = true;
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
 			std::string before = ustatus;
@@ -2600,6 +2605,8 @@ namespace banana
 		if (scraping() && (w < 0 || w > 500)) w = std::max(0, (int)(scrapeNext - t));	// the box art's progress
 		int d = dl ? downloadsWake(t) : -1;	// the session's answer, the download's progress
 		if (d >= 0 && (w < 0 || d < w)) w = d;
+		int b = bshareWake(t);	// Bshare's request countdown, a send's progress
+		if (b >= 0 && (w < 0 || b < w)) w = b;
 		return w;
 	}
 
@@ -3130,7 +3137,7 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_DOWNLOADS ? "downloads" : "phone", 50, 56, 3);
+		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_DOWNLOADS ? "downloads" : entry == ENTRY_BSHARE ? "bshare" : "phone", 50, 56, 3);
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
@@ -4500,6 +4507,8 @@ namespace banana
 			return SEARCH;
 		case ENTRY_DOWNLOADS:
 			return finishDownloadsEntry();
+		case ENTRY_BSHARE:
+			return finishBshareEntry();
 		}
 		return NONE;
 	}

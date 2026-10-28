@@ -49,6 +49,13 @@ namespace banana
 		void close();
 		// the shelf's Downloads tile: files from a NAS or a computer, archives unpacked (settings_downloads.cpp)
 		void openDownloads();
+		// the shelf's Bshare tile: files to and from phones and computers with LocalSend (settings_bshare.cpp)
+		void openBshare();
+		// a "banana:<page>" tile's page (systems.conf's run): Bshare's or Downloads'
+		void openApp(const std::string& run) { if (run == "banana:bshare") openBshare(); else openDownloads(); }
+		// Bshare's helper serving (seen by LocalSend's apps, receiving): from the start while Receive is on
+		static void bshareServe(bool want);
+		bool bshareReceiving() const;
 		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
 		bool isOpen() const { return mOpen; }
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
@@ -176,7 +183,7 @@ namespace banana
 		std::string wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, DOWNLOADS } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, DOWNLOADS, BSHARE } page = LIST;
 		// the game page (X on a DS game in the library): its emulator, this game only (banana/nds-per-game.conf, read by
 		// run-nds: "<ROM file name> = superdrastic|bananads", no line = Settings > Nintendo DS > Emulator)
 		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
@@ -199,7 +206,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_DOWNLOADS } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_DOWNLOADS, ENTRY_BSHARE } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Downloads' fields)
 		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
@@ -433,6 +440,16 @@ namespace banana
 		int downloadsWake(double nowMs) const;
 		Result finishDownloadsEntry();
 		void closeDownloads();
+		// Bshare (settings_bshare.cpp): its pages, reading banana-bshare's files in /run/banana
+		struct Bshare;
+		std::shared_ptr<Bshare> bs;
+		Result pressBshare(Key k);
+		Result touchBshare(float cx, float cy);
+		void renderBshare();
+		bool updateBshare(double nowMs);
+		int bshareWake(double nowMs) const;
+		Result finishBshareEntry();
+		void closeBshare();
 		void tick(float x, float y, const rnds::Color& c);	// a mark on a 2 px grid (a chosen file)
 		void meter(float x, float y, float w, double fraction);	// a progress bar
 		std::string gTitle, gSystem;

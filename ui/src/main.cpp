@@ -518,6 +518,7 @@ struct EventNotice
 	uint32_t accent = 0x6ad07a;
 	double until = 0, lookedAt = -1e9, wifiDownAt = -1e9;
 	int recording = -1, wifi = -1, bt = -1;	// (-1: not looked at yet)
+	std::string bsReq, bsRecv = "?", bsSend = "?";	// Bshare's request, receive and send, as last read ("?": not yet)
 	bool btHeld = false;	// the headphones gone for a sleep: their coming back isn't news
 	bool showing(double now) const { return until > now; }
 	bool hide(double now) { bool was = showing(now); until = 0; return was; }
@@ -574,6 +575,39 @@ struct EventNotice
 			if (bt >= 0 && !head && !held) { show("Bluetooth headphones disconnected", "The sound is back on the speakers.", 2, 0xffb340, now); came = true; }
 			btHeld = !head && held;
 			bt = head;
+		}
+		// Bshare: a device asking to send, a transfer done (its helper's files, settings_bshare.cpp)
+		auto read = [](const char* p) { std::ifstream f(p); std::stringstream s; s << f.rdbuf(); return s.str(); };
+		auto cols = [](const std::string& l) { std::vector<std::string> c; std::stringstream s(l); std::string x; while (std::getline(s, x, '\t')) c.push_back(x); return c; };
+		std::string req = read("/run/banana/bshare-request");
+		if (req != bsReq)
+		{
+			std::string from, n;
+			std::stringstream in(req);
+			std::string l;
+			while (std::getline(in, l)) { auto c = cols(l); if (c.size() >= 2 && c[0] == "from") from = c[1]; if (c.size() >= 2 && c[0] == "files") n = c[1]; }
+			if (!req.empty()) { show(from + " wants to send " + n + (n == "1" ? " file" : " files"), "Open Bshare to accept.", 3, 0x4a9bff, now); came = true; }
+			bsReq = req;
+		}
+		std::string rc = read("/run/banana/bshare-receive");
+		if (rc != bsRecv)
+		{
+			auto c = cols(rc.substr(0, rc.find('\n')));
+			if (bsRecv != "?" && c.size() >= 7 && (c[0] == "done" || c[0] == "partly"))
+			{
+				show("Received " + c[2] + (c[2] == "1" ? " file" : " files") + " from " + c[1],
+					c[6] == "received" ? "In banana/received." : c[6] == "games" || c[6] == "both" ? "Games went into their system's folder." : "In " + c[6] + ".", 1, 0x6fdc87, now);
+				came = true;
+			}
+			bsRecv = rc;
+		}
+		std::string sc = read("/run/banana/bshare-send");
+		if (sc != bsSend)
+		{
+			auto c = cols(sc.substr(0, sc.find('\n')));
+			if (bsSend != "?" && c.size() >= 4 && c[0] == "done") { show("Sent " + c[3] + (c[3] == "1" ? " file" : " files") + " to " + c[1], "", 1, 0x6fdc87, now); came = true; }
+			if (bsSend != "?" && c.size() >= 2 && c[0] == "declined") { show(c[1] + " said no", "Nothing was sent.", 2, 0xffb340, now); came = true; }
+			bsSend = sc;
 		}
 		return came;
 	}
@@ -790,7 +824,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (!settings.isOpen() && it->second == Key::A && ui.view() == rnds::UI::HOME && ui.systemIndex() >= 0 &&
 				ui.systemIndex() < lib.systemCount() && internalApp(lib.shelf(ui.systemIndex()).def))
 			{
-				settings.openDownloads();
+				settings.openApp(lib.shelf(ui.systemIndex()).def.run);
 				logf("press a: %s open", lib.shelf(ui.systemIndex()).def.run.c_str());
 				continue;
 			}
@@ -1086,7 +1120,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
 			recordEvent("game", "start: %s (%s)", lib.gameAt(g).title.c_str(), lib.systemOf(g).id.c_str());
 			lib.clearLaunch();
-			if (internalApp(lib.systemOf(g))) { ui.setHome(lib.currentShelf()); settings.openDownloads(); logf("downloads open"); }
+			if (internalApp(lib.systemOf(g))) { ui.setHome(lib.currentShelf()); settings.openApp(lib.systemOf(g).run); logf("%s open", lib.systemOf(g).run.c_str()); }
 		}
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
@@ -1661,6 +1695,7 @@ int main(int argc, char** argv)
 	settingsView.setFontDir(o.banana + "/fonts");
 	settingsView.setLibraryPaths(o.systems, o.roms);
 	settingsView.downloadsToast(nowMs());	// (a job finished before the menu started isn't news)
+	if (settingsView.bshareReceiving()) Settings::bshareServe(true);	// (Bshare's Receive on: seen from the start)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.wakeLoop = [&] { uint64_t one = 1; if (write(worker.wakeFd, &one, 8) < 0) {} };	// (Downloads' helper answered)
 	// a Downloads job the last menu stopped for a game and never let go on (it ended before the game did): on again,
@@ -1869,7 +1904,7 @@ int main(int argc, char** argv)
 			{
 				ui->touchCancel();
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openDownloads();
+				settingsView.openApp(lib.shelf(s).def.run);
 				rep.key = Key::NONE;
 				sound.play("select");
 				dirty = true;
@@ -2333,7 +2368,7 @@ int main(int argc, char** argv)
 				std::lock_guard<std::mutex> l(worker.uiLock);
 				ui->setHome(lib.currentShelf());
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openDownloads();
+				settingsView.openApp(lib.systemOf(g).run);
 				rep.key = Key::NONE;
 				dirty = true;
 				continue;

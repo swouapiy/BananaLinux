@@ -10,7 +10,7 @@ override LDLIBS += -lpthread
 
 SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 # (Downloads' pages, and the bits of banana-fetch they share with it: no network in banana-ui itself)
-SRC += src/settings_downloads.cpp src/nas.cpp src/fetch/names.cpp src/fetch/jobfile.cpp src/fetch/servers.cpp
+SRC += src/settings_downloads.cpp src/settings_bshare.cpp src/nas.cpp src/fetch/names.cpp src/fetch/jobfile.cpp src/fetch/servers.cpp
 PKGS = freetype2 libdrm zlib
 UI_FLAGS =
 ifeq ($(ALSA),1)

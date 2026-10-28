@@ -27,6 +27,7 @@ namespace banana
 		// each list ends with nullptr: valid() walks it to that (without it, a value not in the list read on past the
 		// array, into the next one's: a crash, or "accent = on" taken as valid)
 		const char* const ON_OFF[] = { "on", "off", nullptr };
+		const char* const BSHARE_RECEIVE[] = { "off", "ask", "auto", nullptr };
 		const char* const ACCENT_TEXT[] = { "auto", "dark", "light", nullptr };
 		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
@@ -84,6 +85,8 @@ namespace banana
 			{ "boxart_twilight_url", "https://boxart.kirovair.com", TEXT, nullptr, 0, 0 },
 			{ "boxart_twilight_key", "tb2_9f4c1d7a3e8b5062", TEXT, nullptr, 0, 0 },
 			{ "downloads_unpack", "ask", ENUM, ASK, 0, 0 },
+			{ "bshare_receive", "off", ENUM, BSHARE_RECEIVE, 0, 0 },
+			{ "bshare_name", "", TEXT, nullptr, 0, 0 },
 			{ "downloads_delete_archive", "ask", ENUM, ASK, 0, 0 },
 			{ "downloads_unwrap", "on", ENUM, ON_OFF, 0, 0 },
 			{ "downloads_hidden", "off", ENUM, ON_OFF, 0, 0 },
