@@ -13,6 +13,8 @@
 #include <vector>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+#include <drm_fourcc.h>
+#include <string>
 
 namespace banana
 {
@@ -97,6 +99,8 @@ namespace banana
 		if (b.handle) { drm_mode_destroy_dumb d = {}; d.handle = b.handle; drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &d); }
 		b = Buf();
 	}
+
+	static void logPlanes(int fd, const uint32_t crtc[2]);
 
 	bool Display::open(const std::string& top, std::string& err)
 	{
@@ -186,6 +190,7 @@ namespace banana
 			}
 			// panels still dark (the boot): both lit at once; else (lit, or the driver won't) as always
 			if (!lightBoth() && !handOver) restore();
+			if (!handOver) { uint32_t c[2] = { p[0].crtc, p[1].crtc }; logPlanes(fd, c); }
 			return true;
 		}
 		return false;
@@ -253,6 +258,44 @@ namespace banana
 			if (blob[s]) drmModeDestroyPropertyBlob(fd, blob[s]);
 		}
 		return lit == 2 && waiting == 0;
+	}
+
+	// The display's planes, once in the log (banana-ui.log): each one's type, the CRTCs it can go on, where it is now
+	// and whether it takes ARGB8888 (a picture with see-through parts). For the notifications over a game: a plane the
+	// game's lease leaves out, on the game's CRTC, could carry them (to be tried on the device first)
+	static void logPlanes(int fd, const uint32_t crtc[2])
+	{
+		drmSetClientCap(fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
+		drmModeRes* res = drmModeGetResources(fd);
+		drmModePlaneRes* pr = drmModeGetPlaneResources(fd);
+		for (uint32_t j = 0; res && pr && j < pr->count_planes; j++)
+		{
+			drmModePlane* pl = drmModeGetPlane(fd, pr->planes[j]);
+			if (!pl) continue;
+			const char* type = "?";
+			if (drmModeObjectProperties* pp = drmModeObjectGetProperties(fd, pl->plane_id, DRM_MODE_OBJECT_PLANE))
+			{
+				for (uint32_t k = 0; k < pp->count_props; k++)
+					if (drmModePropertyRes* q = drmModeGetProperty(fd, pp->props[k]))
+					{
+						if (!strcmp(q->name, "type"))
+							type = pp->prop_values[k] == DRM_PLANE_TYPE_PRIMARY ? "primary" : pp->prop_values[k] == DRM_PLANE_TYPE_CURSOR ? "cursor" : "overlay";
+						drmModeFreeProperty(q);
+					}
+				drmModeFreeObjectProperties(pp);
+			}
+			bool argb = false;
+			for (uint32_t f = 0; f < pl->count_formats; f++) if (pl->formats[f] == DRM_FORMAT_ARGB8888) argb = true;
+			std::string can;
+			for (int i = 0; i < res->count_crtcs; i++)
+				if (pl->possible_crtcs & (1u << i))
+					can += std::string(can.empty() ? "" : ",") + (res->crtcs[i] == crtc[0] ? "top" : res->crtcs[i] == crtc[1] ? "bottom" : std::to_string(res->crtcs[i]));
+			fprintf(stderr, "banana-ui: display: plane %u %s, on %s, now %s%s\n", pl->plane_id, type, can.c_str(),
+				pl->crtc_id == crtc[0] ? "top" : pl->crtc_id == crtc[1] ? "bottom" : pl->crtc_id ? "another" : "free", argb ? ", ARGB8888" : "");
+			drmModeFreePlane(pl);
+		}
+		if (pr) drmModeFreePlaneResources(pr);
+		if (res) drmModeFreeResources(res);
 	}
 
 	// Every plane upright: a plane's rotation outlives the program that set it, and the menu draws with the legacy

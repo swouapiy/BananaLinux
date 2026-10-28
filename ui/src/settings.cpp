@@ -1965,15 +1965,11 @@ namespace banana
 
 	void Settings::notice(const std::string& title, const std::string& body, int percent)
 	{
+		if (percent < 0) { banner(title, body, 3, 0xffb340); return; }	// (the hardware check's, an update's: a warning)
+		// the battery: its level in the square instead of a sign, red at 10% and under
 		SPal p = pal(light);
-		box("bubble", false, 40, 344, 560, 104);
-		if (percent < 0)	// no battery (the hardware check's notice): the text across the whole bubble
-		{
-			text(title, true, 22, 66, 360, p.ink);
-			wrapped(body, 18, 66, 392, 510, 2, p.muted);
-			return;
-		}
-		// the status bar's battery, three times its size on the same pixel grid, its level red at 10% and under
+		Color red = light ? Color::hex(0xc8382d) : Color::hex(0xff5a4f);
+		banner(title, body, 0, percent <= 10 ? 0xff5a4f : 0xffb340);
 		auto it = cache.find("battery");
 		if (it == cache.end())
 		{
@@ -1983,15 +1979,42 @@ namespace banana
 			it = put("battery", c, b);
 		}
 		keep(it);
-		int k = std::max(1, (int)std::lround(3 * s));
-		float bx = std::round(X(66)), by = std::round(X(375));
+		// the status bar's battery, twice its size on the same pixel grid, in the square's middle
+		int k = std::max(1, (int)std::lround(2 * s));
 		if (it->second.tex)
-			be->draw(it->second.tex, bx, by, (float)it->second.tex->w * k, (float)it->second.tex->h * k, p.ink);
-		int lv = percent <= 0 ? 0 : std::max(1, (int)std::lround(16 * std::min(100, percent) / 100.0f));
-		Color lc = percent <= 10 ? (light ? Color::hex(0xc8382d) : Color::hex(0xff5a4f)) : p.accent;
-		if (lv > 0) be->fill(bx + 3 * k, by + 3 * k, (float)lv * k, (float)8 * k, lc);
-		text(title, true, 22, 172, 360, p.ink);
-		wrapped(body, 18, 172, 392, 404, 2, p.muted);
+		{
+			float w = (float)it->second.tex->w * k, h = (float)it->second.tex->h * k;
+			float bx = std::round(X(16 + 24) - w / 2), by = std::round(X(12 + 24) - h / 2);
+			be->draw(it->second.tex, bx, by, w, h, Color::hex(0x12181f));
+			int lv = percent <= 0 ? 0 : std::max(1, (int)std::lround(16 * std::min(100, percent) / 100.0f));
+			if (lv > 0) be->fill(bx + 3 * k, by + 3 * k, (float)lv * k, (float)8 * k, percent <= 10 ? red : Color::hex(0x12181f));
+		}
+		(void)p;
+	}
+
+	void Settings::banner(const std::string& title, const std::string& body, int sign, uint32_t accent)
+	{
+		// the toasts' look (drawToast): the dark pill across the top, the accent's square with its sign, the title in
+		// the accent and the line in light text; a second line when the text needs it
+		static const char* const SIGN[4][9] = {
+			{ ".........", ".........", ".........", ".........", ".........", ".........", ".........", ".........", "........." },
+			{ ".........", "........#", ".......##", "......##.", "#....##..", "##..##...", ".####....", "..##.....", "........." },
+			{ "##.....##", ".##...##.", "..##.##..", "...###...", "...###...", "..##.##..", ".##...##.", "##.....##", "........." },
+			{ "...##....", "...##....", "...##....", "...##....", "...##....", "...##....", ".........", "...##....", "...##...." } };
+		const Color lightText = Color::hex(0xf1ede2), acc = Color::hex(accent);
+		bool two = !body.empty() && text(body, false, 18, 0, 0, lightText, false, 0, true) > 536;
+		box("osd", false, 8, 4, 624, two ? 86 : 64);
+		float bs = 48, tx = 16, ty = 12;
+		be->fill(std::round(X(tx)), std::round(X(ty)), std::round(X(bs)), std::round(X(bs)), acc);
+		int k = std::max(1, (int)std::lround(X(bs) / 14));
+		float ox = std::round(X(tx + bs / 2)) - 9 * k / 2.0f, oy = std::round(X(ty + bs / 2)) - 9 * k / 2.0f;
+		if (sign > 0 && sign < 4)
+			for (int r = 0; r < 9; r++)
+				for (int c = 0; c < 9; c++)
+					if (SIGN[sign][r][c] == '#') be->fill(std::round(ox + c * k), std::round(oy + r * k), (float)k, (float)k, Color::hex(0x12181f));
+		text(fit(title, true, 17, 540), true, 17, 78, 14, acc);
+		if (two) wrapped(body, 18, 78, 37, 536, 2, lightText);
+		else if (!body.empty()) text(fit(body, false, 18, 540), false, 18, 78, 38, lightText);
 	}
 
 	void Settings::level(const std::string& label, int percent)

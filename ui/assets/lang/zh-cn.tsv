@@ -61,9 +61,9 @@ menu		The BANANA partition needs exFAT	BANANA 分区需要 exFAT 格式
 menu		Y on a game adds it here	在游戏上按 Y 可将其添加到此处
 menu		Copy {.ext} files to roms/{folder}	将 {.ext} 文件复制到 roms/{folder}
 menu		Battery nearly empty: {percent}%	电量即将耗尽：{percent}%
-menu		Save your game now. At {percent} Banana closes it and shuts down.	请立即保存游戏。电量降至 {percent} 时 Banana 将关闭游戏并关机。
+menu		Save your game now. At {percent} Banana shuts down.	请立即保存游戏。电量降至 {percent} 时 Banana 将关机。
 menu		Battery low: {percent}%	电量低：{percent}%
-menu		Plug in the charger soon. At {percent} Banana closes the game and shuts down.	请尽快接入充电器。电量降至 {percent} 时 Banana 将关闭游戏并关机。
+menu		Plug in the charger soon. At {percent} Banana saves and shuts down.	请尽快接入充电器。电量降至 {percent} 时 Banana 将保存并关机。
 menu		Time to find the charger.	请插入充电器。
 menu		banana-perf {value}	banana-perf {value}
 menu		Brightness	亮度
@@ -1194,3 +1194,10 @@ settings		The folder is kept, with its files inside.	保留该文件夹及其中
 settings		Files and folders whose names start with a dot, on your servers.	服务器上名称以点开头的文件和文件夹。
 settings		Shown.	显示。
 settings		Hidden, as on most computers.	隐藏，与大多数电脑一样。
+menu		Flight recorder on	飞行记录器已开启
+menu		Hold Select for 2 seconds to mark a moment.	按住 Select 2 秒可标记当前时刻。
+menu		Wi-Fi connected	Wi-Fi 已连接
+menu		Bluetooth headphones connected	蓝牙耳机已连接
+menu		The sound plays through them.	声音将从耳机播放。
+menu		Bluetooth headphones disconnected	蓝牙耳机已断开
+menu		The sound is back on the speakers.	声音已切回扬声器。

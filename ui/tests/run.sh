@@ -58,9 +58,9 @@ for size in 640x480 1024x768; do
     done
     check "health notice: Not found: touchscreen, Wi-Fi"   # the boot's hardware check (/run/banana/health-notice)
     check "press a: health notice hidden"
-    # drawn, not only logged: the notice's bubble (the top panel's lower part) differs from the frame without it
+    # drawn, not only logged: the notification's banner (across the top of the top panel) differs from the frame without it
     [ -s "$OUT/$size-health-top.png" ] && [ -s "$OUT/$size-no-health-top.png" ] || { echo "FAIL $size: no health shots"; fail=1; }
-    d=$(convert "$OUT/$size-health-top.png" "$OUT/$size-no-health-top.png" -gravity south -crop 100%x30%+0+0 +repage -compose difference -composite -format '%[fx:mean>0.01]' info: 2>/dev/null)
+    d=$(convert "$OUT/$size-health-top.png" "$OUT/$size-no-health-top.png" -gravity north -crop 100%x22%+0+0 +repage -compose difference -composite -format '%[fx:mean>0.01]' info: 2>/dev/null)
     [ "$d" = 1 ] || { echo "FAIL $size: the health notice wasn't drawn"; fail=1; }
     [ "$(grep -c 'notice Battery low: 19%' "$log")" = 2 ] || { echo "FAIL $size: the notice didn't come back after charging"; fail=1; }
     grep -q "battery 18%" "$log" && { echo "FAIL $size: a second notice in the same step"; fail=1; }
