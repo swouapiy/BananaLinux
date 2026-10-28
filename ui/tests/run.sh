@@ -27,7 +27,8 @@ for size in 640x480 1024x768; do
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
         --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; shot settings; press a; press down; shot settings-list; press r; shot settings-page; press b; press r; press r; press r; press r; press r; press a; shot settings-system; press down; press right; shot settings-tz; press b; press b; romicon $FX/roms/nds/Yellow Planet [!].zip; romicon $FX/roms/nds/Peel Quest.nds; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; shot battery-charging; battery 19; \
-            outro bye-start 0; outro bye-eject 330; outro bye-word 520; outro bye-fall 820; outro bye-crt 1030; outro bye-end 1300" \
+            outro bye-start 0; outro bye-eject 330; outro bye-word 520; outro bye-fall 820; outro bye-crt 1030; outro bye-end 1300; \
+            battery 60 charging; shot no-health; healthnotice touchscreen, Wi-Fi; shot health; press a; rollbacknotice; shot rollback; press a" \
         2> "$log" || { echo "FAIL $size: banana-ui exited $?"; fail=1; continue; }
     check() { grep -q "$1" "$log" || { echo "FAIL $size: no '$1'"; fail=1; }; }
     check "press a: used, view 1"          # home -> the DS library
@@ -55,6 +56,12 @@ for size in 640x480 1024x768; do
     for p in top bot; do     # the shutdown ends on black panels
         [ "$(convert "$OUT/$size-bye-end-$p.png" -format '%[fx:maxima]' info:)" = 0 ] || { echo "FAIL $size: the shutdown's last frame isn't black ($p)"; fail=1; }
     done
+    check "health notice: Not found: touchscreen, Wi-Fi"   # the boot's hardware check (/run/banana/health-notice)
+    check "press a: health notice hidden"
+    # drawn, not only logged: the notice's bubble (the top panel's lower part) differs from the frame without it
+    [ -s "$OUT/$size-health-top.png" ] && [ -s "$OUT/$size-no-health-top.png" ] || { echo "FAIL $size: no health shots"; fail=1; }
+    d=$(convert "$OUT/$size-health-top.png" "$OUT/$size-no-health-top.png" -gravity south -crop 100%x30%+0+0 +repage -compose difference -composite -format '%[fx:mean>0.01]' info: 2>/dev/null)
+    [ "$d" = 1 ] || { echo "FAIL $size: the health notice wasn't drawn"; fail=1; }
     [ "$(grep -c 'notice Battery low: 19%' "$log")" = 2 ] || { echo "FAIL $size: the notice didn't come back after charging"; fail=1; }
     grep -q "battery 18%" "$log" && { echo "FAIL $size: a second notice in the same step"; fail=1; }
     for s in boot-drop boot-word boot-click home lib lib2 ready settings settings-list settings-system settings-tz battery-low battery-empty battery-charging; do
@@ -359,11 +366,45 @@ for size in 640x480 1024x768; do
         a=${pair% *}; b=${pair#* }
         cmp -s "$OUT/$size-$a-bot.png" "$OUT/$size-$b-bot.png" && { echo "FAIL $size: $a and $b are the same picture"; fail=1; }
     done
+    # settings.conf values not in their lists are put back to the defaults at start (the lists of allowed values were
+    # read on past their ends: "accent = on" or "nds_emulator = off" could pass, the next list's values, or the menu crash)
+    vlog=$OUT/$size-values.log
+    sed -i '/^accent = /d; /^nds_emulator = /d' "$FX/data/settings.conf"
+    printf 'accent = on\nnds_emulator = off\n' >> "$FX/data/settings.conf"
+    "$HERE/banana-ui" --headless "$OUT/$size-values-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "home 0" 2> "$vlog" ||
+        { echo "FAIL $size: banana-ui (invalid settings) exited $?"; fail=1; }
+    grep -q '^accent = yellow$' "$FX/data/settings.conf" || { echo "FAIL $size: an invalid accent kept: $(grep '^accent' "$FX/data/settings.conf")"; fail=1; }
+    grep -q '^nds_emulator = superdrastic$' "$FX/data/settings.conf" || { echo "FAIL $size: an invalid DS emulator kept: $(grep '^nds_emulator' "$FX/data/settings.conf")"; fail=1; }
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1
 # home server sync (banana-sync) against a stand-in RomM and, when its source is here, the real Romhost
 OUT="$OUT" "$HERE/tests/sync.sh" || fail=1
+# the flight recorder's part in banana-ui: with /run/banana/recording there, its events go to the recorder's socket
+# (a stand-in for bananad here): Settings opened, a group, a setting changed (old -> new), closed, a library
+if [ -w /run ] || [ -w /run/banana ]; then
+    mkdir -p /run/banana; rm -f /run/banana/recorder.sock; : > /run/banana/recording
+    python3 -I - "$OUT/recorder.txt" <<'PY' &
+import socket, sys, time
+s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM); s.bind('/run/banana/recorder.sock'); s.settimeout(0.5)
+out, end = open(sys.argv[1], 'w'), time.time() + 20
+while time.time() < end:
+    try: out.write(s.recv(400).decode() + '\n'); out.flush()
+    except socket.timeout: pass
+PY
+    L=$!; sleep 0.5
+    "$HERE/banana-ui" --headless "$OUT/rec-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; press start; press r; press a; press right; press left; press b; press b; press a; wait 300" 2> "$OUT/rec.log" ||
+        { echo "FAIL: banana-ui (recorder) exited $?"; fail=1; }
+    sleep 0.5; kill $L 2>/dev/null; rm -f /run/banana/recording /run/banana/recorder.sock
+    R=$OUT/recorder.txt
+    for want in "settings	open" "settings	Sleep & power" "setting	Dim when idle: " "settings	closed" "menu	library: "; do
+        grep -qF "$want" "$R" || { echo "FAIL: the recorder: no '$want' ($(tr '\n' '|' < "$R"))"; fail=1; }
+    done
+    grep -q "setting	Dim when idle: .* -> " "$R" || { echo "FAIL: the recorder: no old -> new for the setting"; fail=1; }
+fi
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"
 exit $fail

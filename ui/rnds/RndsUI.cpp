@@ -1473,7 +1473,8 @@ namespace rnds
 			bool charging = src->charging();
 			auto battery = [&](float bx)		// the 26x14 icon, its level 3 px in
 			{
-				drawSprite(still("batt", batt, false), bx, 25 + ry, nullptr, INK);
+				Color c = !charging && lvl >= 0 && lvl < 0.195f ? RED : INK;
+				drawSprite(still("batt", batt, false), bx, 25 + ry, nullptr, c);
 				float l = lvl < 0 ? 0.75f : lvl;
 				float fw = std::round(16 * std::min(1.0f, std::max(0.0f, l)) * s) / s;
 				// on the charger: the level in the accent colour (the amber of the charging LED) and a bolt over it,

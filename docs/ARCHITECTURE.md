@@ -18,13 +18,17 @@ can read and fill it). The root is never written to; nothing on it can be corrup
 ## Updates
 
 The build makes `banana-<board>-<version>.update.tar` next to the image: `Image`, the device tree, `rootfs.squashfs`,
-`VERSION`, `board` and their `sha256sums`. Put in `banana/updates/` on the card (file sharing copies it over Wi-Fi)
+`VERSION`, `board`, `u-boot-rockchip.bin` and their `sha256sums`. Put in `banana/updates/` on the card (file sharing copies it over Wi-Fi)
 it appears in Settings > System > Update. `/usr/libexec/banana/update apply` checks every file's hash, refuses a
 package for the other handheld, writes the squashfs to the slot not in use (16 MB at a time, the progress on the
 screen), reads it back and compares the hash, copies the kernel and device tree to the boot partition's `b/` (or
 `a/`), checks those too, and only then rewrites `extlinux.conf`'s `DEFAULT` (a tiny file, renamed over the old one).
 The running system is never touched; a failure at any step leaves everything as it was; the new system runs from
-the restart. `Previous version` switches `DEFAULT` back to the other slot, so a version that misbehaves is one
+the restart. U-Boot is the one exception, as in ROCKNIX's updates: there is a single copy, at sector 64, so it is
+written only when the package's differs from the card's (from a package for the card's own board, never a universal
+one), flushed, and read back before the switch; `updates.log` says "U-Boot updated". A power cut in that second
+leaves a card to write again on a computer (the handheld's own memory still starts); without it, an updated card
+would keep the U-Boot it was first written with (charging when plugged in while off needs the newer one). `Previous version` switches `DEFAULT` back to the other slot, so a version that misbehaves is one
 restart away from the one before it. Each update is a line in `banana/logs/updates.log`, and the new device tree
 is retuned by `banana-panel-tune` on its first boot. `tools/qemu-boot.sh` applies an update in the VM and boots
 the other slot, reading `extlinux.conf` as U-Boot does.
@@ -187,9 +191,11 @@ nothing). Closing the lid (the hall sensor, `SW_LID`), a short press of power, o
 the handheld to sleep:
 
 1. The game's process group gets `SIGSTOP` (ROCKNIX found DraStic's dynarec must not run on while the clocks drop).
-2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its driver unloaded: the RTL8821CS doesn't survive a
-   suspend otherwise; nothing at all when Wi-Fi is off. Bluetooth down the same way, its modules unloaded, the sound
-   held quiet so a woken game isn't loud on the speakers until the headphones are called back).
+2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down, its driver unloaded and its SD controller unbound, which
+   powers the card off: the RTL8821CS doesn't survive a suspend otherwise, and a bound controller brought the card
+   back up inside the kernel's resume; nothing at all when Wi-Fi is off. Bluetooth down the same way, its modules
+   unloaded, the sound held quiet so a woken game isn't loud on the speakers until the headphones are called back).
+   The USB-C port is dual-role as on the stock firmware (`dr_mode = "otg"`), so its xHCI suspends without a hook.
 3. `sync()`: this kernel has `SUSPEND_SKIP_SYNC`, so the flush is bananad's (with saves written within 2 s anyway,
    `vm.dirty_expire`).
 4. The RTC alarm for the battery check (`sleep_check_hours`, 4), devices set to resume in parallel
@@ -224,24 +230,56 @@ SoC's GPIO0_C3 (`gpio-keys-hall`), unpowered once the RK817 is off, and the RK81
 game that fails isn't started at every boot), names the ROM in `/run/banana/resume-once` and launches it; the
 launcher loads its resume state once, Quick resume on or off. On the charger ("dark and awake") the deadline doesn't
 count: nothing drains, and the charging light would go out; unplugged, it starts at the real sleep.
+What woke it (sleep.log's "awake (...)") comes from the wake keys' events waiting when it returns (a power press,
+the lid opening), else the lid's state before and after, else the charger coming or going, else the power button.
+A power press or the lid opening while the suspend is still under way (the hooks, the sync) calls it off, as
+Android's wakeup count does, instead of the press getting lost and a second one needed.
 
 If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
-fails with the lid shut, both backlights go off until it opens. With lid sleep switched off, closing the lid only
+fails with the lid shut, both backlights go off until it opens. A press during a failed try is a wake, not the
+start of the next try; and the next sleep starts from the configured way again. With lid sleep switched off, closing the lid only
 turns the backlights off. Every sleep is a line in `banana/logs/sleep.log` (time to suspend, time asleep, why it
-woke, how long the game and the menu took to come back); with `sleep_debug = yes` the kernel's per-device times go
+woke, how long the game and the menu took to come back, and what it cost the battery: the gauge's mAh and the
+average current, off the charger); with `sleep_debug = yes` the kernel's per-device times go
 to `banana/logs/sleep-devices.log`, slowest first.
 
-What a wake costs is then the kernel's device resume: on the RG DS mostly the two panels' power-on sequences
-(ROCKNIX's 20 + 10 + 50 ms, the init commands and 120 ms after sleep-out, one panel after the other) and the SD
-card; on the RG DS Plus the panels take about a fifth of that. `system/bananad/tests/sleep-test.sh` runs all of the
+What a wake costs is then the kernel's device resume. The two panels' power-on sequences (reset, the init
+commands, 120 ms after sleep-out, one panel after the other) are the longest part, so the display is restored on a
+workqueue (kernel patch `2-linux-0030`), as phones do: the kernel's resume returns, the game and the menu go on,
+and the panels light up meanwhile (a commit waits on the restore's locks). The RG DS Plus's device tree had
+`wait=255` after sleep-out and display-on, which `panel-generic-dsi` reads as hex: 597 ms each, 2.4 s a wake (and
+a boot); now 120 and 50 ms. `system/bananad/tests/sleep-test.sh` runs all of the
 above against a made-up `/sys` in its own namespaces (a FIFO for `/sys/power/state`, real input events for the lid).
 
-Two idle minutes in the menu dim both panels to 30% (`dim_minutes`, `dim_percent`); the first press brings them
-back, and a game is never dimmed. bananad itself sleeps in `poll()` until something is due (the battery look once a
-minute, the dim or sleep deadline, a pending save), so an idle handheld wakes it about once a minute. Hold power
+Idle, the handheld dims, sleeps, then turns off: two minutes without input dim both panels to 30% (`dim_minutes`,
+`dim_percent`), ten put it to sleep (`autosleep_minutes`), and an hour asleep, however it went to sleep, turns it off
+as a held power button does (`poweroff_minutes`: the RTC alarm that wakes it for the battery check wakes it for that
+too; with sleep set to never, an hour without input awake). Input is a button, a touch or a stick pushed: the
+touchscreen and the sticks have a second, unpolled descriptor read when the timers are due, so their motion never
+wakes bananad. The timers count in the menu, or in games too with `idle_in_games` (a game is paused by a sleep, as by
+the lid). On the charger it sleeps as a phone does, but never turns off by itself: asleep, the amber LED stays lit
+(at full, `retain-state-suspended`) and an RTC alarm every 10 minutes looks at the battery, putting the amber LED out
+once it is full; the cable coming out wakes it. bananad itself sleeps in `poll()` until something is due (the battery look once a
+minute, the dim, sleep or turn-off deadline, a pending save), so an idle handheld wakes it about once a minute. Hold power
 2 s to shut down; volume keys change the mixer, F + volume the backlights; a battery at 3% and discharging shuts
 down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`
 (the settings screen writes it and sends SIGHUP).
+
+### Charging while off
+
+A charger plugged into the handheld while it is off starts the RK817, and with it the whole boot: U-Boot's
+`ROCKCHIP_RK8XX_DISABLE_BOOT_ON_POWERON`, which turned it straight off again, is no longer set (charging was then
+left to the PMIC alone, and some handhelds didn't charge at all, #34). Turned off with the charger in (from the menu,
+or by bananad), rcK leaves `banana/.charge-next` and restarts instead of powering off. Either way rcS runs
+`bananad --charge` once the data partition is mounted, before anything else: the RK817's power-on reason (register
+0xf5 over I2C: a charger plugged in, not the power key) or the mark makes it a charger's start, and a restart's own
+mark (`banana/.restart`, rcK's) keeps a restart from being taken for one, since the RK817 remembers what first
+started it. Then, as a phone does: both panels dark, one CPU on `powersave`, the amber LED until the battery is full
+and the green one after, and asleep in between (the sleep hooks' `pre` first: USB and Wi-Fi off): a look at the
+battery every 10 minutes (the RTC), the LEDs at full so they stay lit asleep (`retain-state-suspended`). The power
+button wakes it, and held a second goes on with the boot (the `post` hooks first); a short press sleeps on. The
+charger pulled out turns it off. A suspend that fails leaves it charging awake, as before.
+Each one is in `banana/logs/charging.log` (why, the battery at the start, full, the end).
 
 ## What it costs
 

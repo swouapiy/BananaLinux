@@ -861,3 +861,276 @@ settings		The password couldn't be checked: %s.
 settings		Asking the beta server (bananaos-cfw.dev) which test build is the newest for this handheld...	
 settings		The beta server has no test build for this handheld.	
 settings		A asks the beta server (bananaos-cfw.dev, Wi-Fi needed) whether a newer test build is out for this handheld. Nothing is downloaded until you choose Download.	
+# Lines for the settings in one plain style, the developer options and the health and rollback notices: translated by
+# Claude (machine translation), to be checked by a translator.
+settings		A heavy 3D game may slow down with one after a while: set it to None (X in the library).	使用着色器时，较重的 3D 游戏过一段时间可能会变慢：请为它设为“无”（在游戏库中按 X）。
+settings		Developer options	开发者选项
+settings		Smooth scaling. The lightest: no extra work for the chip.	平滑缩放。最轻量：芯片不需额外工作。
+settings		Every DS pixel an exact square, no blur.	每个 DS 像素都是精确的正方形，无模糊。
+settings		Sharp, evenly sized pixels, without blur.	清晰、大小均匀的像素，无模糊。
+settings		Sharp, even pixels, in the DS's own duller colours.	清晰、均匀的像素，采用 DS 原本较暗淡的色彩。
+settings		The fine grid of the DS's screen.	DS 屏幕的细密网格。
+settings		The DS's screen grid, in its own duller colours.	DS 屏幕网格，采用其原本较暗淡的色彩。
+settings		Smooth, clean edges. The heaviest.	平滑、干净的边缘。最耗性能。
+settings		A handheld LCD's look, in the DS's colours.	掌机 LCD 的效果，采用 DS 的色彩。
+settings		A handheld LCD's look.	掌机 LCD 的效果。
+settings		A handheld LCD's look, with stronger lines.	掌机 LCD 的效果，线条更明显。
+settings		A light LCD look.	轻量的 LCD 效果。
+settings		The DS's own, duller colours.	DS 原本较暗淡的色彩。
+settings		A soft retro pixel look.	柔和的复古像素效果。
+settings		Each pixel with a raised edge.	每个像素带有凸起的边缘。
+settings		Sharp pixels with smooth edges.	清晰的像素，平滑的边缘。
+settings		Sharp pixels with a TV's scanlines.	清晰的像素，带电视扫描线。
+settings		An old TV's scanlines.	老式电视的扫描线。
+settings		Jagged edges softened.	柔化锯齿边缘。
+settings		Exact square pixels, filling more of the screen.	精确的方形像素，占满更多屏幕。
+settings		The DS's screen grid, at double size.	DS 屏幕网格，两倍大小。
+settings		Round dots, like a printed picture (MiZai).	圆点，如同印刷图片（MiZai）。
+settings		MiZai's dots, tuned for the RG DS screens.	MiZai 的圆点，为 RG DS 屏幕调校。
+settings		Each pixel a small tile.	每个像素是一块小方砖。
+settings		DraStic's LCD look.	DraStic 的 LCD 效果。
+settings		DraStic's LCD look, in the DS's colours.	DraStic 的 LCD 效果，采用 DS 的色彩。
+settings		DraStic's smooth pixel scaling.	DraStic 的平滑像素缩放。
+settings		DraStic's sharp pixels with smooth edges.	DraStic 的清晰像素与平滑边缘。
+settings		DraStic's sharp pixels, in the DS's colours.	DraStic 的清晰像素，采用 DS 的色彩。
+settings		DraStic's light LCD look.	DraStic 的轻量 LCD 效果。
+settings		DraStic's light LCD look, in the DS's colours.	DraStic 的轻量 LCD 效果，采用 DS 的色彩。
+settings		Your own shader, from banana/shaders on the card.	你自己的着色器，来自存储卡上的 banana/shaders。
+settings		How the menu looks. Your own themes go in banana/themes on the card (its README says how).	菜单的外观。你自己的主题放在存储卡上的 banana/themes（其 README 有说明）。
+settings		Dark colours, easy on the eyes.	深色，看着不累眼。
+settings		Light colours, for daylight.	浅色，适合白天。
+settings		Your games as cartridges on a shelf. Still experimental.	你的游戏如卡带般摆在架子上。仍为实验性功能。
+settings		A theme from banana/themes on the card.	来自存储卡上 banana/themes 的主题。
+settings		The colour of the text on the selection.	选中项上文字的颜色。
+settings		Dark or light, whichever reads better on the accent colour.	深色或浅色，取在强调色上更易读的一种。
+settings		Always dark text.	始终使用深色文字。
+settings		Always light text.	始终使用浅色文字。
+settings		How bright the top screen is. F + volume changes both screens anywhere, in games too.	上屏的亮度。F + 音量键可随时调节两块屏幕，游戏中也可以。
+settings		How bright the bottom screen is. F + volume changes both screens anywhere, in games too.	下屏的亮度。F + 音量键可随时调节两块屏幕，游戏中也可以。
+settings		The top screen's gentle movement and shine.	上屏轻柔的晃动与光泽。
+settings		The top screen moves and shines.	上屏会晃动并有光泽。
+settings		The top screen holds still, and saves a little battery.	上屏保持静止，稍微省电。
+settings		How loud the speakers or headphones are. The volume keys change it anywhere.	扬声器或耳机的音量。音量键可随时调节。
+settings		The menu's clicks, and the cartridge sound when a game starts.	菜单的点击声，以及游戏启动时的卡带声。
+settings		The menu plays its sounds.	菜单播放音效。
+settings		The menu is silent. Games keep their sound.	菜单静音。游戏保留其声音。
+settings		How the battery shows on the top screen.	电池在上屏的显示方式。
+settings		Just the battery icon.	仅显示电池图标。
+settings		The icon, and how full it is in percent.	图标，以及电量百分比。
+settings		How the time shows on the top screen.	时间在上屏的显示方式。
+settings		Like 14:30.	如 14:30。
+settings		Like 2:30 PM.	如 下午 2:30。
+settings		Which systems are on the home row. A opens the list.	主页一行中显示哪些系统。按 A 打开列表。
+settings		The bananas and the cartridge as the handheld starts.	掌机启动时的香蕉与卡带动画。
+settings		Plays as it starts, and backwards as it shuts down.	启动时播放，关机时倒放。
+settings		Goes straight to the menu, and straight to black.	直接进入菜单，关机时直接黑屏。
+settings		Lowers the screens when you leave the handheld alone.	闲置时降低屏幕亮度。
+settings		The screens never dim.	屏幕从不变暗。
+settings		Screens dim after 1 minute without use.	闲置 1 分钟后屏幕变暗。
+settings		Screens dim after 2 minutes without use.	闲置 2 分钟后屏幕变暗。
+settings		Screens dim after 5 minutes without use.	闲置 5 分钟后屏幕变暗。
+settings		Puts the handheld to sleep when you leave it alone. Your game pauses.	闲置时让掌机休眠。游戏会暂停。
+settings		It never falls asleep by itself.	从不自动休眠。
+settings		Sleeps after 5 minutes without use.	闲置 5 分钟后休眠。
+settings		Sleeps after 10 minutes without use.	闲置 10 分钟后休眠。
+settings		Sleeps after 15 minutes without use.	闲置 15 分钟后休眠。
+settings		Sleeps after 30 minutes without use.	闲置 30 分钟后休眠。
+settings		Turn off when idle	闲置时关机
+settings		Turns the handheld off after it has slept for a while. Your game saves first.	休眠一段时间后关机。游戏会先保存。
+settings		3 hours	3 小时
+settings		6 hours	6 小时
+settings		It stays asleep until you wake it.	一直休眠，直到你唤醒它。
+settings		Turns off after 5 minutes asleep.	休眠 5 分钟后关机。
+settings		Turns off after 10 minutes asleep.	休眠 10 分钟后关机。
+settings		Turns off after 15 minutes asleep.	休眠 15 分钟后关机。
+settings		Turns off after 30 minutes asleep.	休眠 30 分钟后关机。
+settings		Turns off after 1 hour asleep.	休眠 1 小时后关机。
+settings		Turns off after 3 hours asleep.	休眠 3 小时后关机。
+settings		Turns off after 6 hours asleep.	休眠 6 小时后关机。
+settings		Idle timers	闲置计时
+settings		Where dimming, sleep and turning off can happen.	在哪里可以变暗、休眠和关机。
+settings		In the menu	在菜单中
+settings		Everywhere	任何地方
+settings		Only in the menu. A game is never interrupted.	仅在菜单中。游戏从不会被打断。
+settings		In the menu and in games. Touching the screen counts as use.	菜单和游戏中都会。触摸屏幕也算作使用。
+settings		What happens when you close the lid.	合上盖子时会发生什么。
+settings		It sleeps. Open the lid to carry on where you were.	进入休眠。打开盖子即可从原处继续。
+settings		The screens go dark, but the game keeps running.	屏幕熄灭，但游戏继续运行。
+settings		How the handheld wakes from sleep.	掌机如何从休眠中唤醒。
+settings		Wakes up quickly.	快速唤醒。
+settings		Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong.	唤醒稍慢，但最稳妥。若唤醒出错会自动选用。
+settings		The lights on the handheld: green, red when the battery is low, amber while charging.	掌机上的指示灯：绿色；电量低时红色；充电时琥珀色。
+settings		Full brightness.	最亮。
+settings		Softer lights.	较柔和的灯光。
+settings		No lights.	不亮灯。
+settings		LED while asleep	休眠时的指示灯
+settings		The power light while the handheld sleeps.	掌机休眠时的电源指示灯。
+settings		The light stays on, so you can tell it's asleep, not off.	指示灯保持亮着，便于分辨是休眠而不是关机。
+settings		The light goes out while it sleeps.	休眠时指示灯熄灭。
+settings		Which emulator plays DS games. X on a game in the library picks one for that game alone.	用哪个模拟器运行 DS 游戏。在游戏库中对某个游戏按 X 可单独为它选择。
+settings		DraStic: the fastest. Its own settings are below.	DraStic：最快。它自己的设置在下方。
+settings		Banana's own, built on melonDS: the most accurate. Its own settings are below.	Banana 自己的模拟器，基于 melonDS：最准确。它自己的设置在下方。
+settings		What quitting a game does.	退出游戏时会怎样。
+settings		Quitting ends the game. Next time it starts from its title screen.	退出即结束游戏。下次从标题画面开始。
+settings		Quitting keeps your place, even through a shutdown. Next time the game carries on from there.	退出时保留进度，关机也不丢失。下次从那里继续。
+settings		The language the DS itself is set to. A game with several languages starts in this one.	DS 本身设置的语言。支持多种语言的游戏会以此语言启动。
+settings		The name the DS itself is set to, as on a real one: what games and Mario Kart's records call you. 10 characters at most.	DS 本身设置的名字，和真机一样：游戏和马里奥赛车记录中对你的称呼。最多 10 个字符。
+settings		The look of the DS screens. Your own go in banana/shaders.	DS 屏幕的外观。你自己的着色器放在 banana/shaders。
+settings		How sharp DS games' 3D is drawn.	DS 游戏 3D 画面的清晰度。
+settings		Twice the DS's size: sharper 3D.	DS 的两倍大小：3D 更清晰。
+settings		The DS's own size: the lightest.	DS 的原始大小：最轻量。
+settings		Three times the DS's size. Experimental: a busy 3D scene can slow down.	DS 的三倍大小。实验性：复杂的 3D 场景可能变慢。
+settings		Four times, the Plus screens' own size: the sharpest. Experimental: a busy 3D scene can slow down.	四倍，即 Plus 屏幕的原生大小：最清晰。实验性：复杂的 3D 场景可能变慢。
+settings		The outlines some games draw around 3D models (Zelda, Kirby, many Pokémon battles).	部分游戏在 3D 模型周围绘制的轮廓线（塞尔达、星之卡比、许多宝可梦对战）。
+settings		Outlines drawn, as on a DS.	绘制轮廓线，与 DS 一致。
+settings		Outlines left out.	不绘制轮廓线。
+settings		The distance fog some games draw in 3D.	部分游戏在 3D 中绘制的远景雾。
+settings		Fog drawn, as on a DS.	绘制雾效，与 DS 一致。
+settings		Fog left out.	不绘制雾效。
+settings		How DS frames line up with the screens.	DS 画面帧如何与屏幕对齐。
+settings		A new frame every screen refresh: the smoothest. Games run 0.3% fast, the sound matched.	每次屏幕刷新一帧新画面：最流畅。游戏快 0.3%，声音随之匹配。
+settings		The DS's own speed. A frame shows twice about every 6 seconds.	DS 的原始速度。大约每 6 秒有一帧显示两次。
+settings		How soon a press shows on the screens. Experimental.	按键多快反映到屏幕上。实验性。
+settings		Frames queued as usual: the steadiest.	照常排队帧：最稳定。
+settings		No frame queue: a press shows about two refreshes sooner.	无帧队列：按键大约提前两次刷新显示。
+settings		Also runs a frame ahead, so the game answers sooner than its own lag. Needs twice the processor; turns itself off where it doesn't fit.	同时预先运行一帧，让游戏响应快于其自身延迟。需要两倍的处理器性能；不够时会自动关闭。
+settings		Also runs two frames ahead. Needs even more processor: light 2D games at 1x.	同时预先运行两帧。需要更多处理器性能：适合 1x 下的轻量 2D 游戏。
+settings		How fast the processor runs in DS games.	DS 游戏中处理器的运行速度。
+settings		Finds the lowest speed each game runs at full speed, and remembers it.	为每个游戏找到能全速运行的最低频率并记住。
+settings		Always the top speed. Uses more battery.	始终最高频率。更耗电。
+settings		How closely the DS's two processors keep in step.	DS 的两个处理器保持同步的紧密程度。
+settings		As melonDS does it. Works with every game.	与 melonDS 相同。适用于所有游戏。
+settings		About 10% faster, but it can break a game: Golden Sun: Dark Dawn loses its 3D world.	约快 10%，但可能导致游戏出错：《黄金太阳 漆黑的黎明》会丢失 3D 世界。
+settings		Whether games hear the real microphone.	游戏是否能听到真实的麦克风。
+settings		Games hear the microphone: blow or speak when a game asks.	游戏能听到麦克风：游戏要求时吹气或说话。
+settings		Games hear nothing. The in-game menu's Blow still works.	游戏听不到任何声音。游戏内菜单的“吹气”仍然可用。
+settings		How loud a sound must be to reach the game.	声音要多大才能传到游戏。
+settings		Speaking and blowing get through.	说话和吹气都能传到。
+settings		Quieter sounds get through too.	较轻的声音也能传到。
+settings		Only loud sounds get through.	只有大声才能传到。
+settings		Everything gets through, the game's own sound from the speakers too.	所有声音都能传到，包括扬声器中游戏自己的声音。
+settings		Puts BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.	将 BananaDS 的设置恢复为 Banana 的默认值。存档、即时存档和每个游戏的时钟保留。按两次 A。
+settings		Twice the DS's size: sharper 3D, still at full speed.	DS 的两倍大小：3D 更清晰，仍可全速运行。
+settings		How the DS's 3D is drawn alongside the game.	DS 的 3D 如何与游戏一同绘制。
+settings		Drawn beside the game: the faster way.	与游戏并行绘制：更快的方式。
+settings		Drawn in step with the game. For a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games).	与游戏同步绘制。适用于 3D 显示在错误屏幕或晚一帧的游戏（勇者斗恶龙系列）。
+settings		No frame queue: a press shows about two refreshes sooner. Heavy scenes can stutter a little.	无帧队列：按键大约提前两次刷新显示。复杂场景可能略有卡顿。
+settings		Puts DraStic's buttons back to Banana's, if a setup in DraStic's menu went wrong. Press A twice.	若在 DraStic 菜单中按键设置出错，可将其按键恢复为 Banana 的默认值。按两次 A。
+settings		Puts all of DraStic's and SuperDrastic's settings back to Banana's. Saves, save states and cheats stay. Press A twice.	将 DraStic 和 SuperDrastic 的全部设置恢复为 Banana 的默认值。存档、即时存档和金手指保留。按两次 A。
+settings		Which screen other systems' games play on.	其他系统的游戏在哪块屏幕上运行。
+settings		Games play on the top screen.	游戏在上屏运行。
+settings		Games play on the bottom screen.	游戏在下屏运行。
+settings		What the other screen shows while a game plays.	游戏运行时另一块屏幕显示什么。
+settings		Achievements, and buttons to save, load, open RetroArch's menu, fast-forward and quit. Touch them on the bottom screen.	成就，以及保存、读取、打开 RetroArch 菜单、快进和退出的按钮。在下屏触摸使用。
+settings		The other screen stays dark.	另一块屏幕保持熄灭。
+settings		What the game panel on the bottom screen does when you leave it alone.	闲置时下屏游戏面板会怎样。
+settings		It dims. A touch or any button brings it back.	变暗。触摸或按任意键即可恢复。
+settings		It goes dark. A touch or any button brings it back.	熄灭。触摸或按任意键即可恢复。
+settings		It stays as it is.	保持原样。
+settings		How long the game panel waits before it dims or turns off.	游戏面板在变暗或熄灭前等待多久。
+settings		Your Pokémon on the second screen, for Ruby, Sapphire, Emerald, FireRed and LeafGreen (English). Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	在第二块屏幕上显示你的宝可梦，适用于红宝石、蓝宝石、绿宝石、火红和叶绿（英文版）。需开启“第二屏幕”。灵感来自 Lidor Itzhari 的 PokeDaisy。
+settings		The second screen stays as it is.	第二块屏幕保持原样。
+settings		The party with levels, HP and moves, and in a battle the foe, its types and how each move does.	队伍的等级、HP 和招式；对战中显示对手、其属性以及各招式的效果。
+settings		Pages about other Game Boy Advance games on the second screen. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	在第二块屏幕上显示其他 GBA 游戏的信息页。需开启“第二屏幕”。灵感来自 Lidor Itzhari 的 PokeDaisy。
+settings		Status, the fight, the map, the bag, collectibles and progress, read from the game as it plays.	状态、战斗、地图、背包、收集品和进度，在游戏运行时从游戏中读取。
+settings		How achievements unlock. RetroArch's own menu changes this too.	成就如何解锁。RetroArch 自己的菜单也可更改此项。
+settings		Save states, rewind and cheats still work.	即时存档、倒带和金手指仍然可用。
+settings		Those are locked, and unlocks count as hardcore on retroachievements.org.	这些功能被锁定，解锁在 retroachievements.org 上计为硬核模式。
+settings		Quitting keeps your place. Next time the game carries on from there (not in Hardcore).	退出时保留进度。下次从那里继续（硬核模式除外）。
+settings		The look of other systems' games. RetroArch's own menu has many more.	其他系统游戏的外观。RetroArch 自己的菜单中还有更多选择。
+settings		Plain pixels, no effect.	原始像素，无效果。
+settings		A handheld LCD's grid.	掌机 LCD 的网格。
+settings		Sharp pixels at any size.	任意大小下都清晰的像素。
+settings		What fills the black around a game's picture.	游戏画面周围的黑边用什么填充。
+settings		Plain black.	纯黑。
+settings		A quiet border in the menu's colours, the picture at a sharp size. Not for the DS, the N64, or a picture that fills the screen.	采用菜单配色的素雅边框，画面以清晰的尺寸显示。不适用于 DS、N64 或已占满屏幕的画面。
+settings		How much sound RetroArch keeps ready ahead.	RetroArch 预先准备多少声音数据。
+settings		The sound reacts fastest, but can crackle in a busy game.	声音反应最快，但在复杂游戏中可能有爆音。
+settings		A balance of delay and safety.	在延迟与稳定之间取得平衡。
+settings		The most margin against crackling, with a little more delay.	最能防止爆音，延迟稍多。
+settings		Whether games wait for the screen before drawing.	游戏是否等待屏幕后再绘制。
+settings		No tearing.	无画面撕裂。
+settings		Games can run faster, but the picture can tear.	游戏可以跑得更快，但画面可能撕裂。
+settings		Which emulator plays Game Boy Advance games. gpSP is the fastest; mGBA the most accurate, needed for RetroAchievements hardcore.	用哪个模拟器运行 GBA 游戏。gpSP 最快；mGBA 最准确，RetroAchievements 硬核模式需要它。
+settings		Which emulator plays this system's games. The first is Banana's own; cores from RetroArch's Online Updater show up here too.	用哪个模拟器运行该系统的游戏。第一个是 Banana 自带的；通过 RetroArch 在线更新下载的核心也会显示在这里。
+settings		The F + button shortcuts in games.	游戏中的 F + 按键快捷键。
+settings		F + X the menu, Start quits, L and R load and save, Y the frame counter, L2 rewind, R2 fast-forward.	F + X 菜单，Start 退出，L 和 R 读取和保存，Y 帧率显示，L2 倒带，R2 快进。
+settings		Only F + X and F + Start, the two needed to get out.	只有 F + X 和 F + Start，退出所需的两个。
+settings		Puts RetroArch's settings back to Banana's, if a button was bound away in its menu. Saves, states and your account stay. Press A twice.	若在 RetroArch 菜单中按键被改绑，可将其设置恢复为 Banana 的默认值。存档、即时存档和你的账号保留。按两次 A。
+settings		Joins your saved networks.	连接你保存的网络。
+settings		Wi-Fi stays off, and saves battery.	Wi-Fi 保持关闭，省电。
+settings		The networks around you. A on one joins it.	你周围的网络。对某个网络按 A 即可连接。
+settings		Controllers, headphones and speakers.	手柄、耳机和音箱。
+settings		The radio stays off, and saves battery.	无线电保持关闭，省电。
+settings		On. Pair devices below; the sound plays on Bluetooth headphones while they're connected.	开启。在下方配对设备；蓝牙耳机连接时声音从耳机播放。
+settings		Your paired devices and the ones around. A pairs, connects or disconnects one.	已配对的设备和周围的设备。按 A 配对、连接或断开。
+settings		How sound plays on Bluetooth headphones.	蓝牙耳机的声音播放方式。
+settings		The sound as close to the picture as Bluetooth gets, for games.	声音与画面尽可能同步，适合游戏。
+settings		Richer sound, a little later and with a little more battery.	音质更丰富，稍有延迟，也稍微耗电。
+settings		What a computer needs to open the share.	电脑打开共享时需要什么。
+settings		The name and password below. Windows needs one.	下方的用户名和密码。Windows 需要密码。
+settings		No password: anyone on the network opens it. Only on a network you trust.	无密码：网络中任何人都能打开。仅在可信网络中使用。
+settings		Your games, box art and saves from a server at home (Romhost or RomM). A opens its page.	来自家庭服务器（Romhost 或 RomM）的游戏、封面和存档。按 A 打开其页面。
+settings		Your time zone, for the clock and your games. Summer time is included.	你的时区，用于时钟和游戏。已包含夏令时。
+settings		Installs a new version of Banana, from GitHub over Wi-Fi or from a package on the card. It runs from the next restart.	安装新版本的 Banana，可通过 Wi-Fi 从 GitHub 获取，或使用存储卡上的安装包。下次重启后生效。
+settings		Whether checking for updates includes test versions.	检查更新时是否包括测试版。
+settings		Test versions count. Every release so far is one.	包括测试版。目前所有发布版都是测试版。
+settings		Only stable versions.	仅限稳定版。
+settings		When Banana looks for a new version. Nothing downloads without you.	Banana 何时查找新版本。未经你同意不会下载任何内容。
+settings		Only when you choose Check for updates.	仅在你选择“检查更新”时。
+settings		Also when Wi-Fi connects, at most once a day.	Wi-Fi 连接时也会检查，每天最多一次。
+settings		Downloads covers, title screens, genres and years for your games. Needs Wi-Fi, no account. It only fetches what's missing.	为你的游戏下载封面、标题画面、类型和年份。需要 Wi-Fi，无需账号。只获取缺失的内容。
+settings		Where covers come from.	封面的来源。
+settings		libretro's free collections.	libretro 的免费资源库。
+settings		libretro, and TwilightBoxart for the covers libretro doesn't have.	libretro，以及 TwilightBoxart 补充 libretro 没有的封面。
+settings		TwilightBoxart's covers first, libretro's for the rest.	优先 TwilightBoxart 的封面，其余用 libretro 的。
+settings		Restarts into the version you had before the last update. Press A twice.	重启并进入上次更新前的版本。按两次 A。
+settings		Shows the games on the card in the second slot.	显示第二个卡槽中存储卡上的游戏。
+settings		Its games appear in your library while it's in (its roms folder, exFAT or FAT32).	插着时，其游戏会出现在游戏库中（其 roms 文件夹，exFAT 或 FAT32）。
+settings		Its games stay hidden.	其游戏保持隐藏。
+settings		Runs the first-start steps again: Wi-Fi, the time zone and the RetroAchievements account.	重新运行首次启动的步骤：Wi-Fi、时区和 RetroAchievements 账号。
+settings		Puts the menu, display, sound, power and network settings back to their defaults. Your games and saves are untouched. Press A twice.	将菜单、显示、声音、电源和网络设置恢复为默认值。游戏和存档不受影响。按两次 A。
+settings		Puts the emulators' settings back to their defaults: the DS emulator, Quick resume, each system's emulator, and RetroArch's shader, audio latency, VSync and hotkeys. Press A twice.	将模拟器设置恢复为默认值：DS 模拟器、快速恢复、各系统的模拟器，以及 RetroArch 的着色器、音频延迟、垂直同步和快捷键。按两次 A。
+settings		Turns the handheld off. Press A twice, or hold the power button.	关闭掌机。按两次 A，或长按电源键。
+settings		Tools for finding what went wrong: a recording of everything the handheld does, and more detailed logs.	用于排查问题的工具：记录掌机的一切活动，以及更详细的日志。
+settings		Puts the handheld to sleep, as a press of the power button does. Your game pauses.	让掌机休眠，与按一下电源键相同。游戏会暂停。
+settings		What comes from the server.	从服务器获取什么。
+settings		The server's games come to the card, and leave it when they leave the server.	服务器上的游戏会下载到存储卡，服务器上删除时也会从卡上删除。
+settings		The games stay as they are. Only the saves sync.	游戏保持原样。只同步存档。
+settings		Whether save states sync too.	是否也同步即时存档。
+settings		Only the games' own saves sync.	只同步游戏自身的存档。
+settings		Save states sync too (on Romhost, its Devices page decides). Quick-resume states never do.	即时存档也会同步（在 Romhost 上由其“设备”页面决定）。快速恢复存档从不同步。
+settings		When syncing happens by itself.	何时自动同步。
+settings		Only when you choose Sync now.	仅在你选择“立即同步”时。
+settings		A game's saves go up as you leave it, in the background.	退出游戏时在后台上传其存档。
+settings		Also games and saves whenever Wi-Fi connects. Never while a game runs.	Wi-Fi 连接时也同步游戏和存档。游戏运行时从不同步。
+settings		Unpairs the handheld. Your games and saves stay on the card. Press A twice.	取消掌机的配对。游戏和存档保留在存储卡上。按两次 A。
+settings		Whether this system syncs with the home server.	该系统是否与家庭服务器同步。
+settings		Its games and saves sync with the server.	其游戏和存档与服务器同步。
+settings		Its games stay as they are on this handheld.	其游戏在本机上保持原样。
+settings		Flight recorder	飞行记录仪
+settings		Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi.	记录掌机的活动：按键、触摸、盖子、屏幕、休眠、电池和 Wi-Fi。
+settings		Not recording.	不记录。
+settings		Recording to banana/logs/sessions, even after a restart. Hold Select for 2 seconds to mark a moment (the light blinks twice).	记录到 banana/logs/sessions，重启后继续。按住 Select 2 秒可标记当前时刻（指示灯闪两下）。
+settings		Sleep timing log	休眠计时日志
+settings		How long each part of the handheld takes to sleep and to wake.	掌机各部件休眠和唤醒各需多长时间。
+settings		Not logged.	不记录。
+settings		Written to banana/logs/sleep-devices.log after each wake.	每次唤醒后写入 banana/logs/sleep-devices.log。
+settings		Night test	夜间测试
+settings		A night's data on battery: 2 hours of wakes, 2 hours asleep with the light, 2 without, then off. The report goes to banana/logs/night-test.txt. Press A twice.	用电池收集一夜的数据：2 小时反复唤醒，2 小时亮灯休眠，2 小时灭灯休眠，然后关机。报告写入 banana/logs/night-test.txt。按两次 A。
+settings		Hide developer options	隐藏开发者选项
+settings		Takes the Developer options row away again (A seven times on System > About brings it back). Press A twice.	再次隐藏“开发者选项”一行（在 系统 > 关于 上按七次 A 可恢复）。按两次 A。
+settings		Developer options are on	开发者选项已开启
+settings		They're at the end of System now.	它们现在位于“系统”的末尾。
+settings		for the developer options	即可开启开发者选项
+settings		Developer options hidden	开发者选项已隐藏
+settings		A seven times on System > About brings them back.	在 系统 > 关于 上按七次 A 可恢复。
+settings		Night test stopped	夜间测试已停止
+settings		What it had so far is in banana/logs/night-test.txt.	目前已有的结果在 banana/logs/night-test.txt。
+settings		Night test started	夜间测试已开始
+settings		Close the lid and leave it on battery. The report: banana/logs/night-test.txt.	合上盖子并使用电池供电。报告：banana/logs/night-test.txt。
+settings		No password needed: keep it off on networks you don't trust.	无需密码：在不可信的网络中请保持关闭。
+settings		Recording	正在记录
+menu		Banana started without {several}. A restart may help; banana/logs/health.txt has the details.	Banana 启动时缺少 {several}。重启可能有帮助；详情见 banana/logs/health.txt。
+menu		The update didn't start	更新未能启动
+menu		Banana went back to the version before it by itself. banana/logs/updates.log has the details.	Banana 已自动回到之前的版本。详情见 banana/logs/updates.log。

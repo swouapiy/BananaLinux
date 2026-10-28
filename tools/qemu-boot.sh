@@ -66,8 +66,13 @@ make_update() {    # make_update <dir>
     off=$(part_offset 2)
     size=$(python3 -c "import struct, sys; f = open(sys.argv[1], 'rb'); f.seek($off + 40); print(struct.unpack('<Q', f.read(8))[0])" "$CARD")
     dd if="$CARD" of="$U/rootfs.squashfs" bs=1M iflag=skip_bytes,count_bytes skip=$off count=$size status=none
+    # U-Boot: the card's own first MB with a mark in it, so it differs and the update writes it (QEMU starts the
+    # kernel itself: what is there doesn't matter to the boot); a copy kept to compare the card with afterwards
+    dd if="$CARD" of="$U/u-boot-rockchip.bin" bs=32768 skip=1 count=32 status=none
+    printf 'banana qemu-test u-boot' | dd of="$U/u-boot-rockchip.bin" bs=1 seek=$((1048576 - 64)) conv=notrunc status=none
+    cp "$U/u-boot-rockchip.bin" "$OUT/u-boot-test.bin"
     echo qemu-test > "$U/VERSION"; echo "$BOARD" > "$U/board"
-    (cd "$U" && sha256sum Image $DTBS rootfs.squashfs > sha256sums)
+    (cd "$U" && sha256sum Image $DTBS rootfs.squashfs u-boot-rockchip.bin > sha256sums)
     tar -C "$1" -cf "$U.tar" "$(basename "$U")"; rm -rf "$U"
     ls -la "$U.tar" | awk '{print $5, $9}'
 }
@@ -180,7 +185,8 @@ with_data() {   # with_data <command...>: the card's data partition (exFAT) moun
     DATA=$OUT/data; mkdir -p "$DATA"
     LOOP=$($SUDO losetup -f --show -o $(part_offset 4) "$CARD") || { bad "no loop device for the card"; return 1; }
     $SUDO modprobe exfat 2>/dev/null || true
-    $SUDO mount -t exfat "$LOOP" "$DATA" 2> "$OUT/mount.err" || $SUDO mount.exfat-fuse "$LOOP" "$DATA" 2>> "$OUT/mount.err" ||
+    # (as this user: mounted by root, the kernel's exFAT gives root the files, and the test can't write the card)
+    $SUDO mount -t exfat -o uid=$(id -u),gid=$(id -g) "$LOOP" "$DATA" 2> "$OUT/mount.err" || $SUDO mount.exfat-fuse "$LOOP" "$DATA" 2>> "$OUT/mount.err" ||
         { bad "the data partition can't be mounted (no exFAT in the kernel, no exfat-fuse): $(tr '\n' ' ' < "$OUT/mount.err")"; $SUDO losetup -d "$LOOP"; return 1; }
     "$@"; r=$?
     $SUDO umount "$DATA" 2>/dev/null || $SUDO fusermount -u "$DATA"; $SUDO losetup -d "$LOOP"; LOOP=; DATA=
@@ -191,6 +197,7 @@ echo "1. the first boot: the data partition made, the menu, a shutdown"
 boot first
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition was made and mounted" || bad "no data partition"
 grep -q "panels 640x480" "$OUT/serial.log" && ok "both panels opened at 640x480" || bad "the panels didn't open"
+grep -q "health: everything found" "$OUT/serial.log" && ok "the hardware check found everything ($(grep -o 'health: .*' "$OUT/serial.log" | head -n 1))" || bad "the hardware check: $(grep -o 'health: .*' "$OUT/serial.log" | head -n 1)"
 # the first-time setup opens over the menu on a first boot; B skips it (and writes setup-done on the card)
 grep -q "banana-ui: first-time setup" "$OUT/serial.log" && ok "the first-time setup opened" || bad "no first-time setup on the first boot"
 shot first-setup
@@ -288,8 +295,13 @@ key ret            # Restart
 for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || break; sleep 0.5; done
 kill -0 $QEMU 2>/dev/null && { bad "no restart after the update"; kill $QEMU; } || ok "restarted after the update"
 wait $QEMU 2>/dev/null || true
+dd if="$CARD" bs=32768 skip=1 count=32 status=none | cmp -s - "$OUT/u-boot-test.bin" &&
+    ok "the update wrote the package's U-Boot to the card (at 32 KB, read back)" || bad "the card's U-Boot isn't the package's"
 boot fourth
 grep -q "rcS: slot b booted" "$OUT/serial.log" && ok "the fourth boot ran slot b: the update" || bad "the fourth boot didn't run slot b"
+# the update's slot on trial, kept once its menu is up (boot-guard)
+grep -q "boot-guard: slot b on trial" "$OUT/serial.log" && ok "the update's slot on trial" || bad "the update's slot wasn't on trial"
+wait_for "boot-guard: slot b started: kept" 30 "the update kept once its menu was up"
 shot fourth-menu
 # Start > System > Previous version (four rows under Time zone: Update, Box art, Box art from, Previous version;
 # checked headless) > A twice: back to slot a from the next boot
@@ -299,12 +311,14 @@ kill -0 $QEMU 2>/dev/null && { bad "no restart from Previous version"; kill $QEM
 wait $QEMU 2>/dev/null || true
 boot fifth
 grep -q "rcS: slot a booted" "$OUT/serial.log" && ok "the fifth boot ran slot a again: the version before the update" || bad "the fifth boot didn't run slot a"
+wait_for "boot-guard: slot a started: kept" 30 "the switched-to slot kept once its menu was up"
 shutdown_from_settings fifth
 show_logs() {
     echo "--- the card's logs/boot.txt"; cat "$DATA/banana/logs/boot.txt" 2>/dev/null || true
     [ -f "$DATA/banana/logs/boot.txt" ] && ok "logs/boot.txt written" || bad "no logs/boot.txt"
     ls "$DATA/banana/logs/" | tr '\n' ' '; echo
     echo "--- logs/updates.log"; cat "$DATA/banana/logs/updates.log" 2>/dev/null || echo "(none)"
+    grep -q "qemu-test to slot b .*, U-Boot updated" "$DATA/banana/logs/updates.log" 2>/dev/null && ok "updates.log: U-Boot updated" || bad "updates.log doesn't say U-Boot was updated"
 }
 with_data show_logs
 echo "qemu boot test: $pass passed, $fail failed ($OUT)"

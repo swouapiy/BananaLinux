@@ -263,21 +263,29 @@
 		compatible = "pwm-leds";
 
 		green_led: led-0 {
+			retain-state-suspended;	/* lit while asleep (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_GREEN>;
-			default-state = "on";
+			/* as U-Boot left it (lit for a power-button start, off for charging, uboot-patches/004) until bananad
+			 * sets the LEDs: on, green lit at the driver's probe, so a start for charging flashed green first */
+			default-state = "keep";
 			function = LED_FUNCTION_POWER;
 			max-brightness = <255>;
 			pwms = <&pwm5 0 25000 0>;
 		};
 
 		amber_led: led-1 {
+			retain-state-suspended;	/* lit while asleep on the charger (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_AMBER>;
+			/* as U-Boot left it (lit with a charger in, uboot-patches/004) until bananad sets the LEDs, so the
+			 * charging light stays on from the plug-in through the boot */
+			default-state = "keep";
 			function = LED_FUNCTION_CHARGING;
 			max-brightness = <255>;
 			pwms = <&pwm6 0 25000 0>;
 		};
 
 		red_led: led-2 {
+			retain-state-suspended;	/* lit while asleep (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_RED>;
 			default-state = "off";
 			function = LED_FUNCTION_STATUS;
@@ -679,8 +687,10 @@
 				regulator-min-microvolt = <900000>;
 				regulator-name = "vdd_logic";
 				regulator-ramp-delay = <6001>;
+				/* off asleep, as the stock Android's tree has it (its sleep mode 0x5ec: ARMOFF_LOGOFF, PMIC_LP) and
+				 * Rockchip's RK3568 EVB and mainline's RGxx3 do: was on at 0.9 V, ROCKNIX's port */
 				regulator-state-mem {
-					regulator-on-in-suspend;
+					regulator-off-in-suspend;
 					regulator-suspend-microvolt = <900000>;
 				};
 			};
@@ -1238,11 +1248,28 @@
 	status = "okay";
 };
 
+/*
+ * The OTG port as Anbernic's own firmware has it: dual-role, the USB2 PHY's ID and VBUS detection picking the role.
+ * With nothing plugged in the controller sits idle as a device; its xHCI only runs while a host cable is in, so it
+ * is not there to fail a suspend ("Clearing Run/Stop bit failed -110") as a host forced on with no gadget support did.
+ * The quirks are the stock firmware's for this controller and PHY.
+ */
 &usb_host0_xhci {
-	dr_mode = "peripheral";
+	dr_mode = "otg";
+	extcon = <&usb2phy0>;
 	phy-names = "usb2-phy";
 	phys = <&usb2phy0_otg>;
 	maximum-speed = "high-speed";
+	snps,dis_enblslpm_quirk;
+	snps,dis-u1-entry-quirk;
+	snps,dis-u2-entry-quirk;
+	snps,dis-u2-freeclk-exists-quirk;
+	snps,dis-del-phy-power-chg-quirk;
+	snps,dis-tx-ipgap-linecheck-quirk;
+	snps,dis_rxdet_inp3_quirk;
+	snps,parkmode-disable-hs-quirk;
+	snps,parkmode-disable-ss-quirk;
+	snps,usb2-lpm-disable;
 	status = "okay";
 };
 

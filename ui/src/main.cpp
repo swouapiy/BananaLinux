@@ -20,6 +20,7 @@
 #include "splash.h"
 #include "lang.h"
 #include "settings.h"
+#include "recorder.h"
 #include "settings_defaults.h"
 #include "theme.h"
 #include "colors.h"
@@ -40,6 +41,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <iterator>
 #include <future>
 #include <list>
 #include <sys/stat.h>
@@ -262,6 +264,7 @@ struct Options
 	std::string systems = "/etc/banana/systems.conf", roms = "/data/roms", data = "/data/banana";
 	std::string top = "DSI-2", touch = "fe5e0000.i2c";
 	std::string headless, script;
+	long repeat = 1;	// --repeat: the script run this many times over (the soak test)
 	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
 	int w = 640, h = 480;
 };
@@ -441,6 +444,58 @@ struct LowBattery
 	}
 };
 
+// The boot's hardware check (/usr/libexec/banana/health): the parts that matter and weren't found, named in
+// /run/banana/health-notice (by the early check before the menu, and by the late one, up to 20 s on, for the
+// touchscreen, the Wi-Fi and the GPU). Shown as the battery's notice is, until a press or 12 s; again only when the
+// file changes, so a notice seen isn't shown at every wake.
+struct HealthNotice
+{
+	std::string title, body;
+	double until = 0;
+	long long seen = -1;	// the file's mtime (ns) when last read
+	bool showing(double now) const { return until > now; }
+	bool show(const std::string& parts, double now)
+	{
+		bool several = parts.find(',') != std::string::npos;
+		title = "Not found: " + parts;
+		body = std::string("Banana started without ") + (several ? "them" : "it") + ". A restart may help; banana/logs/health.txt has the details.";
+		until = now + 12000;
+		return true;
+	}
+	// boot-guard went back to the version before an update that didn't start (its mark, moved to /run): said once
+	void showRollback(double now)
+	{
+		title = "The update didn't start";
+		body = "Banana went back to the version before it by itself. banana/logs/updates.log has the details.";
+		until = now + 15000;
+	}
+	// true when a new notice came
+	bool check(double now)
+	{
+		if (access("/run/banana/rolled-back", F_OK) == 0)
+		{
+			unlink("/run/banana/rolled-back");
+			showRollback(now);
+			return true;
+		}
+		struct stat st;
+		if (stat("/run/banana/health-notice", &st) != 0) return false;
+		long long m = (long long)st.st_mtim.tv_sec * 1000000000LL + st.st_mtim.tv_nsec;
+		if (m == seen) return false;
+		seen = m;
+		std::ifstream f("/run/banana/health-notice");
+		std::string parts;
+		std::getline(f, parts);
+		return !parts.empty() && show(parts, now);
+	}
+	bool hide(double now)
+	{
+		bool was = showing(now);
+		until = 0;
+		return was;
+	}
+};
+
 static int shutdownPercent(const std::string& data)
 {
 	return atoi(getConfValue(data + "/bananad.conf", "battery_shutdown_percent",
@@ -527,6 +582,19 @@ template <class U> static void afterShelves(Host& lib, U& ui)
 	logf("shown systems: %d on the home row", lib.systemCount());
 }
 
+// the recorder: the menu's screen when it changes (home, a system's library, a game being started)
+template <class U> static void recordView(U& ui, Host& lib)
+{
+	static int lastView = -1, lastSys = -1;
+	int v = (int)ui.view(), sys = ui.systemIndex();
+	if (v == lastView && (v != rnds::UI::LIBRARY || sys == lastSys)) return;
+	lastView = v; lastSys = sys;
+	std::string name = sys >= 0 && sys < lib.systemCount() ? lib.shelf(sys).def.name : std::string("?");
+	if (v == rnds::UI::HOME) recordEvent("menu", "home");
+	else if (v == rnds::UI::LIBRARY) recordEvent("menu", "library: %s", name.c_str());
+	else if (ui.gameIndex() >= 0) recordEvent("menu", "starting: %s (%s)", lib.gameAt(ui.gameIndex()).title.c_str(), name.c_str());
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -552,7 +620,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.setSync(true);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
-	be.overlay = [&](int screen) { if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent); };
+	HealthNotice health;
+	be.overlay = [&](int screen)
+	{
+		if (screen != 0) return;
+		if (low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		else if (health.showing(now)) settings.notice(health.title, health.body, -1);
+	};
+	for (long pass = 0; pass < o.repeat; pass++, ss.clear(), ss.seekg(0))
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -568,6 +643,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// type <text>: typed on the open keyboard at once (the rest of the command, spaces too; never logged)
 		else if (op == "type") { std::string t; std::getline(cs >> std::ws, t); settings.typeText(t); }
 		else if (op == "resumeboot") resumeAfterPoweroff(lib, o.data, nullptr);	// as at boot after Power off after sleeping
+		else if (op == "rss")
+		{
+			// rss: the memory in use now (the soak test reads these over a long run for a leak)
+			std::ifstream f("/proc/self/status");
+			std::string l;
+			while (std::getline(f, l)) if (l.compare(0, 6, "VmRSS:") == 0) logf("rss %s", l.c_str() + 6 + strspn(l.c_str() + 6, " \t"));
+		}
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -575,6 +657,20 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			cs >> lib.testPower.percent >> ch;
 			lib.testPower.charging = ch == "charging";
 			if (low.check(lib.power(), shutdownPercent(o.data), now)) logf("battery %d%%: notice %s", lib.testPower.percent, low.showing(now) ? low.title.c_str() : "hidden");
+		}
+		else if (op == "rollbacknotice")
+		{
+			// rollbacknotice: boot-guard's notice after it went back to the version before (/run/banana/rolled-back)
+			health.showRollback(now);
+			logf("notice: %s", health.title.c_str());
+		}
+		else if (op == "healthnotice")
+		{
+			// healthnotice <parts>: the hardware check's notice, as /run/banana/health-notice would bring it
+			std::string parts;
+			std::getline(cs >> std::ws, parts);
+			health.show(parts, now);
+			logf("health notice: %s", health.title.c_str());
 		}
 		else if (op == "press")
 		{
@@ -585,6 +681,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
+			if (health.hide(now)) logf("press %s: health notice hidden", b.c_str());
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
 			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
 			{
@@ -597,7 +694,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			if (settings.isOpen() || it->second == Key::START)
 			{
-				if (!settings.isOpen()) { settings.open(); logf("press %s: settings open", b.c_str()); continue; }
+				if (!settings.isOpen()) { settings.open(); recordEvent("settings", "open"); logf("press %s: settings open", b.c_str()); continue; }
 				int r = (int)settings.press(it->second);
 				if (r == Settings::TITLES)
 				{
@@ -620,10 +717,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 					logf("search \"%s\": shelf %d, %d games", settings.searchText.c_str(), sh, sh >= 0 ? (int)lib.shelf(sh).games.size() : -1);
 				}
 				logf("press %s: settings %s", b.c_str(), settings.isOpen() ? ("result " + std::to_string(r)).c_str() : "closed");
+				if (!settings.isOpen()) recordEvent("settings", "closed");
 				continue;
 			}
 			if (!uiButton(it->second, btn)) { logf("unknown button %s", b.c_str()); return 2; }
 			bool used = ui.press(btn);
+			recordView(ui, lib);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
@@ -869,6 +968,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		{
 			int g = lib.pendingLaunch();
 			logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
+			recordEvent("game", "start: %s (%s)", lib.gameAt(g).title.c_str(), lib.systemOf(g).id.c_str());
 			lib.clearLaunch();
 		}
 		ui.update(now);
@@ -1256,7 +1356,16 @@ int main(int argc, char** argv)
 		else if (a == "--roms") o.roms = next();
 		else if (a == "--data") o.data = next();
 		else if (a == "--headless") o.headless = next();
-		else if (a == "--script") o.script = next();
+		else if (a == "--repeat") o.repeat = std::max(1L, atol(next().c_str()));
+		else if (a == "--script")
+		{
+			o.script = next();
+			if (!o.script.empty() && o.script[0] == '@')	// @file: a script too long for the command line (the soak test's)
+			{
+				std::ifstream f(o.script.substr(1));
+				o.script.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+			}
+		}
 		else if (a == "--theme") o.theme = next();
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
@@ -1393,6 +1502,9 @@ int main(int argc, char** argv)
 	worker.start(uiPtr);
 	irisToMenu(disp, be, *ui);
 	bootMark("banana-ui: the menu");
+	recordEvent("menu", "up");
+	// the boot reached the menu: a new system on trial is kept (boot-guard), the breadcrumbs stop
+	if (FILE* f = fopen("/run/banana/boot-ok", "w")) fclose(f);
 	// the first boot after the installation: the setup (Wi-Fi, the time zone, the accounts) before anything else
 	bool firstSetup = access((o.data + "/setup-done").c_str(), F_OK) != 0;
 
@@ -1433,6 +1545,7 @@ int main(int argc, char** argv)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	LowBattery low;
+	HealthNotice health;	// (the early check's notice is there before the menu: the loop's first pass shows it)
 	bool batteryDue = true;
 	if (firstSetup) { settingsView.setup(); logf("first-time setup"); }
 	RomWatch roms;
@@ -1445,7 +1558,11 @@ int main(int argc, char** argv)
 	{
 		if (screen != 0) return;
 		double t = nowMs();
+		// the flight recorder recording (bananad's /run/banana/recording): a small red dot in the top corner
+		if (access("/run/banana/recording", F_OK) == 0)
+			be.fill(std::round(disp.width() - 16 * scale), std::round(6 * scale), std::round(6 * scale), std::round(6 * scale), rnds::Color::hex(0xff3b30));
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
+		else if (health.showing(t)) settingsView.notice(health.title, health.body, -1);	// (-1: no battery)
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
 		else settingsView.drawToast(t);	// (only while Settings is open: the account check's result)
 	};
@@ -1490,7 +1607,7 @@ int main(int argc, char** argv)
 			sound.play("select");
 			break;
 		}
-		case Settings::CLOSED: sound.play("back"); break;
+		case Settings::CLOSED: sound.play("back"); recordEvent("settings", "closed"); break;
 		case Settings::TITLES:
 		{
 			// a game's own name or sort title typed on its page: the library again, the cursor on the same game
@@ -1523,8 +1640,8 @@ int main(int argc, char** argv)
 			sound.play("select");
 			break;
 		}
-		case Settings::REBOOT: logf("restarting"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
-		case Settings::POWEROFF: logf("shutting down"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
+		case Settings::REBOOT: logf("restarting"); recordEvent("menu", "restart (Settings)"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
+		case Settings::POWEROFF: logf("shutting down"); recordEvent("menu", "shut down (Settings)"); close(open("/run/banana/poweroff", O_WRONLY | O_CREAT | O_CLOEXEC, 0644)); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off (rcK: off, not a restart)
 		default: break;
 		}
 		dirty = true;
@@ -1534,7 +1651,11 @@ int main(int argc, char** argv)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
-		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && low.hide(nowMs())) dirty = true;
+		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
+		{
+			bool lowWas = low.hide(nowMs()), healthWas = health.hide(nowMs());	// (both hidden, whichever showed)
+			if (lowWas || healthWas) dirty = true;
+		}
 		if (settingsView.isOpen())
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
@@ -1591,6 +1712,7 @@ int main(int argc, char** argv)
 			ui->touchCancel();
 			settingsView.setVariant(settings["theme"]);
 			settingsView.open();
+			recordEvent("settings", "open");
 			rep.key = Key::NONE;
 			sound.play("select");
 			dirty = true;
@@ -1743,6 +1865,12 @@ int main(int argc, char** argv)
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
 		{
+			// the recorder: the game, its system, how it's run (the launcher's name: run-retroarch, run-nds...)
+			std::string how = sd.run.substr(0, sd.run.find(' '));
+			how = how.substr(how.rfind('/') + 1);
+			recordEvent("game", "start: %s (%s, %s)", lib.gameAt(game).title.c_str(), sd.id.c_str(), how.c_str());
+		}
+		{
 			std::ofstream f(o.data + "/last-system");
 			f << ui->systemIndex() << "\n";
 		}
@@ -1872,6 +2000,7 @@ int main(int argc, char** argv)
 		}
 		long secs = (long)((nowMs() - start) / 1000);
 		logf("game ended after %ld s (status %d)", secs, status);
+		recordEvent("game", "ended after %ld s (status %d)", secs, status);
 		int openTries = 0;
 		for (; !disp.open(o.top, err) && openTries < 100; openTries++) usleep(50000);
 		const double opened = nowMs();
@@ -1958,8 +2087,17 @@ int main(int argc, char** argv)
 		launchWatch = -1;
 	}
 	resumeAfterPoweroff(lib, o.data, "/run/banana/resume-once");	// (its game starts at the loop's first turn)
+	bool wasTyping = false;
 	while (!quit)
 	{
+		recordView(*ui, lib);	// (the recorder: the menu's screen when it changed)
+		// the keyboard up or gone: bananad's recorder reads /run/banana/keyboard (no touch positions while typing)
+		if (settingsView.typing() != wasTyping)
+		{
+			wasTyping = !wasTyping;
+			if (wasTyping) { if (FILE* f = fopen("/run/banana/keyboard", "w")) fclose(f); }
+			else unlink("/run/banana/keyboard");
+		}
 		double now = nowMs();
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
@@ -2038,8 +2176,15 @@ int main(int argc, char** argv)
 		if (batteryDue)
 		{
 			batteryDue = false;
-			if (low.check(lib.power(), shutdownPercent(o.data), now)) dirty = true;
+			if (low.check(lib.power(), shutdownPercent(o.data), now))
+			{
+				dirty = true;
+				if (low.showing(now)) recordEvent("notice", "%s", low.title.c_str());
+			}
 		}
+		// the hardware check's notice: new or changed (the late check writes it after the menu is up; /run/banana's
+		// watch wakes the loop when it's moved into place)
+		if (health.check(now)) { logf("health notice: %s", health.title.c_str()); recordEvent("notice", "%s", health.title.c_str()); dirty = true; }
 
 		bool want;
 		{
@@ -2107,6 +2252,11 @@ int main(int argc, char** argv)
 		if (low.showing(now))
 		{
 			int left = (int)(low.until - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
+		if (health.showing(now))
+		{
+			int left = (int)(health.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
 		if (osdUntil > now)
@@ -2199,10 +2349,13 @@ int main(int argc, char** argv)
 		std::ofstream f(o.data + "/last-system");
 		f << ui->systemIndex() << "\n";
 	}
+	recordEvent("menu", "quit");
 	bottomIdle.setOwned(false, nowMs());	// the backlight and the marker back as they were
 	worker.finish();
-	// not straight after a game: a shutdown from it (the power button held) gives rcK's 3 s to its saves instead
-	if (shuttingDown && disp.isOpen() && settings["splash"] != "off" && nowMs() - gameEnded > 2000)
+	// not straight after a game: a shutdown from it (the power button held) gives rcK's 3 s to its saves instead;
+	// not when it turns off from sleep either (bananad's mark): the panels are dark, nobody would see it
+	if (shuttingDown && disp.isOpen() && settings["splash"] != "off" && nowMs() - gameEnded > 2000 &&
+		access("/run/banana/quiet-shutdown", F_OK) != 0)
 	{
 		logf("shutdown animation");
 		playOutro(disp, be, o, variant, sound);

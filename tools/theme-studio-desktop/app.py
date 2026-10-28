@@ -7,8 +7,8 @@ import sys
 import zipfile
 
 from PySide6.QtCore import QMimeData, QPointF, QRectF, QSettings, QSize, Qt, QTimer
-from PySide6.QtGui import (QAction, QColor, QDrag, QFont, QFontDatabase, QImage, QKeySequence, QPainter, QPen,
-                           QPixmap)
+from PySide6.QtGui import (QAction, QColor, QDrag, QFont, QFontDatabase, QIcon, QImage, QKeySequence, QPainter,
+                           QPen, QPixmap)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDockWidget, QDoubleSpinBox,
                                QFileDialog, QFormLayout, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView,
                                QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu,
@@ -26,9 +26,24 @@ import widgets as Wd
 
 MIME = 'application/x-banana-element'
 TYPE_MARK = {'rect': '▭', 'text': 'T', 'image': '▣', 'group': '▤', 'list': '☰'}
-ACTIONS = ['', 'prev', 'next', 'prev:5', 'next:5', 'prev:10', 'next:10', 'first', 'last', 'open', 'back', 'fav', 'resume',
-           'prevSystem', 'nextSystem', 'none']
+# The engine's action tokens (docs/THEMES.md, "Buttons") with the words the dropdown shows, so a beginner picks
+# "back 5 items" rather than "prev:5".
+ACTIONS = [('', 'the default'), ('prev', 'the previous item'), ('next', 'the next item'),
+           ('prev:5', 'back 5 items'), ('next:5', 'forward 5 items'), ('prev:10', 'back 10 items'),
+           ('next:10', 'forward 10 items'), ('first', 'the first item'), ('last', 'the last item'),
+           ('open', 'open the system / play the game'), ('back', 'leave the library'),
+           ('fav', 'star the selection'), ('resume', "the system's last game"),
+           ('prevSystem', 'the previous system'), ('nextSystem', 'the next system'), ('none', 'nothing')]
 BUTTON_NAMES = ['left', 'right', 'up', 'down', 'a', 'b', 'x', 'y', 'l', 'r']
+
+
+def json_problem(what, e):
+    """Text for a dialog about something that had to be JSON, in words rather than the parser's own message."""
+    return ('That is not valid JSON, so it was left alone.\n\n'
+            'What you were editing: %s\n'
+            'What went wrong: %s\n\n'
+            'The usual slips are a missing comma between two items, a comma just before a } or ], '
+            'or a word that needs "quotes" around it.' % (what, e))
 
 
 # ---- the document's tree -----------------------------------------------------------------------------------------------
@@ -681,7 +696,7 @@ class Inspector(QScrollArea):
             box.toggled.connect(lambda on, inner=inner, name=name: (inner.setVisible(on), self.s.settings.setValue('section/' + name, 'true' if on else 'false')))
             v.addWidget(box)
         # whatever the forms don't cover, as JSON
-        other = QGroupBox('Other properties')
+        other = QGroupBox('More settings (advanced)')
         ofl = QFormLayout(other)
         for k, val in el.items():
             if k in known:
@@ -711,10 +726,10 @@ class Inspector(QScrollArea):
         ofl.addRow(addrow)
         v.addWidget(other)
         # component parameters, states, smoothing
-        v.addWidget(self.json_box('Component parameters (with)', 'with', el, '{ "label": "Play" }'))
-        v.addWidget(self.json_box('States: overrides while "when" holds', 'states', el,
+        v.addWidget(self.json_box('Values you pass in', 'with', el, '{ "label": "Play" }'))
+        v.addWidget(self.json_box('Changes while a condition holds', 'states', el,
                                   '[ { "when": "=sel", "scale": 1.1, "fill": "#fff" } ]'))
-        v.addWidget(self.json_box('Smooth: ease towards new values (ms)', 'smooth', el, '{ "x": 120, "scale": 90 }  or  150'))
+        v.addWidget(self.json_box('Ease towards new values (ms)', 'smooth', el, '{ "x": 120, "scale": 90 }  or  150'))
         raw = QGroupBox('This element as JSON')
         raw.setCheckable(True)
         raw.setChecked(False)
@@ -754,7 +769,7 @@ class Inspector(QScrollArea):
             try:
                 val, _ = jsonc.loads(t)
             except ValueError as ex:
-                QMessageBox.warning(self, 'JSON', str(ex))
+                QMessageBox.warning(self, 'JSON', json_problem('a value that has to be JSON', ex))
                 return
             self.s.set_prop(self.path, key, val)
         ap.clicked.connect(apply)
@@ -910,6 +925,137 @@ class DictTable(QWidget):
             self.t.setItem(r, 1, QTableWidgetItem(rel))
 
 
+class IconsTable(QWidget):
+    """The theme's own icons, by system id: the file replaces the menu's icon for that system"""
+
+    IDS = ['nds', 'gba', 'gbc', 'gb', 'nes', 'snes', 'megadrive', 'psx', 'n64',
+           'dodakvarter', 'rocknixdsbank', 'pico-8', 'ports']
+
+    def __init__(self, studio):
+        super().__init__()
+        self.s = studio
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        lab = QLabel("A system's own icon, by id (nds, gba, gbc, gb, nes, snes, megadrive, psx, n64, pico-8, ports): "
+                     'the picture replaces the menu\'s icon for that system, on the home screen, in lists and in '
+                     'Settings. A 128×128 PNG is plenty; 4096 px a side is the engine\'s limit. Keep it in the '
+                     "theme's folder (Import copies it there).")
+        lab.setWordWrap(True)
+        lab.setStyleSheet('color: #999')
+        v.addWidget(lab)
+        self.t = QTableWidget(0, 2)
+        self.t.setHorizontalHeaderLabels(['System', 'Icon'])
+        self.t.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.t.verticalHeader().hide()
+        self.t.cellChanged.connect(self.changed)
+        v.addWidget(self.t)
+        row = QHBoxLayout()
+        a = QPushButton('Add')
+        a.clicked.connect(self.add)
+        i = QPushButton('Import picture…')
+        i.clicked.connect(self.import_one)
+        r = QPushButton('Remove')
+        r.clicked.connect(self.remove)
+        row.addWidget(a)
+        row.addWidget(i)
+        row.addWidget(r)
+        v.addLayout(row)
+        self.loading = False
+
+    def ids(self):
+        """The standard ids, plus whatever the checkout's systems.conf lists."""
+        ids = list(self.IDS)
+        repo = getattr(self.s.exact, 'repo', '')
+        if repo:
+            path = os.path.join(repo, 'system', 'rootfs', 'etc', 'banana', 'systems.conf')
+            try:
+                with open(path, encoding='utf-8') as fh:
+                    for line in fh:
+                        line = line.strip()
+                        if line.startswith('[') and line.endswith(']'):
+                            sid = line[1:-1]
+                            if sid and sid not in ids:
+                                ids.append(sid)
+            except OSError:
+                pass
+        return ids
+
+    def load(self):
+        self.loading = True
+        d = self.s.doc.get('icons') if isinstance(self.s.doc.get('icons'), dict) else {}
+        self.t.setRowCount(0)
+        for sid, path in d.items():
+            self.row(sid, path if isinstance(path, str) else '')
+        self.loading = False
+
+    def row(self, sid, path):
+        r = self.t.rowCount()
+        self.t.insertRow(r)
+        cb = QComboBox()
+        cb.setEditable(True)				# a card may have a system of its own
+        cb.addItems(self.ids())
+        cb.setCurrentText(sid)
+        cb.currentTextChanged.connect(self.changed)
+        self.t.setCellWidget(r, 0, cb)
+        self.t.setItem(r, 1, QTableWidgetItem(path))
+        self.thumb(r, path)
+
+    def thumb(self, r, path):
+        """Show the picture if it is beside the theme."""
+        if not path:
+            return
+        p = path if os.path.isabs(path) else os.path.join(self.s.theme_dir(), path)
+        if os.path.exists(p):
+            pm = QPixmap(p)
+            if not pm.isNull():
+                self.t.item(r, 1).setIcon(QIcon(pm.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation)))
+
+    def collect(self):
+        d = {}
+        for r in range(self.t.rowCount()):
+            cb = self.t.cellWidget(r, 0)
+            sid = cb.currentText().strip() if cb else ''
+            it = self.t.item(r, 1)
+            val = it.text().strip() if it else ''
+            if sid and val:
+                d[sid] = val
+        return d
+
+    def changed(self, *_):
+        if self.loading:
+            return
+        before = self.s.snapshot()
+        d = self.collect()
+        if d:
+            self.s.doc['icons'] = d
+        else:
+            self.s.doc.pop('icons', None)
+        self.s.commit(before=before, structure=False, inspector=True)
+        self.load()
+
+    def add(self):
+        used = set(self.collect())
+        sid = next((i for i in self.ids() if i not in used), '')
+        self.loading = True
+        self.row(sid, '')
+        self.loading = False
+
+    def import_one(self):
+        r = self.t.currentRow()
+        if r < 0:
+            QMessageBox.information(self, 'Import', 'Pick a row first (Add one if there is none).')
+            return
+        rel = self.s.import_asset('Pictures (*.png *.jpg *.jpeg)')
+        if rel:
+            self.t.item(r, 1).setText(rel)		# cellChanged commits and reloads
+
+    def remove(self):
+        r = self.t.currentRow()
+        if r >= 0:
+            self.t.removeRow(r)
+            self.changed()
+
+
 class ThemePanel(QScrollArea):
     """The theme's own settings: name, colours, fonts, vars, buttons, hints, timings"""
 
@@ -959,6 +1105,9 @@ class ThemePanel(QScrollArea):
                                file_browse=True)
         self.fonts.load()
         tabs.addTab(self.fonts, 'Fonts')
+        self.icons_table = IconsTable(self.s)
+        self.icons_table.load()
+        tabs.addTab(self.icons_table, 'System icons')
         tabs.addTab(self.input_tab(), 'Buttons')
         tabs.addTab(self.hints_tab(), 'Hints')
         tabs.addTab(self.behavior_tab(), 'Timing')
@@ -978,12 +1127,16 @@ class ThemePanel(QScrollArea):
             gl.addWidget(QLabel(b.upper() if len(b) == 1 else b), r + 2, 0)
             for c, view in enumerate(('home', 'library')):
                 cb = QComboBox()
-                cb.setEditable(True)
-                cb.addItems(ACTIONS)
+                for code, label in ACTIONS:
+                    cb.addItem(label, code)
                 cur = (inp.get(view) or {}).get(b, '') if isinstance(inp.get(view), dict) else ''
-                cb.setCurrentText(cur)
-                cb.activated.connect(lambda i, cb=cb, view=view, b=b: self.s.set_input(view, b, cb.currentText()))
-                cb.lineEdit().editingFinished.connect(lambda cb=cb, view=view, b=b: self.s.set_input(view, b, cb.currentText()))
+                i = cb.findData(cur)
+                if i < 0 and cur:				# an action written by hand: show it rather than lose it
+                    cb.addItem('%s  (written by hand)' % cur, cur)
+                    i = cb.count() - 1
+                cb.setCurrentIndex(i if i >= 0 else 0)
+                cb.setToolTip('What the %s button does in %s' % (b.upper() if len(b) == 1 else b, view))
+                cb.activated.connect(lambda _i, cb=cb, view=view, b=b: self.s.set_input(view, b, cb.currentData() or ''))
                 gl.addWidget(cb, r + 2, c + 1)
         return w
 
@@ -1056,21 +1209,33 @@ class SimPanel(QWidget):
         lay.addLayout(nav)
         sl = QGridLayout()
         self.sliders = {}
-        rows = (('time', 'time (ms)', 0, 20000), ('moved', 'moved (ms ago)', 0, 3000), ('entered', 'entered (ms ago)', 0, 3000),
-                ('launch', 'launch.progress %', 0, 100), ('scroll_offset', 'scroll − cursor %', -100, 100), ('battery', 'battery %', -1, 100))
-        for r, (key, label, lo, hi) in enumerate(rows):
+        self.slider_labels = {}
+        # These are the values a theme's animations read, so you can see how "=moved" or "=launch.progress" really
+        # behave. Plain words on the label, the hook's own name in the tooltip.
+        rows = (('time', 'Clock the theme sees (ms)', 0, 20000, 'The time hook: milliseconds since the menu started'),
+                ('moved', 'Since the selection moved (ms)', 0, 3000, 'The moved hook: 0 right after a move, bigger as it settles'),
+                ('entered', 'Since the view opened (ms)', 0, 3000, 'The entered hook: 0 right after the view changed'),
+                ('launch', 'A game starting (%)', 0, 100, 'launch.progress, 0 to 100: the Starting… view as a game is picked'),
+                ('scroll_offset', 'List scroll offset (%)', -100, 100, 'scroll beside cursor: how far the list has eased along'),
+                ('battery', 'Battery charge (%)', -1, 100, '-1 is "unknown", the same as a handheld with no battery reading'))
+        for r, (key, label, lo, hi, tip) in enumerate(rows):
             s = QSlider(Qt.Horizontal)
             s.setRange(lo, hi)
+            s.setToolTip(tip)
             val = getattr(sim, key)
             s.setValue(int(val * 100) if key in ('launch', 'scroll_offset') else int(val))
             lab = QLabel()
+            lab.setToolTip(tip)
             s.valueChanged.connect(lambda v, key=key, lab=lab: self.set(key, v, lab))
-            sl.addWidget(QLabel(label), r, 0)
+            name = QLabel(label)
+            name.setToolTip(tip)
+            sl.addWidget(name, r, 0)
             sl.addWidget(s, r, 1)
             sl.addWidget(lab, r, 2)
             lab.setText(str(s.value()))
             lab.setMinimumWidth(44)
             self.sliders[key] = s
+            self.slider_labels[key] = lab
         lay.addLayout(sl, 1)
         right = QVBoxLayout()
         self.play = QPushButton('▶ Play animations')
@@ -1109,6 +1274,11 @@ class SimPanel(QWidget):
             val = getattr(sim, key)
             s.setValue(int(val * 100) if key in ('launch', 'scroll_offset') else int(min(val, s.maximum())))
             s.blockSignals(False)
+            # the number beside the slider follows too: Play animations used to move the canvas while these readouts
+            # stayed frozen, which made the button look broken
+            lab = self.slider_labels.get(key)
+            if lab is not None:
+                lab.setText(str(s.value()))
 
 
 # ---- the window --------------------------------------------------------------------------------------------------------
@@ -1117,6 +1287,8 @@ class Studio(QMainWindow):
         super().__init__()
         self.settings = QSettings('BananaOS', 'ThemeStudio')
         self._light = str(self.settings.value('light_theme', 'false')).lower() in ('true', '1')
+        # your own themes live outside the repo; the Open/Save dialogs start here (File > Themes folder to change)
+        self.themes_dir = self.settings.value('themes_dir', os.path.expanduser('~/BananaThemes'))
         repo = exact.find_repo(self.settings.value('repo', ''))
         self.renderer = E.Renderer(repo)
         self.exact = exact.Exact(self)
@@ -1214,6 +1386,9 @@ class Studio(QMainWindow):
             self.open_path(path)
         else:
             self.load_doc(presets.blank(), None, '')
+            QTimer.singleShot(300, lambda: self.statusBar().showMessage(
+                'A working theme is open, ready to change. File ▸ New from a template… starts from one of the '
+                'examples; Help ▸ Quick guide is a short walkthrough of the editor.', 20000))
         if not repo:
             QTimer.singleShot(300, lambda: self.statusBar().showMessage(
                 'No BananaLinux checkout found: fonts, icons and the engine preview need one (Engine > Set BananaLinux folder).', 15000))
@@ -1238,7 +1413,8 @@ class Studio(QMainWindow):
                 tb.addAction(a)
             return a
         m = mb.addMenu('&File')
-        act(m, 'New…', self.new, QKeySequence.New, True, 'Start from a template')
+        act(m, 'New from a template…', self.new, QKeySequence.New, True,
+            'Start a theme from one of the examples BananaOS ships (Canvas, Hillside, Turntable, Classic)')
         act(m, 'Open…', self.open, QKeySequence.Open, True)
         self.recent_menu = m.addMenu('Open recent')
         self.fill_recent()
@@ -1306,7 +1482,7 @@ class Studio(QMainWindow):
         act(m, 'Build banana-ui', self.build_engine)
         act(m, 'Set BananaLinux folder…', self.set_repo)
         m = mb.addMenu('&Help')
-        act(m, 'Quick guide', self.help)
+        act(m, 'Quick guide', self.help, None, True, 'A short walkthrough of the editor')
         act(m, 'Expression reference', self.expr_help, 'F1')
 
     def help(self):
@@ -1446,7 +1622,7 @@ class Studio(QMainWindow):
             try:
                 hs[view] = json.loads(text)
             except ValueError as e:
-                QMessageBox.warning(self, 'Hints', 'Not JSON: %s' % e)
+                QMessageBox.warning(self, 'The hints list', json_problem('the hints list', e))
                 return
         else:
             hs.pop(view, None)
@@ -1464,7 +1640,7 @@ class Studio(QMainWindow):
                 try:
                     b['cues'] = json.loads(value)
                 except ValueError as e:
-                    QMessageBox.warning(self, 'Cues', 'Not JSON: %s' % e)
+                    QMessageBox.warning(self, 'Sound cue times', json_problem('the sound cue times', e))
                     return
         else:
             b[key] = value
@@ -1474,7 +1650,7 @@ class Studio(QMainWindow):
         try:
             v, _ = jsonc.loads(text)
         except ValueError as e:
-            QMessageBox.warning(self, 'JSON', str(e))
+            QMessageBox.warning(self, 'JSON', json_problem('the element', e))
             return
         before = self.snapshot()
         parent = get(self.doc, path[:-1]) if path else None
@@ -2186,7 +2362,7 @@ class Studio(QMainWindow):
     def open(self):
         if not self.maybe_save():
             return
-        f, _ = QFileDialog.getOpenFileName(self, 'Open a theme', self.settings.value('lastdir', os.path.expanduser('~')), 'Themes (*.json)')
+        f, _ = QFileDialog.getOpenFileName(self, 'Open a theme', self.settings.value('lastdir', self.themes_dir), 'Themes (*.json)')
         if f:
             self.open_path(f)
 
@@ -2194,7 +2370,8 @@ class Studio(QMainWindow):
         try:
             doc, had = jsonc.load(f)
         except (OSError, ValueError) as e:
-            QMessageBox.warning(self, 'Open', 'Can\'t read %s:\n%s' % (f, e))
+            QMessageBox.warning(self, 'Open', 'This file could not be read as a theme, so it was not opened.\n\n' +
+                                '%s\n\n%s\n\nIf you are not sure, use File ▸ New from a template… and change that.' % (f, e))
             return
         if not isinstance(doc, dict):
             QMessageBox.warning(self, 'Open', 'Not a theme: the file is not a JSON object.')
@@ -2219,7 +2396,7 @@ class Studio(QMainWindow):
         return self.write(self.path)
 
     def save_as(self):
-        start = self.path or os.path.join(self.settings.value('lastdir', os.path.expanduser('~')),
+        start = self.path or os.path.join(self.settings.value('lastdir', self.themes_dir),
                                           (self.doc.get('name') or 'my-theme').lower().replace(' ', '-').replace('(', '').replace(')', '') + '.json')
         f, _ = QFileDialog.getSaveFileName(self, 'Save the theme', start, 'Themes (*.json)')
         if not f:
@@ -2284,7 +2461,7 @@ class Studio(QMainWindow):
 
     def export_zip(self):
         stem = os.path.splitext(os.path.basename(self.path))[0] if self.path else (self.doc.get('name') or 'theme').lower().replace(' ', '-')
-        f, _ = QFileDialog.getSaveFileName(self, 'Export', os.path.join(self.settings.value('lastdir', os.path.expanduser('~')), stem + '.zip'), 'Zip (*.zip)')
+        f, _ = QFileDialog.getSaveFileName(self, 'Export', os.path.join(self.settings.value('lastdir', self.themes_dir), stem + '.zip'), 'Zip (*.zip)')
         if not f:
             return
         base = self.theme_dir()

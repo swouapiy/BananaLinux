@@ -53,9 +53,10 @@ def main():
     fails = []
     port = free_port()
     url = "http://127.0.0.1:%d" % port
-    themes_dir = Path(tempfile.mkdtemp(prefix="banana-themes-"))
+    themes_dir = Path(tempfile.mkdtemp(prefix="banana-themes-"))		# the card's banana/themes (send)
+    own_dir = Path(tempfile.mkdtemp(prefix="banana-mine-"))		# your own themes folder (--themes)
     srv = subprocess.Popen([sys.executable, str(SERVE), "--port", str(port), "--no-browser",
-                            "--themes-dir", str(themes_dir)],
+                            "--themes-dir", str(themes_dir), "--themes", str(own_dir)],
                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     try:
         for _ in range(120):
@@ -89,6 +90,12 @@ def main():
         if st != 200 or b"$schema" not in body:
             fails.append("/api/schema didn't serve docs/theme.schema.json")
 
+        st, body = get(url + "/api/systems")
+        ids = json.loads(body)
+        print("systems:", ids)
+        if "nds" not in ids or "gba" not in ids:
+            fails.append("/api/systems didn't list the shipped systems")
+
         # a real render of the card's own example layout theme
         text = CANVAS.read_text()
         st, res = post(url + "/api/render", {"theme": text})
@@ -118,6 +125,20 @@ def main():
         st, res = post(url + "/api/send", {"name": "x.json", "theme": "{}", "assets": [{"path": "../../evil", "data": PNG_1PX}]})
         if (themes_dir.parent / "evil").exists():
             fails.append("/api/send wrote outside its directory")
+
+        # your own themes folder: empty at first, listed and saved with --themes
+        st, body = get(url + "/api/themes")
+        if json.loads(body) != []:
+            fails.append("/api/themes should be empty before saving anything")
+        st, res = post(url + "/api/themes/save", {"name": "mine", "theme": '{"name":"Mine","screens":{}}'})
+        print("save local:", res)
+        st, body = get(url + "/api/themes")
+        names = [t["name"] for t in json.loads(body)]
+        print("local themes:", names)
+        if "Mine" not in names:
+            fails.append("/api/themes/save didn't show up in the list")
+        if not (own_dir / "mine.json").exists():
+            fails.append("/api/themes/save didn't write the file")
     finally:
         srv.terminate()
         try:

@@ -24,7 +24,8 @@ namespace banana
 			bool emulator = false;		// EMULATOR scope (also true for Type CORE below)
 		};
 
-		// each list ends in nullptr: valid() walks it to the end
+		// each list ends with nullptr: valid() walks it to that (without it, a value not in the list read on past the
+		// array, into the next one's: a crash, or "accent = on" taken as valid)
 		const char* const ON_OFF[] = { "on", "off", nullptr };
 		const char* const ACCENT_TEXT[] = { "auto", "dark", "light", nullptr };
 		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };

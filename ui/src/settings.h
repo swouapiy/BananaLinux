@@ -48,6 +48,9 @@ namespace banana
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
 		int powerGroup() const;	// -1: none
+		// the on-screen keyboard is up (a password or an account being typed): the flight recorder leaves touches'
+		// positions out while it is
+		bool typing() const { return mOpen && page == KEYBOARD; }
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
 
 		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other
@@ -107,7 +110,8 @@ namespace banana
 		void setSync(bool on) { sync = on; }
 
 		// a notice over the screen being drawn (between the backend's beginScreen and endScreen): the battery icon at
-		// percent, a title and a line or two, in the bubble style near the bottom of the panel
+		// percent (below 0: no battery, the text across the bubble), a title and a line or two, in the bubble style near
+		// the bottom of the panel
 		void notice(const std::string& title, const std::string& body, int percent);
 		// the volume or brightness keys' level: a small bubble near the bottom of the panel, its label, the percent and
 		// a bar (drawn like notice)
@@ -122,6 +126,7 @@ namespace banana
 			std::string section, icon, label, help;
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
+			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
 			int at = 0;
 			enum Kind { CHOICE, BRIGHTNESS, VOLUME, INFO, ACTION, PAGE } kind = CHOICE;
 		};
@@ -141,6 +146,10 @@ namespace banana
 		int groupOf(int item) const;			// the group an item is in
 		int groupStart(int g) const, groupEnd(int g) const;	// its items: [start, end)
 		std::string groupHint(int g) const;		// what is in it, for its tile
+		void toRow(const std::string& key);		// the cursor on that row, in its group's list
+		bool devOn = false;						// System's Developer row unlocked (settings.conf's developer)
+		int aboutTaps = 0;						// A's on System > About so far (seven unlock it)
+		std::map<std::string, std::string> recShown;	// each setting as shown, for the recorder's "old -> new"
 		Result pressGroups(Key k);
 		void renderGroups();
 		bool downOnRow = false;
@@ -456,6 +465,7 @@ namespace banana
 		// the top panel's header and help text (Settings' rows and a game's page): where they go, in 640x480 CSS px
 		static constexpr float HEAD_ICON_Y = 42, HEAD_SECTION_Y = 46, HEAD_LABEL_Y = 70, HEAD_VALUE_Y = 110;
 		static constexpr float HELP_X = 50, HELP_W = 540, HELP_TOP = 152, HELP_BOTTOM = 438;
+		static constexpr float HINT_TOP = 300;	// a choice's hint, under the row's sentence
 		bool helpFit(const std::string& t, float top, float bottom, float& size, int& lines) const;
 		void helpText(const std::string& t, float top, float bottom, const rnds::Color& c);
 		std::string helpOf(int item);

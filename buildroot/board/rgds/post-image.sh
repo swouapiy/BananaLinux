@@ -34,9 +34,9 @@ gzip -kf9 "banana-$BOARD.img"
 VERSION=$(cat "$HERE/../../../VERSION")
 U=banana-$BOARD-$VERSION.update
 rm -rf "$U"; mkdir "$U"
-cp Image.lz4 "$U/Image"; cp rootfs.squashfs "$U/"; for d in $DTBS; do cp "$d.dtb" "$U/"; done
+cp Image.lz4 "$U/Image"; cp rootfs.squashfs u-boot-rockchip.bin "$U/"; for d in $DTBS; do cp "$d.dtb" "$U/"; done
 echo "$VERSION" > "$U/VERSION"; echo "$BOARD" > "$U/board"
-(cd "$U" && sha256sum Image *.dtb rootfs.squashfs > sha256sums)
+(cd "$U" && sha256sum Image *.dtb rootfs.squashfs u-boot-rockchip.bin > sha256sums)	# (U-Boot: the update writes it when it differs)
 tar -cf "$U.tar" "$U"
 rm -rf "$U"
 echo "SD card image: $BINARIES_DIR/banana-$BOARD.img(.gz); update package: $BINARIES_DIR/$U.tar"

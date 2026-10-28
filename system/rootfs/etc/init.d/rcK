@@ -10,6 +10,18 @@ for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
     pidof banana-ui retroarch drastic >/dev/null || { [ -n "$G" ] && kill -0 "$G" 2>/dev/null; } || break
     sleep 0.1
 done
+# still there after 3 s (a game ignoring SIGTERM, hung on its save): killed, so nothing holds the card open at the
+# unmount below; a card left mounted read-write is what a pulled battery would leave
+if pidof banana-ui retroarch drastic >/dev/null || { [ -n "$G" ] && kill -0 "$G" 2>/dev/null; }; then
+    echo "rcK: still running after 3 s: killed" > /dev/kmsg 2>/dev/null
+    [ -n "$G" ] && kill -KILL -"$G" 2>/dev/null
+    killall -KILL banana-ui retroarch drastic 2>/dev/null
+    sleep 0.2
+fi
+# then bananad, while the card is still mounted: it writes the flight recorder's last lines out and goes (killed after
+# the unmount, the last half-minute of a recording was lost at every restart)
+killall bananad 2>/dev/null
+for i in 1 2 3 4 5 6 7 8 9 10; do pidof bananad >/dev/null || break; sleep 0.1; done
 /usr/libexec/banana/share down 2>/dev/null     # a computer's open files on the card
 /usr/libexec/banana/ssh down 2>/dev/null
 /usr/libexec/banana/wifi down 2>/dev/null
@@ -34,7 +46,20 @@ else
     [ -n "$t" ] || t=$b; [ -n "$b" ] || b=$t
     [ -n "$t" ] && [ "$t $b" != "$old_t $old_b" ] && echo "$t $b" > /data/banana/backlight
 fi
+# turned off with the charger in: started again into charging (rcS, bananad --charge) as a phone does; a restart
+# leaves its own mark, so the RK817's memory of a charger that started it isn't taken for a new one
+CHARGE=
+if [ -f /run/banana/poweroff ]; then
+    for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && CHARGE=1; done
+    [ -n "$CHARGE" ] && touch /data/banana/.charge-next
+else
+    touch /data/banana/.restart
+fi
 /usr/libexec/banana/boot-log off   # the boot's log, complete, whenever the handheld is turned off; the battery noted
 sync
 umount /data 2>/dev/null || mount -o remount,ro /data
 sync
+# the LEDs off: switched off, the handheld shows nothing (bananad stopped above, so it doesn't put them back)
+for l in /sys/class/leds/*; do echo none > "$l/trigger"; echo 0 > "$l/brightness"; done 2>/dev/null
+# (the boot mode flag says so to U-Boot, which then leaves the power LED off: the PMIC still says power button)
+[ -n "$CHARGE" ] && { devmem 0xfdc20200 32 0x5242C30B 2>/dev/null; reboot -f; }

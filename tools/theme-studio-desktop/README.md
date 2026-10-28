@@ -27,13 +27,15 @@ banana-ui). Elsewhere, point it at a checkout with Engine > Set BananaLinux fold
   press ƒ to write an `=expression`, which gets completion of the hooks, vars and functions and turns red when it
   doesn't parse. Texts take `{hooks}` in braces. States, `with` parameters, `smooth`, any property the forms don't
   know, and the element's raw JSON are there too.
-- **Theme settings**: name, author, accent, default font, variables, the colour-theme keys, fonts, the buttons'
-  actions per view, hints and timings.
+- **Theme settings**: name, author, accent, default font, variables, the colour-theme keys, fonts, **system icons**
+  (each system's own picture, by id), the buttons' actions per view, hints and timings.
 - **Components**: make one from a selection, edit it once (every `use` follows), add instances.
 - **Assets**: pictures, fonts and sounds are copied into a folder named after the theme, next to its JSON, and named
   by relative paths, as the engine expects.
-- **Preview**: switch views, move the selection (◀ ▶ A B), scrub `time`, `moved`, `entered`, `launch.progress` and the
-  scroll, set the battery and Wi-Fi, and play the animations. The studio draws with its own port of the engine's
+- **Preview**: switch views, move the selection (◀ ▶ A B), and play the animations. The sliders scrub the values a
+  theme's own animations read — the clock the theme sees, time since the selection moved or the view opened, a game
+  starting, the list's scroll offset and the battery charge — labelled in those words with the hook's name on hover.
+  The studio draws with its own port of the engine's
   layout rules over a made-up library; **F5** swaps in the real banana-ui's picture (rendered headless in about
   0.1 s, refreshed after each change) and lists the engine's own theme errors under Problems.
 - **JSON** tab: the whole file, for anything else. Comments and trailing commas are read; saving writes plain JSON.
@@ -55,3 +57,6 @@ banana-ui). Elsewhere, point it at a checkout with Engine > Set BananaLinux fold
 | `tests/smoke.py` | Builds the window offscreen and paints it, so a broken import or stylesheet is caught |
 
 The look matches the web editor (`tools/theme-studio/`), so the two feel like the same tool.
+
+The themes you make live in a folder of their own, outside the checkout (`~/BananaThemes` by default): the Open
+and Save dialogs start there, so your themes never end up in the repo or in the example list.
