@@ -38,6 +38,7 @@ namespace banana
 		const char* const LATENCY[] = { "32", "64", "128", nullptr };
 		const char* const LOGIN[] = { "password", "guest", nullptr };
 		const char* const BT_AUDIO[] = { "latency", "quality", nullptr };
+		const char* const ASK[] = { "ask", "always", "never", nullptr };
 
 		// (language is left out on purpose: a reset keeps the menu's language, and the codes are lang/'s files)
 		// The values /etc/banana/settings.conf documents, and the ones a card is completed with when that file is
@@ -82,6 +83,10 @@ namespace banana
 			{ "homesync_auto", "off", ENUM, HOMESYNC_AUTO, 0, 0 },
 			{ "boxart_twilight_url", "https://boxart.kirovair.com", TEXT, nullptr, 0, 0 },
 			{ "boxart_twilight_key", "tb2_9f4c1d7a3e8b5062", TEXT, nullptr, 0, 0 },
+			{ "downloads_unpack", "ask", ENUM, ASK, 0, 0 },
+			{ "downloads_delete_archive", "ask", ENUM, ASK, 0, 0 },
+			{ "downloads_unwrap", "on", ENUM, ON_OFF, 0, 0 },
+			{ "downloads_hidden", "off", ENUM, ON_OFF, 0, 0 },
 			{ "core.gba", "gpsp", CORE, nullptr, 0, 0 },
 		};
 

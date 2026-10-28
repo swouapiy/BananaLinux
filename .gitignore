@@ -6,6 +6,9 @@
 /ui/tests/gamecomp-test
 /ui/tests/input-test
 /ui/fuzz/out/
+/ui/banana-fetch
+/ui/tests/servers/share/
+/ui/tests/servers/tls/
 /system/bananad/bananad
 /system/bananad/banana-panel-tune
 *.o

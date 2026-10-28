@@ -3,7 +3,7 @@
 answers as files, eReaderDS as a made-up release. Checks where everything lands (/data/store/apps, the Apps shelf's
 /data/store/tiles), that the catalog that came with the system is used while Banana's isn't on the network, that
 a remove leaves the shelf's folder and a port of the same name alone, and that the apps that come with the system
-(Döda Kvarter, Poketool) are listed as installed, a remove takes their tile off the menu
+(Döda Kvarter, Poketool, Downloads) are listed as installed, a remove takes their tile off the menu
 (/data/store/hidden-systems) and an install puts it back.
   python3 store/test-banana.py <rocknixds-store, with BananaOS's patches>"""
 import hashlib
@@ -32,6 +32,7 @@ def main(cli):
         # Döda Kvarter's folder in the system with its VERSION; Poketool's without one (the system's version then)
         os.makedirs(root + "/usr/share/banana/apps/dodakvarter")
         os.makedirs(root + "/usr/share/banana/apps/bank")
+        os.makedirs(root + "/usr/share/banana/apps/downloads")     # (Downloads: banana-ui's own page, its tile's folder)
         with open(root + "/usr/share/banana/apps/dodakvarter/VERSION", "w") as f:
             f.write("0.3.0\n")
         # the Store as the package installs it: the tool, the catalog and its pictures beside it
@@ -121,6 +122,15 @@ def main(cli):
         check(o.strip().splitlines()[-1] == "DONE 0.3.0", "install Döda Kvarter: " + o.strip().splitlines()[-1])
         check(os.path.exists(hidden) and "dodakvarter" not in open(hidden).read().split(), "its system out of hidden-systems")
         check(row("dodakvarter")[7:8] == ["installed"], "list: Döda Kvarter installed again")
+        # Downloads (banana-ui's own page, PR #80): installed with the system's version, removed and put back the same way
+        r = row("downloads")
+        check(r[5:8] == ["0.4.2", "0.4.2", "installed"], "list: Downloads installed (the system's version): %s" % r[5:8])
+        o = run("remove", "downloads")
+        check(o.strip().endswith("DONE") and "downloads" in open(hidden).read().split(), "remove Downloads: its system in hidden-systems")
+        check(os.path.isdir(root + "/usr/share/banana/apps/downloads"), "nothing of Downloads deleted")
+        o = run("install", "downloads")
+        check(o.strip().splitlines()[-1] == "DONE 0.4.2" and "downloads" not in open(hidden).read().split(),
+              "install Downloads: its system out of hidden-systems")
         env["RNDS_STORE_DEVICE"] = "rgds"
         check(row("bank")[7:8] == ["installed"] and row("ereaderds")[7:8] == ["unsupported"],
               "the RG DS: Poketool installed, eReaderDS not for it")

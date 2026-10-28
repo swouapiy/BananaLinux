@@ -3,7 +3,9 @@
  *   - Sleep: a short press of the power button, closing the lid, or (in the menu) a few idle minutes put the
  *     handheld into suspend-to-RAM. The running game is paused first (SIGSTOP to its process group) and resumed
  *     after, the hooks in /etc/banana/sleep.d run around it, and banana-ui is told to draw its panels again.
- *     Opening the lid or pressing power wakes it (the device tree marks both as wakeup sources).
+ *     Opening the lid or pressing power wakes it (the device tree marks both as wakeup sources). A download of the
+ *     shelf's Downloads (/run/banana/transfer.pid) holds the idle sleep, and the lid's (the panels go dark): it
+ *     sleeps once the download is done.
  *   - A long press of the power button shuts down cleanly.
  *   - Volume keys change the mixer; F (BTN_MODE) + volume changes both panels' backlights.
  *   - A battery about to run out shuts the handheld down before the data partition can be cut off mid-write.
@@ -706,6 +708,30 @@ static void panel_off_again(void)
 	}
 }
 
+/* a process's state, the letter after its name in /proc/<pid>/stat (R, S, T for stopped, Z...); 0 unknown */
+static char proc_state(pid_t pid)
+{
+	char path[64], line[512];
+	snprintf(path, sizeof path, "/proc/%d/stat", (int)pid);
+	read_str(path, line, sizeof line);
+	const char *name_end = strrchr(line, ')');	/* (the name may hold spaces and parentheses) */
+	return name_end && name_end[1] == ' ' ? name_end[2] : 0;
+}
+
+/* a download of the shelf's Downloads (banana-fetch's runner, its pid in /run/banana/transfer.pid) with no game running:
+ * the lid shut makes the panels dark, and the sleep waits until it is done (the "lid still closed" check then sleeps).
+ * During a game the runner is stopped anyway, and the lid sleeps as ever; the power button always does. A runner left
+ * stopped (banana-ui went away during a game and didn't let it go on) or ended unreaped is no download either: it
+ * would hold the sleep until a reboot. */
+static int lid_held;	/* the lid was shut during a download: dark and awake */
+static int transfer_hold(void)
+{
+	pid_t p = pid_of("/run/banana/transfer.pid");
+	if (!p || pid_of("/run/banana/game.pid")) return 0;
+	char st = proc_state(p);
+	return st != 'T' && st != 't' && st != 'Z';
+}
+
 static int charger_online(void);
 static int in_suspend;	/* suspend_now is running: a shutdown from it is a turn-off from sleep (shutdown_now) */
 /* the night test (usr/libexec/banana/night-test, from Developer options): while /run/banana/night-test holds a number
@@ -889,6 +915,7 @@ static void suspend_now(const char *why)
 {
 	double t0 = mono();
 	in_suspend = 1;
+	lid_held = 0;
 	pid_t game = pid_of("/run/banana/game.pid");
 	pid_t pg = game ? getpgid(game) : 0;
 	if (pg > 0) kill(-pg, SIGSTOP);	/* DraStic's dynarec mustn't run on while the clocks drop (ROCKNIX's finding) */
@@ -2118,10 +2145,16 @@ static void handle(const struct input_event *e)
 	if (e->type == EV_KEY) { last_input = now; undim(); }
 	if (e->type == EV_SW && e->code == SW_LID) {
 		lid_closed = e->value;
-		if (!lid_closed) { if (lid_sleep_at > 0) say("lid opened again before the sleep"); undim(); lid_retry_off = 0; lid_sleep_at = 0; }
+		if (!lid_closed) { if (lid_sleep_at > 0) say("lid opened again before the sleep"); undim(); lid_retry_off = 0; lid_sleep_at = 0; lid_held = 0; }
 		/* a DS game: the panels dark now, the sleep 1.5 s later, so the game sees its lid close first (BananaDS and
 		 * SuperDrastic read the hall sensor too: its sleep mode, its lid sound); opened before that, no sleep */
 		if (lid_closed && cfg.lid_sleep && ds_game()) { lid_sleep_at = now + 1.5; backlights_power(0); say("lid shut in a DS game: asleep in 1.5 s"); }
+		/* a download running (no game): dark and awake until it is done, as a phone finishes one with its screen off */
+		else if (lid_closed && cfg.lid_sleep && transfer_hold()) {
+			backlights_power(0);
+			if (!lid_held) sleep_log("lid closed during a download: dark and awake until it is done");
+			lid_held = 1;
+		}
 		else if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
 		else if (!lid_closed || !cfg.lid_sleep) { backlights_power(!lid_closed); if (!lid_closed) panel_off_again(); }	/* no sleep: at least the panels go dark */
 		return;
@@ -2370,9 +2403,10 @@ int main(int argc, char **argv)
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
 		int game = pid_of("/run/banana/game.pid") != 0;
-		/* a job that must not be slept through (banana-scrape's downloads): its pid in /run/banana/awake.pid; looked
-		 * at again every 5 s, so the idle sleep comes once it is over */
-		int awake = pid_of("/run/banana/awake.pid") != 0;
+		/* a job that must not be slept through (banana-scrape's downloads: its pid in /run/banana/awake.pid; the
+		 * Downloads tile's: transfer_hold); looked at again every 5 s, so the idle sleep, or the lid's, comes once it
+		 * is over */
+		int awake = pid_of("/run/banana/awake.pid") != 0 || transfer_hold();
 		if (awake && wait > 5) wait = 5;
 		/* (only deadlines still ahead: one already passed was acted on after the last poll, or is held back by what
 		 * the action checks (the charger, the lid, no backlight) and a uevent or an input event brings it back; counted
@@ -2468,7 +2502,7 @@ int main(int argc, char **argv)
 		/* on the charger too, as a phone sleeps on it (the charging light stays on); only turning off waits for the
 		 * cable to come out */
 		if (cfg.autosleep_min > 0 && idle && now - last_input >= cfg.autosleep_min * 60.0 &&
-		    !pid_of("/run/banana/awake.pid"))
+		    !pid_of("/run/banana/awake.pid") && !transfer_hold())
 			suspend_now("idle");
 		if (lid_sleep_at > 0 && now >= lid_sleep_at) { lid_sleep_at = 0; if (lid_closed) suspend_now("lid closed"); }
 		if (menu_sleep_at > 0 && now >= menu_sleep_at) { menu_sleep_at = 0; suspend_now("the menu's Sleep"); }
@@ -2481,8 +2515,9 @@ int main(int argc, char **argv)
 		}
 		/* started or woken with the lid shut */
 		if (!access("/run/banana/night-test-sleep", F_OK)) { unlink("/run/banana/night-test-sleep"); suspend_now("night test"); }
-		else if (lid_closed && cfg.lid_sleep && !lid_retry_off && lid_sleep_at == 0 && now - last_input > 5 && night_test_every() <= 0)
-			suspend_now("lid still closed");
+		else if (lid_closed && cfg.lid_sleep && !lid_retry_off && lid_sleep_at == 0 && now - last_input > 5 && night_test_every() <= 0 &&
+		         !transfer_hold())
+			suspend_now(lid_held ? "lid closed, the download done" : "lid still closed");
 
 		if (now >= next_battery) {
 			next_battery = now + 60;

@@ -24,6 +24,12 @@ Bluetooth: Settings > Network > Bluetooth switches it on (off at first: it costs
 finds controllers, headphones and speakers in pairing mode and pairs them (A). While Bluetooth headphones are
 connected the sound plays on them and the volume keys change their volume. Pairings: banana/bluetooth.tar.
 
+Downloads (the tile on the shelf): games from a NAS or a computer over SMB, SFTP or FTP, into their system's
+folder, archives unpacked. Its servers are kept in banana/nas.conf (a remembered password sealed for this
+handheld: another one, or a computer, can't open it), its jobs in banana/downloads, its log in
+banana/logs/downloads.log. Options there: banana/settings.conf's downloads_* lines. A systems.conf of your own
+made before Downloads came needs its [downloads] section (from banana/systems.conf.default) for the tile.
+
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > Network > SSH, then ssh root@<address>. Keys only, no passwords.
 

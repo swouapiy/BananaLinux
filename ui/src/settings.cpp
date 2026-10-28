@@ -3,6 +3,7 @@
 #include "lang.h"
 #include "settings_defaults.h"
 #include "recorder.h"
+#include "settings_draw.h"
 #include "theme.h"
 #include "json.h"
 #include <fcntl.h>
@@ -153,16 +154,7 @@ namespace banana
 		closedir(d);
 	}
 
-	// ---- palette: ROCKNIXDS Pixel's (RndsUI.cpp darkPal / lightPal), the colours this screen uses ----------------------
-	struct SPal
-	{
-		Color ink, muted, line, edge, screenBg, screenFrame, screenBand, ditherA, ditherB;
-		Color panelBand, panelBody, panelLow, bubbleBand, bubbleBody, bubbleLow, slotOn, kbdBg, kbdInk, blackish, shade45;
-		Color accent;
-		// the selected row of a list: the yellow plate the shelf's cartridge stands on (the engine's START plate), dark
-		// text on it, and a dark amber for what the accent marks elsewhere ("Connected", "Press A again")
-		Color pick, pickBand, pickLow, pickEdge, onPick, onPickAccent;
-	};
+	// ---- palette: ROCKNIXDS Pixel's (RndsUI.cpp darkPal / lightPal), the colours this screen uses (settings_draw.h) ---
 	// Update's row: a download going on, a newer version the last check found, or how many update packages wait in
 	// banana/updates on the card ("" for none); looked at once every 2 s at most (the list is drawn on every change)
 	static std::string updatesWaiting(const std::string& updates, const std::string& run, const std::string& running)
@@ -205,7 +197,7 @@ namespace banana
 		return v;
 	}
 
-	static SPal pal(bool light)
+	SPal pal(bool light)
 	{
 		SPal p;
 		if (!light)
@@ -250,9 +242,16 @@ namespace banana
 	}
 
 	// ---- the settings ------------------------------------------------------------------------------------------------
+	// the texture cache's bytes at 1x, times the panel's area (x2.56 at 1.6x). Measured at 1x (1.6x): a page's frame
+	// draws 2.9 MB of it (7.4; its screen and hero boxes are most of that) and the usual pages hold 4.3 MB (10.8) all
+	// together, so only a list of any length gets there: a server's folder in Downloads, whose names, with each cut of
+	// them fit() measured, all stayed (1 to 9 MB a name at 1x, 2 to 19 at 1.6x) until the RAM ran out
+	static const size_t CACHE_1X = 8u << 20;
+
 	Settings::Settings(rnds::Backend* b, const std::string& a, const std::string& d, float scale, const std::string& variant)
 		: be(b), assets(a), data(d), s(scale), light(variant == "light")
 	{
+		budget = (size_t)(CACHE_1X * (double)s * s);
 		R = rnds::Font::load(assets + "/fonts/PixelifySans-Regular.ttf");
 		M = rnds::Font::load(assets + "/fonts/PixelifySans-Medium.ttf");
 		const char* tool = getenv("BANANA_WIFI");	// the test's stand-in
@@ -288,7 +287,7 @@ namespace banana
 			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
 		}
 		// (and now and then anyway: texts that came and went, a clock's minutes, a scan's networks, would pile up)
-		if (look != drawnLook || cache.size() > 1000) { cache.clear(); drawnLook = look; }	// (also for a new accent: the boxes are drawn again)
+		if (look != drawnLook || cache.size() > 1000) { cache.clear(); cacheBytes = 0; drawnLook = look; }	// (also for a new accent: the boxes are drawn again)
 		// the Carts theme writes in Inter (a clean typeface), the others in the theme's Pixelify Sans
 		bool clean = v == "carts" && !fontDir.empty();
 		std::string fonts = clean ? "carts" : rnds::themeFiles.fontRegular + "|" + rnds::themeFiles.fontMedium;
@@ -1048,6 +1047,14 @@ namespace banana
 		return h;
 	}
 
+	void Settings::close()
+	{
+		mOpen = false;
+		page = LIST;
+		wizard = false;
+		closeDownloads();
+	}
+
 	void Settings::open()
 	{
 		// a core downloaded (or deleted) in RetroArch since the rows were made: a system's emulator row comes or goes
@@ -1399,6 +1406,7 @@ namespace banana
 		if (page == COLORS) return pressColors(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
+		if (page == DOWNLOADS) return pressDownloads(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
 		switch (k)
@@ -1533,6 +1541,7 @@ namespace banana
 		if (page == GAME) return touchGame(cx, cy);
 		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == COLORS) return touchColors(cx, cy);
+		if (page == DOWNLOADS) return touchDownloads(cx, cy);
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
@@ -1597,6 +1606,43 @@ namespace banana
 	}
 
 	// ---- drawing ----------------------------------------------------------------------------------------------------
+	// a bitmap's bytes as the backend keeps it (RndsUI's measure)
+	static size_t bytesOf(const rnds::Bitmap& b) { return b.empty() ? 0 : (size_t)b.w * b.h * (b.alpha ? 1 : 4); }
+
+	// a new entry, what it holds counted: its bitmap, its key and the map's node (all a line only measured holds)
+	std::map<std::string, Settings::Cached>::iterator Settings::put(const std::string& key, Cached c, const rnds::Bitmap& b)
+	{
+		c.bytes = bytesOf(b) + key.size() + 128;
+		cacheBytes += c.bytes;
+		return cache.emplace(key, c).first;
+	}
+
+	// after a frame: the least recently used entries that this frame didn't draw or measure go, oldest first, while the
+	// cache holds more than its budget (RndsUI's evict, without its groups). A texture drawn in the last frame stays
+	// alive in the backend's list until it compares the next one (soft.h)
+	void Settings::evict()
+	{
+		if (cacheBytes <= budget) return;
+		typedef std::map<std::string, Cached>::iterator It;
+		std::vector<It> lru;
+		for (It it = cache.begin(); it != cache.end(); ++it)
+			if (it->second.used < frame) lru.push_back(it);
+		std::stable_sort(lru.begin(), lru.end(), [](const It& a, const It& b) { return a->second.used < b->second.used; });
+		for (It it : lru)
+		{
+			if (cacheBytes <= budget) break;
+			cacheBytes -= it->second.bytes;
+			cache.erase(it);
+		}
+	}
+
+	Settings::CacheStats Settings::cacheStats() const
+	{
+		CacheStats st;
+		st.entries = cache.size(); st.bytes = cacheBytes; st.budget = budget;
+		return st;
+	}
+
 	void Settings::box(const std::string& kind, bool on, float x, float y, float w, float h)
 	{
 		SPal p = pal(light);
@@ -1668,9 +1714,9 @@ namespace banana
 			Cached c;
 			c.tex = be->upload(pb.bmp, true);
 			c.ox = pb.originX; c.oy = pb.originY;
-			it = cache.emplace(key, c).first;
+			it = put(key, c, pb.bmp);
 		}
-		const Cached& c = it->second;
+		const Cached& c = keep(it);
 		be->draw(c.tex, std::round(X(x)) - c.ox, std::round(X(y)) - c.oy, (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
 	}
 
@@ -1682,20 +1728,42 @@ namespace banana
 		if (!st.font) return 0;
 		std::string key = "txt:" + t + (medium ? "|m" : "|r") + std::to_string(size) + (upper ? "u" : "") + std::to_string(ls);
 		auto it = cache.find(key);
-		if (it == cache.end())
+		bool fresh = it == cache.end();
+		if (fresh) it = put(key, Cached(), rnds::Bitmap());
+		Cached& cc = keep(it);
+		// (a line measured is laid out, no more: its bitmap is made the first time it is drawn)
+		if (fresh || (!measureOnly && !cc.drawn))
 		{
 			rnds::TextLine l = rnds::layoutLine(rnds::utf8to32(t), st);
-			float asc = st.font->ascent(size), desc = st.font->descent(size), lh = asc + desc;
-			rnds::TextBitmap tb = rnds::renderLine(l, st, s, asc + std::floor((lh - (asc + desc)) / 2));
-			Cached cc;
-			if (!tb.bmp.empty()) cc.tex = be->upload(tb.bmp, true);
-			cc.ox = tb.padX; cc.oy = tb.padY; cc.w = l.width;
-			it = cache.emplace(key, cc).first;
+			cc.w = l.width;
+			if (!measureOnly)
+			{
+				float asc = st.font->ascent(size), desc = st.font->descent(size), lh = asc + desc;
+				rnds::TextBitmap tb = rnds::renderLine(l, st, s, asc + std::floor((lh - (asc + desc)) / 2));
+				if (!tb.bmp.empty()) cc.tex = be->upload(tb.bmp, true);
+				cc.ox = tb.padX; cc.oy = tb.padY;
+				cc.drawn = true;
+				cc.bytes += bytesOf(tb.bmp);
+				cacheBytes += bytesOf(tb.bmp);
+			}
 		}
-		const Cached& cc = it->second;
 		if (!measureOnly && cc.tex)
 			be->draw(cc.tex, std::floor(X(x)) - cc.ox, std::floor(X(top)) - cc.oy, (float)cc.tex->w, (float)cc.tex->h, c);
 		return cc.w;
+	}
+
+	// UTF-32 back to UTF-8 (a laid out line, a cut: for the cache's keys and text())
+	static std::string toUtf8(const std::u32string& u)
+	{
+		std::string o;
+		for (char32_t ch : u)
+		{
+			if (ch < 0x80) o += (char)ch;
+			else if (ch < 0x800) { o += (char)(0xc0 | (ch >> 6)); o += (char)(0x80 | (ch & 0x3f)); }
+			else if (ch < 0x10000) { o += (char)(0xe0 | (ch >> 12)); o += (char)(0x80 | ((ch >> 6) & 0x3f)); o += (char)(0x80 | (ch & 0x3f)); }
+			else { o += (char)(0xf0 | (ch >> 18)); o += (char)(0x80 | ((ch >> 12) & 0x3f)); o += (char)(0x80 | ((ch >> 6) & 0x3f)); o += (char)(0x80 | (ch & 0x3f)); }
+		}
+		return o;
 	}
 
 	void Settings::wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const Color& c)
@@ -1705,18 +1773,7 @@ namespace banana
 		if (!R) return;
 		std::vector<rnds::TextLine> lines = rnds::layoutWrap(rnds::utf8to32(t), st, (int)width, maxLines);
 		float lh = std::round(size * 1.4f);
-		for (size_t i = 0; i < lines.size(); i++)
-		{
-			std::string u8;
-			for (char32_t ch : lines[i].text)
-			{
-				// back to UTF-8 for the cache key and text()
-				if (ch < 0x80) u8 += (char)ch;
-				else if (ch < 0x800) { u8 += (char)(0xc0 | (ch >> 6)); u8 += (char)(0x80 | (ch & 0x3f)); }
-				else { u8 += (char)(0xe0 | (ch >> 12)); u8 += (char)(0x80 | ((ch >> 6) & 0x3f)); u8 += (char)(0x80 | (ch & 0x3f)); }
-			}
-			text(u8, false, size, x, top + i * lh, c);
-		}
+		for (size_t i = 0; i < lines.size(); i++) text(toUtf8(lines[i].text), false, size, x, top + i * lh, c);
 	}
 
 	// an icon centred on cx (its own width: the icons aren't all the same size)
@@ -1739,9 +1796,9 @@ namespace banana
 			rnds::Bitmap b = rnds::decodeFile(assets + "/icons/" + name + ".png");
 			Cached c;
 			if (!b.empty()) c.tex = be->upload(b, false);
-			it = cache.emplace(key, c).first;
+			it = put(key, c, b);
 		}
-		if (!it->second.tex) return;
+		if (!keep(it).tex) return;
 		int k = std::max(1, (int)std::lround(scale * s));	// whole device px per icon pixel
 		be->draw(it->second.tex, std::round(X(x)), std::round(X(y)), (float)it->second.tex->w * k, (float)it->second.tex->h * k, Color(1, 1, 1, 1));
 	}
@@ -1767,8 +1824,9 @@ namespace banana
 			}
 			Cached cc;
 			cc.tex = be->upload(b, false);
-			it = cache.emplace(key, cc).first;
+			it = put(key, cc, b);
 		}
+		keep(it);
 		be->draw(it->second.tex, std::round(X(x)), std::round(X(y)), (float)it->second.tex->w, (float)it->second.tex->h, c);
 	}
 
@@ -1789,6 +1847,40 @@ namespace banana
 		textFit(label, true, 19, x + 15 + kw + 8, 431, w - (15 + kw + 8) - 18, p.ink, true);
 	}
 
+	// where each chip goes: the left ones from 18 on, 8 apart; the right ones from 622 back
+	std::vector<float> Settings::chipXs(const std::vector<Chip>& cs, std::vector<float>& ws)
+	{
+		std::vector<float> xs(cs.size());
+		ws.resize(cs.size());
+		float left = 18, right = 622;
+		for (size_t i = 0; i < cs.size(); i++)
+		{
+			ws[i] = faceWidth(cs[i].face, cs[i].label);
+			if (cs[i].right) { right -= ws[i]; xs[i] = right; right -= 8; }
+			else { xs[i] = left; left += ws[i] + 8; }
+		}
+		return xs;
+	}
+
+	void Settings::drawChips(const std::vector<Chip>& cs)
+	{
+		std::vector<float> ws, xs = chipXs(cs, ws);
+		for (size_t i = 0; i < cs.size(); i++) face(cs[i].face, cs[i].label, xs[i], ws[i]);
+	}
+
+	Key Settings::chipAt(const std::vector<Chip>& cs, float x)
+	{
+		std::vector<float> ws, xs = chipXs(cs, ws);
+		Key best = Key::NONE;
+		float far = 1e9f;
+		for (size_t i = 0; i < cs.size(); i++)
+		{
+			float d = x < xs[i] ? xs[i] - x : x > xs[i] + ws[i] ? x - xs[i] - ws[i] : 0;
+			if (d < far) { far = d; best = cs[i].key; }
+		}
+		return best;
+	}
+
 	void Settings::notice(const std::string& title, const std::string& body, int percent)
 	{
 		SPal p = pal(light);
@@ -1806,8 +1898,9 @@ namespace banana
 			rnds::Bitmap b = rnds::decodeFile(assets + "/battery@1x.png");
 			Cached c;
 			if (!b.empty()) c.tex = be->upload(b, false);
-			it = cache.emplace("battery", c).first;
+			it = put("battery", c, b);
 		}
+		keep(it);
 		int k = std::max(1, (int)std::lround(3 * s));
 		float bx = std::round(X(66)), by = std::round(X(375));
 		if (it->second.tex)
@@ -2095,6 +2188,13 @@ namespace banana
 	void Settings::render()
 	{
 		marqueeFrame();
+		frame++;
+		renderPage();
+		evict();
+	}
+
+	void Settings::renderPage()
+	{
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == BLUETOOTH) { renderBluetooth(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
@@ -2103,6 +2203,7 @@ namespace banana
 		if (page == COLORS) { renderColors(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
+		if (page == DOWNLOADS) { renderDownloads(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
@@ -2284,6 +2385,7 @@ namespace banana
 		}
 		bool changed = scrapeChanged;
 		changed |= btUpdate();
+		if (dl && updateDownloads(t)) changed = true;	// (also under the keyboard: a login answered)
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
 			std::string before = ustatus;
@@ -2376,6 +2478,8 @@ namespace banana
 		int mine = raCheck ? 200 : toastUntil > t ? std::max(0, (int)(toastUntil - t) + 1) : -1;
 		if (mine >= 0 && (w < 0 || mine < w)) w = mine;
 		if (scraping() && (w < 0 || w > 500)) w = std::max(0, (int)(scrapeNext - t));	// the box art's progress
+		int d = dl ? downloadsWake(t) : -1;	// the session's answer, the download's progress
+		if (d >= 0 && (w < 0 || d < w)) w = d;
 		return w;
 	}
 
@@ -2490,7 +2594,7 @@ namespace banana
 	{
 		if (row < 4)
 		{
-			if (pw.size() < 63) pw += KEYS[layer][row][col];
+			if (pw.size() < entryMax) pw += KEYS[layer][row][col];
 			message.clear();
 			return MOVED;
 		}
@@ -2498,7 +2602,7 @@ namespace banana
 		{
 		case 0: layer = layer == 1 ? 0 : 1; break;
 		case 1: layer = layer == 2 ? 0 : 2; break;
-		case 2: if (pw.size() < 63) pw += ' '; break;
+		case 2: if (pw.size() < entryMax) pw += ' '; break;
 		case 3: popChar(pw); break;
 		case 4: return finishEntry();
 		}
@@ -2534,7 +2638,7 @@ namespace banana
 			return MOVED;
 		case Key::X: layer = layer == 1 ? 0 : 1; return MOVED;
 		case Key::L: layer = layer == 2 ? 0 : 2; return MOVED;	// the symbols
-		case Key::Y: if (pw.size() < 63) pw += ' '; return MOVED;
+		case Key::Y: if (pw.size() < entryMax) pw += ' '; return MOVED;
 		case Key::START: return keyboardKey(4, FKEYS[4].c0);
 		default: return NONE;
 		}
@@ -2567,11 +2671,7 @@ namespace banana
 	Settings::Result Settings::touchKeyboard(float cx, float cy)
 	{
 		(void)cx; (void)cy;
-		if (downY >= 418 && downY <= 466)
-		{
-			if (downX < 320) return pressKeyboard(Key::B);
-			return pressKeyboard(Key::START);
-		}
+		if (downY >= 418 && downY <= 466) return pressKeyboard(chipAt(keyboardChips(), downX));
 		int row = (int)std::floor((downY - KY) / KROW);
 		if (row < 0 || row > 4 || downY - KY - row * KROW > KH) return NONE;
 		int col = (int)std::floor((downX - KX) / KPITCH);
@@ -2587,13 +2687,20 @@ namespace banana
 		if (text(t, medium, size, 0, 0, Color(), false, 0, true) <= width) return t;
 		// cut the text as it is shown: the translation's, not the English (a cut English line has no translation)
 		std::string r = lang::active() ? lang::tr(t) : t;
-		while (!r.empty())
+		// the longest start that fits with "..." after it, by halving (the width grows with the length), on the layout
+		// alone: measured with text() a character at a time, each cut was a texture in the cache, dozens for a long name
+		rnds::TextStyle st;
+		st.font = medium ? M : R; st.size = size;
+		if (!st.font) return "...";
+		std::u32string u = rnds::utf8to32(r);
+		size_t fits = 0, over = u.size();	// (the first fits characters fit, the first over don't)
+		while (over - fits > 1)
 		{
-			do r.pop_back(); while (!r.empty() && ((unsigned char)r.back() & 0xc0) == 0x80);	// a whole UTF-8 character
-			if (!r.empty() && ((unsigned char)r.back() & 0xc0) == 0xc0) r.pop_back();
-			if (text(r + "...", medium, size, 0, 0, Color(), false, 0, true) <= width) return r + "...";
+			size_t mid = (fits + over) / 2;
+			if (rnds::layoutLine(u.substr(0, mid) + U"...", st).width <= width) fits = mid;
+			else over = mid;
 		}
-		return "...";
+		return toUtf8(u.substr(0, fits)) + "...";
 	}
 
 	// signal: three steps, the lit ones in ink
@@ -2903,7 +3010,7 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon(entry == ENTRY_SEARCH ? "search" : "phone", 50, 56, 3);
+		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_DOWNLOADS ? "downloads" : "phone", 50, 56, 3);
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
@@ -2923,6 +3030,7 @@ namespace banana
 		}
 		text(n, true, 17, 50, 216, p.muted);
 		std::string help = !message.empty() ? message
+			: !entryHelp.empty() ? entryHelp
 			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: entry == ENTRY_HS_ADDR ? "The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed."
@@ -2982,19 +3090,15 @@ namespace banana
 			float tw = text(k, true, 21, 0, 0, p.ink, false, 0, true);
 			text(k, true, 21, x + std::round((kw - tw) / 2), y + 17, on ? p.onPick : lit ? p.accent : p.ink);
 		}
-		// the buttons that work anywhere on the keyboard
-		const std::string bl = pw.empty() ? "Back" : "Delete", done = entry == ENTRY_WIFI ? "Join" : "Done";
-		float x = 18;
-		struct { const char* key; std::string label; } chips[] = { { "B", bl }, { "X", "Shift" }, { "Y", "Space" } };
-		for (auto& c : chips)
-		{
-			float w = faceWidth(c.key, c.label);
-			face(c.key, c.label, x, w);
-			x += w + 8;
-		}
-		float aw = faceWidth("START", done);
-		face("START", done, 622 - aw, aw);
+		drawChips(keyboardChips());
 		be->endScreen();
+	}
+
+	// the buttons that work anywhere on the keyboard (a tap on one presses it)
+	std::vector<Settings::Chip> Settings::keyboardChips()
+	{
+		return { { Key::B, "B", pw.empty() ? "Back" : "Delete" }, { Key::X, "X", "Shift" }, { Key::Y, "Y", "Space" },
+			{ Key::START, "START", entry == ENTRY_WIFI ? "Join" : "Done", true } };
 	}
 
 	// ---- updates: the packages on the card, one applied by the update script ---------------------------------------
@@ -4067,6 +4171,8 @@ namespace banana
 	void Settings::startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start)
 	{
 		entry = e; entryTitle = title; entrySub = sub; entryBack = back;
+		entryHelp.clear();
+		entryMax = e == ENTRY_DOWNLOADS ? 255 : 63;
 		pw = start;
 		layer = 0; krow = 1; kcol = 0;
 		message.clear();
@@ -4272,6 +4378,8 @@ namespace banana
 			pw.clear();
 			close();
 			return SEARCH;
+		case ENTRY_DOWNLOADS:
+			return finishDownloadsEntry();
 		}
 		return NONE;
 	}
@@ -4387,13 +4495,14 @@ namespace banana
 		toast1 = l1; toast2 = l2; toastAccent = accent; toastIcon = icon;
 		recordEvent("notice", "%s%s%s", l1.c_str(), l2.empty() ? "" : ": ", l2.c_str());
 		toastUntil = now + ms;
+		toastClosed = false;
 	}
 
 	// ROCKNIXDS's pop-up card (SuperDrastic's ui.c render_popup): across the top of the top panel, a tile in the accent
 	// colour with its pixel sign, the first line in the accent colour and the second in light text
 	void Settings::drawToast(double t)
 	{
-		if (!mOpen || toastUntil <= t) return;
+		if ((!mOpen && !toastClosed) || toastUntil <= t) return;
 		static const char* const SIGN[3][9] = {
 			{ "...###...", "..#####..", "..##.##..", "....##...", "...##....", "...##....", ".........", "...##....", "...##...." },
 			{ ".........", "........#", ".......##", "......##.", "#....##..", "##..##...", ".####....", "..##.....", "........." },
@@ -5184,6 +5293,7 @@ namespace banana
 
 	void Settings::gameRender()
 	{
+		frame++;	// (a frame of the cache's, as render()'s: evict() after it)
 		SPal p = pal(light);
 		int state;
 		std::string game;
@@ -5317,6 +5427,7 @@ namespace banana
 		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
 		text(hint, false, 15, 320 - hw / 2, 438, p.muted);
 		be->endScreen();
+		evict();
 	}
 
 	// ---- the Pokémon companion (pokemon.h): the whole panel, the party, a member's summary, the battle, and the tab
