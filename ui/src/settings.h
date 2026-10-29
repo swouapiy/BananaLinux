@@ -515,6 +515,12 @@ namespace banana
 		float pokeName(const std::string& name, int gender, bool medium, float size, float x, float y, float width, const rnds::Color& c);
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		bool glassBox(const std::string& kind, bool on, float x, float y, float w, float h);
+		// a Glass theme's rows: a two-value row (off/on, no/yes, false/true) as a switch (switchOf: 1 on, 0 off, -1 not
+		// one), a level (brightness, volume) as a slider; left and right change them as before
+		int switchOf(const Item& it) const;
+		void pill(float x, float y, float w, float h, const rnds::Color& c);
+		void drawSwitch(float x, float y, bool state, bool picked);
+		void drawSlider(float x, float y, float w, float frac, bool picked);
 		// the screen being drawn (a Glass theme's panels show their screen's picture)
 		int scr = 0;
 		void beginScreen(int n) { scr = n; be->beginScreen(n); }
