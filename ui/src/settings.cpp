@@ -4508,6 +4508,7 @@ namespace banana
 		case ENTRY_DOWNLOADS:
 			return finishDownloadsEntry();
 		case ENTRY_BSHARE_PIN:
+		case ENTRY_BSHARE_MYPIN:
 			return finishBshareEntry();
 		}
 		return NONE;

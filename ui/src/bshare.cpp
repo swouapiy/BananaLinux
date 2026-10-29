@@ -567,6 +567,18 @@ namespace
 		std::string from = info ? info->str("alias", r.ip) : r.ip;
 		for (auto& c : from) if (c == '\t' || c == '\n') c = ' ';
 		if (mode == "off") { answer(r.fd, 403, "{\"message\":\"Receiving is off\"}"); logLine("refused " + from + " (" + r.ip + "): receiving is off"); return; }
+		// Options' Require PIN (LocalSend's own): the sender's ?pin= must be this one, or a 401 its app asks the PIN on
+		std::string myPin = conf(data + "/banana/settings.conf", "bshare_pin", "");
+		if (conf(data + "/banana/settings.conf", "bshare_require_pin", "off") == "on" && !myPin.empty())
+		{
+			std::string got = r.param("pin");
+			if (got != myPin)
+			{
+				answer(r.fd, 401, got.empty() ? "{\"message\":\"PIN required\"}" : "{\"message\":\"Invalid PIN\"}");
+				logLine("refused " + from + " (" + r.ip + "): " + (got.empty() ? "no PIN yet" : "a wrong PIN"));
+				return;
+			}
+		}
 		{
 			std::lock_guard<std::mutex> l(sessMu);
 			if (asking || (session && now() - session->last < 60)) { answer(r.fd, 409, "{\"message\":\"Blocked by another session\"}"); return; }
@@ -937,9 +949,33 @@ namespace
 		return c;
 	}
 
-	// pin: the PIN the other side asked for (LocalSend's "Require PIN"), "" none
-	int send(const std::string& fp, const std::vector<std::string>& paths, const std::string& pin)
+	// the PINs devices asked for, remembered by their fingerprint (banana/bshare/pins: "<fingerprint>\t<PIN>" lines),
+	// so a device's PIN is typed once
+	std::string pinsFile() { return data + "/banana/bshare/pins"; }
+	std::string savedPin(const std::string& fp)
 	{
+		std::ifstream f(pinsFile());
+		std::string l;
+		while (std::getline(f, l))
+			if (l.size() > fp.size() && l.compare(0, fp.size(), fp) == 0 && l[fp.size()] == '\t') return l.substr(fp.size() + 1);
+		return "";
+	}
+	void keepPin(const std::string& fp, const std::string& pin)	// ("" forgets it)
+	{
+		std::ifstream f(pinsFile());
+		std::string l, out;
+		while (std::getline(f, l))
+			if (!(l.size() > fp.size() && l.compare(0, fp.size(), fp) == 0 && l[fp.size()] == '\t')) out += l + "\n";
+		if (!pin.empty()) out += fp + "\t" + pin + "\n";
+		mkdir((data + "/banana/bshare").c_str(), 0755);
+		writeFile(pinsFile(), out);
+	}
+
+	// pin: the PIN the other side asked for (LocalSend's "Require PIN"), "" none: the one remembered for it, if any
+	int send(const std::string& fp, const std::vector<std::string>& paths, const std::string& typed)
+	{
+		std::string pin = typed.empty() ? savedPin(fp) : typed;
+		bool remembered = typed.empty() && !pin.empty();
 		signal(SIGTERM, onSendStop);
 		signal(SIGINT, onSendStop);
 		signal(SIGPIPE, SIG_IGN);
@@ -1000,13 +1036,16 @@ namespace
 		if (sendStop) { sendState("stopped"); return 1; }
 		if (rc != CURLE_OK || (code != 200 && code != 204))
 		{
-			// (401: a PIN, asked for or wrong: the menu asks the user for it and sends again)
-			const char* what = code == 401 ? (pin.empty() ? "pin" : "badpin") : code == 403 ? "declined" : code == 409 ? "busy" : "error";
+			// (401: a PIN, asked for or wrong: the menu asks the user for it and sends again; a remembered one that no
+			// longer works is forgotten, and asked for as if new)
+			if (code == 401 && remembered) keepPin(fp, "");
+			const char* what = code == 401 ? (typed.empty() ? "pin" : "badpin") : code == 403 ? "declined" : code == 409 ? "busy" : "error";
 			sendState(what);
 			logLine("send " + std::to_string(files.size()) + " files to " + sending.alias + " (" + to.ip + "): " + what +
 				(rc != CURLE_OK ? std::string(" (") + curl_easy_strerror(rc) + ")" : " (" + std::to_string(code) + ")"));
 			return 1;
 		}
+		if (!typed.empty()) keepPin(fp, typed);	// (the device took it: not typed again next time)
 		std::string session;
 		if (code == 200)
 		{

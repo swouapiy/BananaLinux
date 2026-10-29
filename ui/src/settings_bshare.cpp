@@ -15,6 +15,7 @@
 #include "nas.h"
 #include "fetch/names.h"
 #include <algorithm>
+#include <random>
 #include <chrono>
 #include <cmath>
 #include <csignal>
@@ -146,7 +147,7 @@ namespace banana
 		// Send. Under them: the folder for Location, the devices, the cards' files, a send's progress
 		enum Sub { HOME, RECEIVE, LOCATION, SEND, DEVICES, FILES, STATUS, OPTIONS, SUBS };
 		enum Kind { K_RECEIVE, K_SEND, K_OPTIONS, K_ACCEPT, K_DECLINE, K_LOCATION, K_DEVICE, K_FILES, K_GO, K_SENDING,
-			K_BACKGROUND, K_ABOUT, K_HERE, K_ITEM, K_PEER, K_STOP };
+			K_BACKGROUND, K_ABOUT, K_HERE, K_ITEM, K_PEER, K_STOP, K_REQPIN, K_MYPIN };
 		struct Row { std::string label, value, icon; Kind kind; int index = -1; bool choice = false, mark = false, warn = false; };
 		struct Item { std::string name, path; bool dir = false; long long size = 0; };
 		struct Peer { std::string fp, alias, model, type; };
@@ -178,6 +179,9 @@ namespace banana
 
 		std::string conf() const { return ui->data + "/settings.conf"; }
 		std::string background() const { return getConfValue(conf(), "bshare_receive", "off"); }
+		// Options' Require PIN (LocalSend's own): a device sending here must type this PIN (the helper checks it)
+		bool pinRequired() const { return getConfValue(conf(), "bshare_require_pin", "off") == "on" && !myPin().empty(); }
+		std::string myPin() const { return getConfValue(conf(), "bshare_pin", ""); }
 		static const char* backgroundName(const std::string& v) { return v == "ask" ? "Ask" : v == "auto" ? "Quick save" : "Off"; }
 		std::string name() const
 		{
@@ -391,6 +395,8 @@ namespace banana
 				break;
 			case OPTIONS:
 				add("Receive when closed", backgroundName(background()), K_BACKGROUND).choice = true;
+				add("Require PIN", pinRequired() ? "On" : "Off", K_REQPIN).choice = true;
+				if (pinRequired()) add("PIN", myPin(), K_MYPIN);
 				add("About Bshare", "", K_ABOUT);
 				break;
 			default:
@@ -415,6 +421,11 @@ namespace banana
 			case K_GO: return send();
 			case K_SENDING: sub = STATUS; message.clear(); return MOVED;
 			case K_BACKGROUND: return change(1);
+			case K_REQPIN: return requirePin(!pinRequired());
+			case K_MYPIN:
+				ui->startEntry(Settings::ENTRY_BSHARE_MYPIN, "Bshare", "Your PIN", Settings::BSHARE, myPin());
+				ui->entryHelp = "The PIN a phone or computer types to send here: 4 to 8 digits. START keeps it.";
+				return MOVED;
 			case K_ABOUT: return NONE;
 			case K_ITEM:
 			{
@@ -436,9 +447,11 @@ namespace banana
 			return NONE;
 		}
 
-		// the PIN typed for the last send: the same files to the same device again, with it ("": given up)
-		Result entered(const std::string& pin)
+		// the PIN typed for the last send: the same files to the same device again, with it ("": given up); or Options'
+		// own PIN
+		Result entered(const std::string& pin, bool mine)
 		{
+			if (mine) return setMyPin(pin);
 			if (pin.empty() || lastFp.empty() || lastFiles.empty()) { message = "Nothing was sent."; return MOVED; }
 			deviceFp = lastFp;
 			marked = std::set<std::string>(lastFiles.begin(), lastFiles.end());
@@ -478,6 +491,29 @@ namespace banana
 			sub = STATUS;
 			message.clear();
 			return MOVED;
+		}
+
+		// Require PIN on (a random 4-digit PIN if there is none yet: the PIN row shows and changes it) or off
+		Result requirePin(bool on)
+		{
+			if (on && myPin().empty())
+			{
+				std::random_device rd;
+				char b[8];
+				snprintf(b, sizeof b, "%04u", (unsigned)(rd() % 10000));
+				setConfValue(conf(), "bshare_pin", b);
+			}
+			setConfValue(conf(), "bshare_require_pin", on ? "on" : "off");
+			return CHANGED;
+		}
+
+		// the PIN typed on Options' PIN row: digits only, 4 to 8 ("" or anything else: kept as it was)
+		Result setMyPin(const std::string& t)
+		{
+			bool ok = t.size() >= 4 && t.size() <= 8 && std::all_of(t.begin(), t.end(), [](char c) { return c >= '0' && c <= '9'; });
+			if (ok) setConfValue(conf(), "bshare_pin", t);
+			message = ok ? "" : t.empty() ? "" : "A PIN is 4 to 8 digits: kept as it was.";
+			return CHANGED;
 		}
 
 		Result change(int d)
@@ -531,6 +567,7 @@ namespace banana
 			case Key::L: if (!n) return NONE; s = std::max(0, s - ROWS); t = std::max(0, t - ROWS); if (s < t) t = s; return MOVED;
 			case Key::R: if (!n) return NONE; s = std::min(n - 1, s + ROWS); if (s >= t + ROWS) t = s - ROWS + 1; return MOVED;
 			case Key::LEFT: case Key::RIGHT:
+				if (cur && cur->choice && cur->kind == K_REQPIN) return requirePin(!pinRequired());	// (two values: either way flips it)
 				if (cur && cur->choice) return change(k == Key::LEFT ? -1 : 1);
 				if (k == Key::LEFT && sub != HOME) return back();
 				return NONE;
@@ -616,8 +653,9 @@ namespace banana
 				else
 				{
 					t.title = "Ready";
-					t.accent = "Seen as " + name();
-					t.help = "Open LocalSend on your phone or computer, on the same Wi-Fi, and send to " + name() + ".";
+					t.accent = "Seen as " + name() + (pinRequired() ? "  ·  PIN " + myPin() : "");
+					t.help = "Open LocalSend on your phone or computer, on the same Wi-Fi, and send to " + name() + "." +
+						(pinRequired() ? " It asks for your PIN, " + myPin() + "." : "");
 					t.hint = !location.empty() ? "Files go into " + shown(location) + "." : "Games go into their system's folder, everything else into banana/received. Location changes that.";
 					if (rc.size() >= 6 && rc[0] == "receiving")
 					{
@@ -687,6 +725,13 @@ namespace banana
 					t.hint = v == "ask" ? "A notification asks; Bshare's Receive page answers." : v == "auto" ? "Files are saved without asking: only on a network you trust." :
 						"Only while Bshare's Receive page is open.";
 				}
+				if (cur && cur->kind == K_REQPIN)
+				{
+					t.help = "Whether a phone or computer must type your PIN before it can send to " + name() + ", as LocalSend's own Require PIN.";
+					t.hint = pinRequired() ? "On: your PIN is " + myPin() + ". The PIN row changes it." : "Off: anyone on the Wi-Fi can ask to send (you still accept each one).";
+				}
+				if (cur && cur->kind == K_MYPIN)
+					t.help = "Your PIN, " + myPin() + ": LocalSend asks for it on the phone or computer that sends here. A changes it.";
 				if (cur && cur->kind == K_ABOUT)
 					t.help = "Bshare works with LocalSend, the free and open-source app by Tien Do Nam and its contributors (localsend.org). "
 						"It is Banana's own small version of LocalSend's open protocol: get LocalSend on your phone or computer, on the same Wi-Fi.";
@@ -728,7 +773,7 @@ namespace banana
 			switch (sub)
 			{
 			case HOME: case OPTIONS:
-				a = !cur ? "" : cur->kind == K_BACKGROUND ? "Change" : cur->kind == K_ABOUT ? "" : "Open";
+				a = !cur ? "" : cur->kind == K_BACKGROUND || cur->kind == K_REQPIN || cur->kind == K_MYPIN ? "Change" : cur->kind == K_ABOUT ? "" : "Open";
 				break;
 			case RECEIVE: a = !cur ? "" : cur->kind == K_ACCEPT ? "Accept" : cur->kind == K_DECLINE ? "Decline" : "Choose"; break;
 			case LOCATION: a = !cur ? "" : cur->kind == K_HERE ? "Choose" : "Open"; break;
@@ -840,7 +885,7 @@ namespace banana
 		pw.clear();
 		page = BSHARE;
 		message.clear();
-		return bs ? bs->entered(text) : MOVED;
+		return bs ? bs->entered(text, entry == ENTRY_BSHARE_MYPIN) : MOVED;
 	}
 
 	Settings::Result Settings::pressBshare(Key k) { return bs ? bs->press(k) : NONE; }

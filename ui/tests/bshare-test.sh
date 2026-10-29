@@ -133,6 +133,17 @@ open(T + "/run/bshare-answer", "w").write("decline " + req["id"] + "\n")
 th.join()
 check(res["r"][0] == 403, "declined: 403")
 check(not os.path.exists(T + "/run/bshare-request"), "the request gone after the answer")
+print("bshare 4b. Require PIN (Options): no PIN 401 'PIN required', a wrong one 401 'Invalid PIN', the right one in")
+open(T + "/data/banana/settings.conf", "w").write("bshare_receive = auto\nbshare_require_pin = on\nbshare_pin = 4321\n")
+s, b = post("prepare-upload", files(("p1", "pin.gba", b"pin")))
+check(s == 401 and "PIN required" in b, "no PIN: 401 PIN required (%d %s)" % (s, b))
+s, b = post("prepare-upload?pin=1111", files(("p1", "pin.gba", b"pin")))
+check(s == 401 and "Invalid PIN" in b, "a wrong PIN: 401 Invalid PIN (%d %s)" % (s, b))
+s, b = post("prepare-upload?pin=4321", files(("p1", "pin.gba", b"pin")))
+check(s == 200, "the right PIN: 200 (%d)" % s)
+if s == 200:
+    j = json.loads(b)
+    post("upload?sessionId=%s&fileId=p1&token=%s" % (j["sessionId"], j["files"]["p1"]), raw=b"pin")
 setting("off")
 s4, _ = post("prepare-upload", files(("o1", "x.gba", b"x")))
 check(s4 == 403, "Receive off: 403")
@@ -208,6 +219,14 @@ grep -q "^badpin	My Mac" "$T/run/bshare-send" && ok "bshare-send: badpin" || bad
 rm -f "$T/out/shot.png"
 "$B" send --pin 4242 mac-fp "$T/send/shot.png" 2>>"$T/send.log" && ok "the right PIN: exit 0" || bad "the right PIN: exit $? ($(tail -n1 "$T/send.log"))"
 cmp -s "$T/send/shot.png" "$T/out/shot.png" && ok "sent with the PIN" || bad "shot.png not sent with the PIN"
+grep -q "^mac-fp	4242$" "$T/data/banana/bshare/pins" && ok "the PIN remembered for that device" || bad "pins: $(cat "$T/data/banana/bshare/pins" 2>&1)"
+rm -f "$T/out/shot.png"
+"$B" send mac-fp "$T/send/shot.png" 2>>"$T/send.log" && cmp -s "$T/send/shot.png" "$T/out/shot.png" &&
+    ok "sent again without typing it (the remembered PIN)" || bad "the remembered PIN wasn't used"
+echo 9999 > "$T/pin"
+"$B" send mac-fp "$T/send/shot.png" 2>>"$T/send.log" && bad "a changed PIN but exit 0" || ok "the device's PIN changed: exit 1"
+grep -q "^pin	My Mac" "$T/run/bshare-send" && ! grep -q "^mac-fp	" "$T/data/banana/bshare/pins" &&
+    ok "the old PIN forgotten, asked for again (pin)" || bad "after a changed PIN: $(cat "$T/run/bshare-send"); pins: $(cat "$T/data/banana/bshare/pins")"
 rm -f "$T/pin"
 [ -s "$T/data/banana/bshare/cert.pem" ] && [ -s "$T/data/banana/bshare/key.pem" ] && ok "its certificate made, kept on the card (LocalSend asks for it)" || bad "no certificate: $(ls "$T/data/banana" 2>&1)"
 touch "$T/decline"

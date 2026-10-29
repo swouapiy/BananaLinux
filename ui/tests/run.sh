@@ -406,10 +406,12 @@ for size in 640x480 1024x768; do
     # closed to Ask
     run_bs "homeid bshare; press a; wait 1; shot bs-home; press down; press a; shot bs-send; press a; shot bs-devices; press a; \
         press down; press a; press a; press down; press a; press a; press a; shot bs-files; press start; shot bs-send-ready; press start; wait 1; \
-        shot bs-status; press b; press b; press down; press a; press right; shot bs-options"
+        shot bs-status; press b; press b; press down; press a; press right; shot bs-options; press down; press a; shot bs-options-pin"
     for i in $(seq 30); do grep -q "^send " "$BRUN/args" && break; sleep 0.1; done    # (the helper started on its own)
     grep -q "^send mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" || { echo "FAIL $size: bshare: no send to My Mac: $(cat "$BRUN/args")"; fail=1; }
     grep -q '^bshare_receive = ask$' "$FX/data/settings.conf" || { echo "FAIL $size: bshare: Options' Receive when closed didn't turn to Ask"; fail=1; }
+    grep -q '^bshare_require_pin = on$' "$FX/data/settings.conf" && grep -Eq '^bshare_pin = [0-9]{4}$' "$FX/data/settings.conf" ||
+        { echo "FAIL $size: bshare: Options' Require PIN didn't turn on with a PIN: $(grep '^bshare_' "$FX/data/settings.conf")"; fail=1; }
     grep -q "^serve$" "$BRUN/args" || { echo "FAIL $size: bshare: the helper wasn't started to serve"; fail=1; }
     sed -i '/^bshare_/d' "$FX/data/settings.conf"
     # a device that asks for a PIN (LocalSend's Require PIN): the helper says "pin", the keyboard comes up on its own,
