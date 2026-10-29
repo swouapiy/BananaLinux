@@ -1,4 +1,5 @@
 #include "layout.h"
+#include "glass.h"
 #include "library.h"
 #include <algorithm>
 #include <cmath>
@@ -103,10 +104,7 @@ namespace banana
 		struct TextTex { rnds::TexPtr tex; int padX = 0, padY = 0; float w = 0; };
 		std::map<std::string, TextTex> texts;
 		std::map<std::string, rnds::TexPtr> shapes;
-		// glass: each screen's picture (the theme's "background") blurred once, at the blur its glass asks for, and the
-		// pieces glass boxes cut from it (by place, size, corners and blur)
-		rnds::Bitmap blurred[2];
-		int blurredAt[2] = { -1, -1 };
+		// glass: the pieces glass boxes cut from the screens' blurred pictures (glass.h)
 		std::map<std::string, rnds::TexPtr> glassPieces;
 		int curScreen = 0;		// the screen being drawn (the "wallpaper" hook)
 		struct ImgTex { rnds::TexPtr tex; float ox = 0, oy = 0, w = 0, h = 0; };	// placed in the box (device px)
@@ -596,97 +594,17 @@ namespace banana
 			if (tt.tex) m->be->draw(tt.tex, std::floor(x * s) - tt.padX, std::floor(y * s) - tt.padY, (float)tt.tex->w, (float)tt.tex->h, col);
 		}
 
-		// the signed distance from a rounded box (half sizes hw, hh, corners rad: top left, top right, bottom right, bottom
-		// left) of the point px, py from its centre; grow: the box made that much bigger all round
-		static float boxDistance(float px, float py, float hw, float hh, const float rad[4], float grow)
-		{
-			float r = std::min(std::min(hw, hh), px < 0 ? (py < 0 ? rad[0] : rad[3]) : (py < 0 ? rad[1] : rad[2]));
-			r = std::max(0.0f, r + grow);
-			float qx = std::fabs(px) - (hw + grow) + r, qy = std::fabs(py) - (hh + grow) + r;
-			float ox = std::max(qx, 0.0f), oy = std::max(qy, 0.0f);
-			return std::sqrt(ox * ox + oy * oy) + std::min(std::max(qx, qy), 0.0f) - r;
-		}
-
-		// a box blur of radius r, three passes each way: close to a Gaussian, and as fast for any r (once per theme)
-		static void boxBlur(rnds::Bitmap& b, int r)
-		{
-			if (r <= 0 || b.empty() || b.alpha) return;
-			std::vector<uint8_t> tmp(b.px.size());
-			auto pass = [&](const uint8_t* src, uint8_t* dst, int n, int lines, size_t step, size_t lineStep)
-			{
-				int win = 2 * r + 1;
-				for (int l = 0; l < lines; l++)
-				{
-					const uint8_t* s0 = src + l * lineStep;
-					uint8_t* d0 = dst + l * lineStep;
-					for (int ch = 0; ch < 4; ch++)
-					{
-						// the edges held: the window reaches past them as the edge pixel repeated
-						auto at = [&](int i) { return (int)s0[(size_t)std::min(std::max(i, 0), n - 1) * step + ch]; };
-						int sum = 0;
-						for (int i = -r; i <= r; i++) sum += at(i);
-						for (int i = 0; i < n; i++)
-						{
-							d0[(size_t)i * step + ch] = (uint8_t)((sum + win / 2) / win);
-							sum += at(i + r + 1) - at(i - r);
-						}
-					}
-				}
-			};
-			for (int k = 0; k < 3; k++)
-			{
-				pass(b.px.data(), tmp.data(), b.w, b.h, 4, (size_t)b.w * 4);		// across
-				pass(tmp.data(), b.px.data(), b.h, b.w, (size_t)b.w * 4, 4);		// down
-			}
-		}
-
-		// the screen's picture blurred by r device px, filled to the screen as the theme's pictures are (RndsUI and an
-		// image with "fit": "fill"), so a glass piece lines up with the picture under it; null when there is none
-		const rnds::Bitmap* backdrop(int screen, int r)
-		{
-			if (blurredAt[screen] != r)
-			{
-				blurredAt[screen] = r;
-				blurred[screen] = rnds::Bitmap();
-				const std::string& p = screen == 0 ? rnds::themeFiles.wallTop : rnds::themeFiles.wallBottom;
-				rnds::Bitmap b = p.empty() ? rnds::Bitmap() : rnds::decodeFile(p);
-				if (!b.empty() && !b.alpha)
-				{
-					b = rnds::resize(b, (int)std::lround(W * s), (int)std::lround(H * s));
-					boxBlur(b, r);
-					blurred[screen] = std::move(b);
-				}
-			}
-			return blurred[screen].empty() ? nullptr : &blurred[screen];
-		}
-
-		// a glass box's piece of the blurred picture: the part under the box (at x, y device px), its corners rounded
+		// a glass box's piece of the blurred picture (glass.h): the part under the box (at x, y device px), its corners
+		// rounded, kept by place, size, corners and blur
 		rnds::TexPtr glassPiece(int screen, int x, int y, int w, int h, const float rad[4], int r)
 		{
 			char kb[160];
 			snprintf(kb, sizeof kb, "%d|%d|%d|%d|%d|%g,%g,%g,%g|%d", screen, x, y, w, h, rad[0], rad[1], rad[2], rad[3], r);
 			auto it = glassPieces.find(kb);
 			if (it != glassPieces.end()) return it->second;
-			const rnds::Bitmap* bd = backdrop(screen, r);
-			if (!bd || w <= 0 || h <= 0 || (size_t)w * h > 4096u * 4096u) return nullptr;
-			rnds::Bitmap b;
-			b.w = w; b.h = h;
-			b.px.assign((size_t)w * h * 4, 0);
-			float hw = w / 2.0f, hh = h / 2.0f;
-			for (int j = 0; j < h; j++)
-			{
-				int sy = std::min(std::max(y + j, 0), bd->h - 1);
-				for (int i = 0; i < w; i++)
-				{
-					float cov = std::min(1.0f, std::max(0.0f, 0.5f - boxDistance(i + 0.5f - hw, j + 0.5f - hh, hw, hh, rad, 0)));
-					if (cov <= 0) continue;
-					int sx = std::min(std::max(x + i, 0), bd->w - 1);
-					const uint8_t* src = &bd->px[((size_t)sy * bd->w + sx) * 4];
-					uint8_t* o = &b.px[((size_t)j * w + i) * 4];
-					o[0] = src[0]; o[1] = src[1]; o[2] = src[2];
-					o[3] = (uint8_t)std::lround(cov * 255);
-				}
-			}
+			const rnds::Bitmap* bd = glassBackdrop(screen, (int)std::lround(W * s), (int)std::lround(H * s), r);
+			rnds::Bitmap b = bd ? banana::glassPiece(*bd, x, y, w, h, rad) : rnds::Bitmap();
+			if (b.empty()) return nullptr;
 			rnds::TexPtr t = m->be->upload(b, false);
 			if (glassPieces.size() > 200) glassPieces.clear();
 			glassPieces[kb] = t;
@@ -1180,6 +1098,7 @@ namespace banana
 			if (flag(c, "flow") && (dirn == "row" || dirn == "column"))
 			{
 				float at = 0;
+				std::vector<float> len;
 				for (int i = 0; i < n; i++)
 				{
 					flowAt.push_back(at);
@@ -1188,13 +1107,33 @@ namespace banana
 					Ctx tc = ctx(tpl, &is, "");
 					float nw, nh;
 					natural(tc, itemW, itemH, f.k, nw, nh);
-					at += (float)(dirn == "row" ? num(tc, "w", nw >= 0 ? nw : itemW, itemW) : num(tc, "h", nh >= 0 ? nh : itemH, itemH)) + gap;
+					len.push_back((float)(dirn == "row" ? num(tc, "w", nw >= 0 ? nw : itemW, itemW) : num(tc, "h", nh >= 0 ? nh : itemH, itemH)));
+					at += len.back() + gap;
 				}
-				// "justify": the run of items centred in the list's box, or at its end (a row of hints in the middle)
+				// "justify": the run of items centred in the list's box, or at its end (a row of hints in the middle);
+				// "split" (hints): B, back, at the start and A, confirm, at the end, the others centred between them
 				std::string j = str(c, "justify", "start");
-				float room = (dirn == "row" ? w : h) - (n > 0 ? at - gap : 0);
-				float off = j == "center" ? room / 2 : j == "end" ? room : 0;
-				if (off > 0) for (float& v : flowAt) v += off;
+				float box = dirn == "row" ? w : h;
+				if (j == "split" && source == "hints")
+				{
+					int back = -1, ok = -1;
+					for (int i = 0; i < n; i++) { if (hl[i].first == "B") back = i; else if (hl[i].first == "A") ok = i; }
+					float lo = back >= 0 ? len[back] + gap : 0, hi = box - (ok >= 0 ? len[ok] + gap : 0), mid = 0;
+					for (int i = 0; i < n; i++) if (i != back && i != ok) mid += len[i] + gap;
+					float x = lo + std::max(0.0f, (hi - lo - (mid > 0 ? mid - gap : 0)) / 2);
+					for (int i = 0; i < n; i++)
+					{
+						if (i == back) flowAt[i] = 0;
+						else if (i == ok) flowAt[i] = box - len[i];
+						else { flowAt[i] = x; x += len[i] + gap; }
+					}
+				}
+				else
+				{
+					float room = box - (n > 0 ? at - gap : 0);
+					float off = j == "center" ? room / 2 : j == "end" ? room : 0;
+					if (off > 0) for (float& v : flowAt) v += off;
+				}
 			}
 			for (int v : order)
 			{

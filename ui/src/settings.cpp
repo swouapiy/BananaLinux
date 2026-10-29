@@ -5,6 +5,7 @@
 #include "recorder.h"
 #include "settings_draw.h"
 #include "theme.h"
+#include "glass.h"
 #include "json.h"
 #include <fcntl.h>
 #include <sys/file.h>
@@ -282,14 +283,15 @@ namespace banana
 			for (auto& e : rnds::themeColors) look += "|" + e.first + "=" + std::to_string(e.second);
 			const rnds::ThemeFiles& f = rnds::themeFiles;
 			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-");
+			look += "|g" + std::to_string(glassLook.blur) + "," + std::to_string(glassLook.pane) + "," + std::to_string(glassLook.edge);
 			struct stat st;
 			std::string tp = themePath(value);
 			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
 		}
 		// (and now and then anyway: texts that came and went, a clock's minutes, a scan's networks, would pile up)
 		if (look != drawnLook || cache.size() > 1000) { cache.clear(); cacheBytes = 0; drawnLook = look; }	// (also for a new accent: the boxes are drawn again)
-		// the Carts theme writes in Inter (a clean typeface), the others in the theme's Pixelify Sans
-		bool clean = v == "carts" && !fontDir.empty();
+		// the Carts and Glass themes write in Inter (a clean typeface), the others in the theme's Pixelify Sans
+		bool clean = (v == "carts" || glassLook.blur > 0) && !fontDir.empty();
 		std::string fonts = clean ? "carts" : rnds::themeFiles.fontRegular + "|" + rnds::themeFiles.fontMedium;
 		if (clean != cleanFonts || !R || fonts != fontsLoaded)
 		{
@@ -1728,8 +1730,93 @@ namespace banana
 		return st;
 	}
 
+	// a Glass theme's box (theme.h's glassLook): the screen its picture, a panel frosted glass (glass.h) with the
+	// theme's tint and a hairline edge (the accent's when on), the picked row the accent. False: not one of those
+	bool Settings::glassBox(const std::string& kind, bool on, float x, float y, float w, float h)
+	{
+		bool screen = kind == "screen", pick = kind == "pick", key = kind == "kbd";
+		float radius = kind == "hero" ? 18 : kind == "slot" ? 14 : kind == "bubble" ? 16 : kind == "face" ? 20 : kind == "osd" ? 12 : 0;
+		if (!screen && !pick && !key && radius <= 0) return false;
+		int sw = (int)std::lround(X(640)), sh = (int)std::lround(X(480));
+		int dx = (int)std::lround(X(x)), dy = (int)std::lround(X(y)), dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
+		if (dw <= 0 || dh <= 0) return true;
+		auto colour = [](uint32_t argb) { return Color::hex(argb & 0xffffff, ((argb >> 24) & 255) / 255.0f); };
+		char kb[128];
+		if (screen)
+		{
+			// the picture itself, filled to the screen (none: the theme's background colour)
+			snprintf(kb, sizeof kb, "glass:wall%d:%dx%d", scr, sw, sh);
+			auto it = cache.find(kb);
+			if (it == cache.end())
+			{
+				const rnds::Bitmap* wall = glassBackdrop(scr, sw, sh, 0);
+				Cached c;
+				if (wall) c.tex = be->upload(*wall, false);
+				it = put(kb, c, wall ? *wall : rnds::Bitmap());
+			}
+			const Cached& c = keep(it);
+			if (c.tex) be->draw(c.tex, 0, 0, (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
+			else be->fill(0, 0, (float)sw, (float)sh, pal(light).screenBg);
+			return true;
+		}
+		if (pick || key)
+		{
+			// the selection: the accent, flat, rounded as the rows are; a button's key: a chip in the text's colour (as
+			// the menu's)
+			snprintf(kb, sizeof kb, "glass:%s:%dx%d", key ? "kbd" : "pick", dw, dh);
+			auto it = cache.find(kb);
+			if (it == cache.end())
+			{
+				rnds::BoxStyle st;
+				st.radius = X(key ? 10 : 14); st.bg = key ? pal(light).ink : pal(light).pick;
+				rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
+				Cached c;
+				c.tex = be->upload(pb.bmp, true);
+				c.ox = pb.originX; c.oy = pb.originY;
+				it = put(kb, c, pb.bmp);
+			}
+			const Cached& c = keep(it);
+			be->draw(c.tex, dx - c.ox, dy - c.oy, (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
+			return true;
+		}
+		// a panel: the blurred picture under it (by where it is), then its tint and edge (by its size)
+		int r = (int)std::lround(X(glassLook.blur));
+		float rad[4] = { X(radius), X(radius), X(radius), X(radius) };
+		snprintf(kb, sizeof kb, "glass:piece%d:%d,%d:%dx%d:%g", scr, dx, dy, dw, dh, (double)radius);
+		auto it = cache.find(kb);
+		if (it == cache.end())
+		{
+			const rnds::Bitmap* bd = glassBackdrop(scr, sw, sh, r);
+			rnds::Bitmap b = bd ? glassPiece(*bd, dx, dy, dw, dh, rad) : rnds::Bitmap();
+			Cached c;
+			if (!b.empty()) c.tex = be->upload(b, false);
+			it = put(kb, c, b);
+		}
+		const Cached& piece = keep(it);
+		if (piece.tex) be->draw(piece.tex, dx, dy, (float)piece.tex->w, (float)piece.tex->h, Color(1, 1, 1, 1));
+		snprintf(kb, sizeof kb, "glass:tint:%s%d:%dx%d", kind.c_str(), on ? 1 : 0, dw, dh);
+		it = cache.find(kb);
+		if (it == cache.end())
+		{
+			rnds::BoxStyle st;
+			st.radius = X(radius);
+			st.bg = colour(glassLook.pane);
+			st.border = on ? std::max(2.0f, std::round(2 * s)) : std::max(1.0f, std::round(s));
+			st.borderColor = on ? Color::hex(rnds::accent.base) : colour(glassLook.edge);
+			rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
+			Cached c;
+			c.tex = be->upload(pb.bmp, true);
+			c.ox = pb.originX; c.oy = pb.originY;
+			it = put(kb, c, pb.bmp);
+		}
+		const Cached& tint = keep(it);
+		be->draw(tint.tex, dx - tint.ox, dy - tint.oy, (float)tint.tex->w, (float)tint.tex->h, Color(1, 1, 1, 1));
+		return true;
+	}
+
 	void Settings::box(const std::string& kind, bool on, float x, float y, float w, float h)
 	{
+		if (glassLook.blur > 0 && glassBox(kind, on, x, y, w, h)) return;
 		SPal p = pal(light);
 		int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 		std::string key = "box:" + kind + (on ? "1" : "0") + ":" + std::to_string(dw) + "x" + std::to_string(dh);
@@ -1861,9 +1948,46 @@ namespace banana
 		for (size_t i = 0; i < lines.size(); i++) text(toUtf8(lines[i].text), false, size, x, top + i * lh, c);
 	}
 
+	// a theme's own picture for an icon (its "icons" by the icon's name, as the shelf's systems by id): smooth, fitted
+	// in the pixel icon's box (its size at that scale: 32 px, Bshare's rows' 16), at x (or centred on it). False: the
+	// theme has none
+	bool Settings::pictureIcon(const std::string& name, float x, float y, int scale, bool centred)
+	{
+		auto f = rnds::themeFiles.icons.find(name);
+		if (f == rnds::themeFiles.icons.end()) return false;
+		static std::map<std::string, int> pixelSize;
+		auto ps = pixelSize.find(name);
+		if (ps == pixelSize.end())
+		{
+			rnds::Bitmap b = rnds::decodeFile(assets + "/icons/" + name + ".png");
+			ps = pixelSize.emplace(name, b.empty() ? 32 : std::max(b.w, b.h)).first;
+		}
+		int box = (int)std::lround(ps->second * scale * s);
+		std::string key = "picon:" + name + ":" + std::to_string(box);
+		auto it = cache.find(key);
+		if (it == cache.end())
+		{
+			rnds::Bitmap b = rnds::decodeFile(f->second);
+			Cached c;
+			if (!b.empty() && !b.alpha && box > 0)
+			{
+				float k = (float)box / std::max(b.w, b.h);
+				b = rnds::resize(b, std::max(1, (int)std::lround(b.w * k)), std::max(1, (int)std::lround(b.h * k)));
+				c.tex = be->upload(b, false);
+			}
+			it = put(key, c, b);
+		}
+		const Cached& c = keep(it);
+		if (!c.tex) return false;
+		float dx = centred ? X(x) - c.tex->w / 2.0f : X(x) + (box - c.tex->w) / 2.0f;
+		be->draw(c.tex, std::round(dx), std::round(X(y) + (box - c.tex->h) / 2.0f), (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
+		return true;
+	}
+
 	// an icon centred on cx (its own width: the icons aren't all the same size)
 	void Settings::iconCentred(const std::string& name, float cx, float y, int scale)
 	{
+		if (pictureIcon(name, cx, y, scale, true)) return;
 		icon(name, -10000, -10000, scale);	// (loads it into the cache; off screen)
 		auto it = cache.find("icon:" + name);
 		if (it == cache.end() || !it->second.tex) return;
@@ -1874,6 +1998,7 @@ namespace banana
 
 	void Settings::icon(const std::string& name, float x, float y, int scale)
 	{
+		if (x > -10000 && pictureIcon(name, x, y, scale, false)) return;	// (-10000: iconCentred loading the pixel one)
 		std::string key = "icon:" + name;
 		auto it = cache.find(key);
 		if (it == cache.end())
@@ -1928,7 +2053,8 @@ namespace banana
 		box("face", false, x, 422, w, 40);
 		float kw = 12 + text(key, true, 16, 0, 0, p.ink, false, 0, true);
 		box("kbd", false, x + 15, 430.5f, kw, 23);
-		text(key, true, 16, x + 21, 432.5f, p.kbdInk);
+		// (a Glass theme's chip is the text's colour: its letter the screen's)
+		text(key, true, 16, x + 21, 432.5f, glassLook.blur > 0 ? (light ? Color::hex(0xffffff) : Color::hex(0x1e1e24)) : p.kbdInk);
 		textFit(label, true, 19, x + 15 + kw + 8, 431, w - (15 + kw + 8) - 18, p.ink, true);
 	}
 
@@ -2118,7 +2244,7 @@ namespace banana
 		int g0 = std::max(0, std::min(gsel, gridCount() - 1));
 		const Item& first = items[groupStart(g0)];
 
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(first.icon, 50, 56, 3);
@@ -2147,7 +2273,7 @@ namespace banana
 		wrapped(about, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Settings", true, 22, 38, 28, p.ink);
@@ -2333,7 +2459,7 @@ namespace banana
 		int gb = groupStart(groupOf(sel)), ge = groupEnd(groupOf(sel));
 
 		// ---- top: what the selected setting is ----
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		// the header (icon, section, name, value) kept tight so the help under it has ten lines (user feedback 2026-10-25: the
@@ -2365,7 +2491,7 @@ namespace banana
 		be->endScreen();
 
 		// ---- bottom: the list ----
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text(cur.section, true, 22, 38, 28, p.ink);
@@ -2854,7 +2980,7 @@ namespace banana
 	{
 		SPal p = pal(light);
 		const wifi::Network* cur = nsel < (int)nets.size() ? &nets[nsel] : nullptr;
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("phone", 50, 56, 3);
@@ -2870,7 +2996,7 @@ namespace banana
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Networks", true, 22, 38, 28, p.ink);
@@ -3073,7 +3199,7 @@ namespace banana
 	{
 		SPal p = pal(light);
 		const bt::Device* cur = bsel < (int)btDevs.size() ? &btDevs[bsel] : nullptr;
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("phone", 50, 56, 3);
@@ -3092,7 +3218,7 @@ namespace banana
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Devices", true, 22, 38, 28, p.ink);
@@ -3134,7 +3260,7 @@ namespace banana
 	void Settings::renderKeyboard()
 	{
 		SPal p = pal(light);
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_DOWNLOADS ? "downloads" : "phone", 50, 56, 3);
@@ -3170,7 +3296,7 @@ namespace banana
 		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		// the text being typed, here too, so the keys and what they make are seen together
 		box("slot", true, 18, 12, 604, 56);
@@ -3634,7 +3760,7 @@ namespace banana
 	{
 		SPal p = pal(light);
 		// the top screen: the pattern, its name on a strip at the top
-		be->beginScreen(0);
+		beginScreen(0);
 		colorsPattern(0, 0, 480);
 		be->fill(0, 0, X(640), X(30), Color::hex(0x101014));
 		text(std::string("Screen colours  ·  ") + COL_PATTERNS[colPattern] + "  ·  L / R: another pattern", true, 15, 12, 7, Color::hex(0xd0d0d0));
@@ -3643,7 +3769,7 @@ namespace banana
 		text(fit(hint, true, 14, 616), true, 14, 12, 457, Color::hex(0xd0d0d0));
 		be->endScreen();
 		// the bottom screen: the same pattern above, the values below
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		colorsPattern(1, 0, 196);
 		be->fill(0, X(196), X(640), X(2), p.line);
@@ -3734,7 +3860,7 @@ namespace banana
 	{
 		SPal p = pal(light);
 		bool busy = artJob.running();
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("picture", 50, 56, 3);
@@ -3747,7 +3873,7 @@ namespace banana
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Box art", true, 22, 38, 28, p.ink);
@@ -3819,7 +3945,7 @@ namespace banana
 		const std::string& bd = board.empty() ? online.board : board;	// (/etc/banana/board, or the check's)
 		const std::string handheld = bd == "rgds-plus" ? "RG DS Plus" : bd == "rgds" ? "RG DS" : "handheld";
 		auto mb = [](long long b) { return std::to_string((b + 524288) / 1048576); };
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("gear", 50, 56, 3);
@@ -3876,7 +4002,7 @@ namespace banana
 		if (!notes.empty()) wrapped(notes, 18, 50, hy + 4 * 28 + 6, 540, 4, p.ink);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Update packages", true, 22, 38, 28, p.ink);
@@ -4255,7 +4381,7 @@ namespace banana
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
@@ -4267,7 +4393,7 @@ namespace banana
 		helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("This game", true, 22, 38, 28, p.ink);
@@ -4749,7 +4875,7 @@ namespace banana
 			"Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.",
 			"Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.",
 			"Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes." };
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("gear", 50, 56, 3);
@@ -4764,7 +4890,7 @@ namespace banana
 		else wrapped(message.empty() ? helps[wsel] : message, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Welcome to Banana", true, 22, 38, 28, p.ink);
@@ -5444,7 +5570,7 @@ namespace banana
 			if (rows.size() > 2) rows.resize(2);
 			for (auto& r : rows) raw->wantBadge(raw, r.badge);
 		}
-		be->beginScreen(gScreen);
+		beginScreen(gScreen);
 		box("screen", false, 0, 0, 640, 480);
 		bool pk = companion && companion->active();
 		if (pk && pkView != PK_GAME)
@@ -6748,7 +6874,7 @@ namespace banana
 		for (int i = 0; i < gcomp::NUM_PAGES; i++)
 		{
 			gcView = i; gcScreen = 0; gcList = gcRow = -1;
-			be->beginScreen(gScreen);
+			beginScreen(gScreen);
 			gcRender(p);
 			gcTabs(p);
 			be->endScreen();

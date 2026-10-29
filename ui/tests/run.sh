@@ -308,16 +308,18 @@ for size in 640x480 1024x768; do
     done
     # the Glass themes: layout themes whose panels blur the screen's picture; no complaint about them, both views drawn,
     # and the glass really blurred: inside the home card the picture's grain is mostly gone (the bare picture beside it
-    # keeps it)
+    # keeps it). grain: how much a pixel differs from its neighbour (a smooth colour gradient hardly counts)
     k=$(( ${size%x*} * 10 / 640 ))
+    grain() { convert "$1" -crop "$2" +repage -colorspace gray \( +clone -roll +1+0 \) -compose difference -composite -crop +1+0 -format '%[fx:mean*10000]' info:; }
     for g in dark light; do
         glog=$OUT/$size-glass-$g.log
         "$HERE/banana-ui" --headless "$OUT/$size-glass-$g-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
             --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
             --theme "$HERE/../system/rootfs/usr/share/banana/themes/glass-$g.json" \
-            --script "home 0; wait 1000; shot home; press a; wait 1000; shot lib" 2> "$glog" || { echo "FAIL $size: banana-ui (glass $g) exited $?"; fail=1; }
+            --script "home 0; wait 1000; shot home; press a; wait 1000; shot lib; press b; press start; wait 600; shot set; press a; wait 600; shot page" \
+            2> "$glog" || { echo "FAIL $size: banana-ui (glass $g) exited $?"; fail=1; }
         grep -q "theme:" "$glog" && { echo "FAIL $size: glass $g: $(grep 'theme:' "$glog" | head -3)"; fail=1; }
-        for s in home lib; do
+        for s in home lib set page; do
             for p in top bot; do
                 f=$OUT/$size-glass-$g-$s-$p.png
                 [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
@@ -326,9 +328,13 @@ for size in 640x480 1024x768; do
         done
         f=$OUT/$size-glass-$g-home-top.png
         # (60 x 50 units: inside the card left of the icon, and bare picture under the card)
-        inside=$(convert "$f" -crop $((60 * k / 10))x$((50 * k / 10))+$((140 * k / 10))+$((85 * k / 10)) -colorspace gray -format '%[fx:standard_deviation*1000]' info:)
-        bare=$(convert "$f" -crop $((60 * k / 10))x$((50 * k / 10))+$((20 * k / 10))+$((400 * k / 10)) -colorspace gray -format '%[fx:standard_deviation*1000]' info:)
+        inside=$(grain "$f" $((60 * k / 10))x$((50 * k / 10))+$((140 * k / 10))+$((85 * k / 10)))
+        bare=$(grain "$f" $((60 * k / 10))x$((50 * k / 10))+$((20 * k / 10))+$((400 * k / 10)))
         awk -v i="$inside" -v b="$bare" 'BEGIN { exit !(i < b / 2) }' || { echo "FAIL $size: glass $g isn't blurred (grain $inside inside, $bare bare)"; fail=1; }
+        # Settings in the same glass: its top panel blurred too (inside the hero box, under the text)
+        f=$OUT/$size-glass-$g-set-top.png
+        inside=$(grain "$f" $((60 * k / 10))x$((40 * k / 10))+$((40 * k / 10))+$((380 * k / 10)))
+        awk -v i="$inside" -v b="$bare" 'BEGIN { exit !(i < b / 2) }' || { echo "FAIL $size: glass $g Settings isn't glass (grain $inside inside, $bare bare)"; fail=1; }
     done
     # the game panel with the Pokémon companion (a made-up Emerald with made-up icons, RetroArch's replies from the
     # decoder's test): the party, a member's summary by touch, another member from the strip, back, a battle (shown by

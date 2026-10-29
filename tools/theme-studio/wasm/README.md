@@ -46,7 +46,7 @@ FreeType comes from Emscripten's port: `-sUSE_FREETYPE=1`.
 ```sh
 em++ -O2 -std=c++17 -sUSE_FREETYPE=1 -sALLOW_MEMORY_GROWTH=1 \
     -I ui/src -I ui/rnds \
-    ui/src/layout.cpp ui/src/expr.cpp ui/src/json.cpp \
+    ui/src/layout.cpp ui/src/glass.cpp ui/src/expr.cpp ui/src/json.cpp \
     ui/rnds/RndsRaster.cpp ui/rnds/RndsUI.cpp \
     tools/theme-studio/wasm/theme-wasm.cpp \
     --preload-file ui/assets/banana/fonts@/fonts \

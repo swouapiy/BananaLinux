@@ -514,6 +514,10 @@ namespace banana
 		void sprite(const char* const* rows, int h, float x, float y, int k, const std::function<rnds::Color(char)>& colour);
 		float pokeName(const std::string& name, int gender, bool medium, float size, float x, float y, float width, const rnds::Color& c);
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
+		bool glassBox(const std::string& kind, bool on, float x, float y, float w, float h);
+		// the screen being drawn (a Glass theme's panels show their screen's picture)
+		int scr = 0;
+		void beginScreen(int n) { scr = n; be->beginScreen(n); }
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
 		// text in a box of `width`: as it is when it fits, else cut with "...", or scrolling while picked (a marquee);
@@ -534,6 +538,7 @@ namespace banana
 		std::string helpOf(int item);
 		std::string gameHelpOf(int row);
 		void icon(const std::string& name, float x, float y, int scale);
+		bool pictureIcon(const std::string& name, float x, float y, int scale, bool centred);
 		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);
 		void face(const std::string& key, const std::string& label, float x, float w);

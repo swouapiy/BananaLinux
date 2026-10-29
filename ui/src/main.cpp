@@ -733,6 +733,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.setFontDir(o.banana + "/fonts");
+	settings.setVariant(theme);	// (as the handheld: a theme's look and fonts, Carts' and Glass' Inter)
 	settings.setSystems(shelfSystems(lib));
 	settings.setSync(true);
 	settings.setLibraryPaths(o.systems, o.roms);

@@ -7,6 +7,8 @@
   "accent": "#ff9f0a",
   "colors": { "screenBg": "#f2eef6", "ink": "#14141c", "muted": "#5a5a68" },
   "font": "inter",
+  // Settings: its panels the same glass, in Inter
+  "settings": { "glass": 14, "pane": "#ffffff4d", "edge": "#ffffff80" },
   "background": { "top": "glass/light-top.jpg", "bottom": "glass/light-bottom.jpg", "dither": false },
   "icons": {
     "nds": "glass/icons/nds.png", "gba": "glass/icons/gba.png", "gbc": "glass/icons/gbc.png", "gb": "glass/icons/gb.png",
@@ -15,7 +17,14 @@
     "pico-8": "glass/icons/pico-8.png", "recently-played": "glass/icons/recently-played.png",
     "favorites": "glass/icons/favorites.png", "downloads": "glass/icons/downloads.png",
     "bshare": "glass/icons/bshare.png", "rocknixdsstore": "glass/icons/rocknixdsstore.png",
-    "storeapps": "glass/icons/storeapps.png", "rocknixdsbank": "glass/icons/rocknixdsbank.png"
+    "storeapps": "glass/icons/storeapps.png", "rocknixdsbank": "glass/icons/rocknixdsbank.png",
+    // Settings' icons and Bshare's pages, by the icon's name
+    "picture": "glass/icons/picture.png", "music": "glass/icons/music.png", "moon": "glass/icons/moon.png",
+    "gamepad": "glass/icons/gamepad.png", "phone": "glass/icons/phone.png", "gear": "glass/icons/gear.png",
+    "bshare-receive": "glass/icons/bshare-receive.png", "bshare-send": "glass/icons/bshare-send.png",
+    "bshare-phone": "glass/icons/bshare-phone.png", "bshare-computer": "glass/icons/bshare-computer.png",
+    "bshare-handheld": "glass/icons/bshare-handheld.png", "bshare-accept": "glass/icons/bshare-accept.png",
+    "bshare-decline": "glass/icons/bshare-decline.png"
   },
 
   "vars": {
@@ -159,8 +168,9 @@
           "visible": "=count <= 30", "range": 40,
           "item": { "type": "rect", "x": "=320 + (i - (n - 1) / 2) * 11", "y": 7, "w": 6.5, "h": 6.5, "anchor": "center",
                     "radius": "50%", "fill": "=i == cursor ? ink : soft" } },
-        { "type": "list", "source": "hints", "direction": "row", "flow": true, "justify": "center", "scrollMode": "none",
-          "x": 0, "y": 418, "w": 640, "h": 42, "gap": 11, "item": { "use": "hint" } }
+        // the buttons: B (back) on the left, A on the right, the others between
+        { "type": "list", "source": "hints", "direction": "row", "flow": true, "justify": "split", "scrollMode": "none",
+          "x": 18, "y": 418, "w": 604, "h": 42, "gap": 11, "item": { "use": "hint" } }
       ]
     },
 
@@ -220,8 +230,9 @@
         { "type": "text", "x": 40, "w": 560, "y": 342, "align": "center", "text": "{game.title}", "font": "inter-semibold", "size": 19, "color": "=ink" },
         { "type": "text", "x": 0, "w": 640, "y": 368, "align": "center", "text": "{cursor + 1} of {count}", "font": "inter-medium",
           "size": 12.5, "color": "=soft" },
-        { "type": "list", "source": "hints", "direction": "row", "flow": true, "justify": "center", "scrollMode": "none",
-          "x": 0, "y": 418, "w": 640, "h": 42, "gap": 11, "item": { "use": "hint" } }
+        // the buttons: B (back) on the left, A on the right, the others between
+        { "type": "list", "source": "hints", "direction": "row", "flow": true, "justify": "split", "scrollMode": "none",
+          "x": 18, "y": 418, "w": 604, "h": 42, "gap": 11, "item": { "use": "hint" } }
       ]
     }
   }

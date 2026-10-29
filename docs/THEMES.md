@@ -168,7 +168,7 @@ buttons of `hints` plus Banana's own, such as SELECT Search), or `range` (`count
 | `scrollMode` | `center` (the selection stays in the middle), `edge` (scrolls when it would leave the box), `none` |
 | `loop` | the list wraps around (with `behavior.wrap` for the buttons) |
 | `flow` | each item as wide (row) or high (column) as its own content: hint chips |
-| `justify` | a `flow` list's run of items: `start`, `center` (a row of hints in the middle), `end` |
+| `justify` | a `flow` list's run of items: `start`, `center` (a row of hints in the middle), `end`; `split` (hints): B, back, at the start, A, confirm, at the end, the others centred between |
 | `range` | a free list draws the items this far from the selection (8) |
 | `selectedOnTop` | the selected item drawn last, over its neighbours (default true) |
 
