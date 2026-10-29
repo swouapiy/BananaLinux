@@ -306,6 +306,30 @@ for size in 640x480 1024x768; do
             [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
         done
     done
+    # the Glass themes: layout themes whose panels blur the screen's picture; no complaint about them, both views drawn,
+    # and the glass really blurred: inside the home card the picture's grain is mostly gone (the bare picture beside it
+    # keeps it)
+    k=$(( ${size%x*} * 10 / 640 ))
+    for g in dark light; do
+        glog=$OUT/$size-glass-$g.log
+        "$HERE/banana-ui" --headless "$OUT/$size-glass-$g-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+            --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+            --theme "$HERE/../system/rootfs/usr/share/banana/themes/glass-$g.json" \
+            --script "home 0; wait 1000; shot home; press a; wait 1000; shot lib" 2> "$glog" || { echo "FAIL $size: banana-ui (glass $g) exited $?"; fail=1; }
+        grep -q "theme:" "$glog" && { echo "FAIL $size: glass $g: $(grep 'theme:' "$glog" | head -3)"; fail=1; }
+        for s in home lib; do
+            for p in top bot; do
+                f=$OUT/$size-glass-$g-$s-$p.png
+                [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
+                [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
+            done
+        done
+        f=$OUT/$size-glass-$g-home-top.png
+        # (60 x 50 units: inside the card left of the icon, and bare picture under the card)
+        inside=$(convert "$f" -crop $((60 * k / 10))x$((50 * k / 10))+$((140 * k / 10))+$((85 * k / 10)) -colorspace gray -format '%[fx:standard_deviation*1000]' info:)
+        bare=$(convert "$f" -crop $((60 * k / 10))x$((50 * k / 10))+$((20 * k / 10))+$((400 * k / 10)) -colorspace gray -format '%[fx:standard_deviation*1000]' info:)
+        awk -v i="$inside" -v b="$bare" 'BEGIN { exit !(i < b / 2) }' || { echo "FAIL $size: glass $g isn't blurred (grain $inside inside, $bare bare)"; fail=1; }
+    done
     # the game panel with the Pokémon companion (a made-up Emerald with made-up icons, RetroArch's replies from the
     # decoder's test): the party, a member's summary by touch, another member from the strip, back, a battle (shown by
     # itself), the Game tab (the panel's tiles and achievements); then the same in the light theme and in Chinese

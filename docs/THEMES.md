@@ -83,6 +83,7 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | `clock`, `date` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"` |
 | `battery`, `charging`, `batteryMode` | percent (-1 unknown), 1 on the charger, `"icon"` / `"text"` (Settings) |
 | `online`, `motion`, `brand` | Wi-Fi up, Settings' motion, `"Alpha 0.4.1"` |
+| `wallpaper` | the screen being drawn's picture from the theme's `background` (`top` or `bottom`), "" without one. Draw it with `"fit": "fill"` so glass lines up with it |
 | `accent`, `accent.light/.dark/.band/.low` | the accent colours (Settings' accent, or the theme's) |
 | `palette.<name>` | a colour of the palette (`palette.ink`, ...) |
 | `cursor`, `count`, `scroll` | the selection's index and the count in the current list (systems at home, games in a library); `scroll` is the selection's eased position, a fraction while it moves |
@@ -126,6 +127,12 @@ An array of elements is a group of them.
 bottom); `radius` (a number, `"50%"` for a pill or a circle, or `[tl, tr, br, bl]`); `border` and `borderColor` (or
 `border: { "width", "color" }`); `shadow: { "x", "y", "blur", "spread", "color" }`.
 
+`glass` (a blur in units, or `{ "blur" }`): frosted glass. The screen's picture (the theme's `background`, filled to
+the screen) is blurred once when the theme loads, and the box shows its part of it inside its corners, with the
+box's `fill` over it as the glass's tint (`"#ffffff4d"` white, `"#14161e6b"` smoked). It blurs the picture only, not
+the elements drawn before the box, so it costs no more than a picture. A box that moves or changes size makes its
+piece again, so keep glass boxes still. `glass-dark.json` and `glass-light.json` in `/usr/share/banana/themes` use it.
+
 ### text
 
 `text`, `font`, `size`, `color`, `align` (`left`, `center`, `right`, within `w`), `valign` (`top`, `middle`, `bottom`,
@@ -161,6 +168,7 @@ buttons of `hints` plus Banana's own, such as SELECT Search), or `range` (`count
 | `scrollMode` | `center` (the selection stays in the middle), `edge` (scrolls when it would leave the box), `none` |
 | `loop` | the list wraps around (with `behavior.wrap` for the buttons) |
 | `flow` | each item as wide (row) or high (column) as its own content: hint chips |
+| `justify` | a `flow` list's run of items: `start`, `center` (a row of hints in the middle), `end` |
 | `range` | a free list draws the items this far from the selection (8) |
 | `selectedOnTop` | the selected item drawn last, over its neighbours (default true) |
 
@@ -187,7 +195,7 @@ text and fitted pictures are made once and kept, and the screens' unchanged part
 ## What it can't do (yet)
 
 - Rotation and skew: elements stay upright rectangles.
-- Blur of what's behind an element, and blend modes other than normal.
+- Blur of elements behind an element (`glass` blurs the screen's picture only), and blend modes other than normal.
 - Masks other than rounded corners.
 - Dragging a list with a finger (a tap selects).
 - Lists of other things than systems, games and hints (achievements, the settings).

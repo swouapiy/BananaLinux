@@ -103,6 +103,12 @@ namespace banana
 		struct TextTex { rnds::TexPtr tex; int padX = 0, padY = 0; float w = 0; };
 		std::map<std::string, TextTex> texts;
 		std::map<std::string, rnds::TexPtr> shapes;
+		// glass: each screen's picture (the theme's "background") blurred once, at the blur its glass asks for, and the
+		// pieces glass boxes cut from it (by place, size, corners and blur)
+		rnds::Bitmap blurred[2];
+		int blurredAt[2] = { -1, -1 };
+		std::map<std::string, rnds::TexPtr> glassPieces;
+		int curScreen = 0;		// the screen being drawn (the "wallpaper" hook)
 		struct ImgTex { rnds::TexPtr tex; float ox = 0, oy = 0, w = 0, h = 0; };	// placed in the box (device px)
 		std::map<std::string, ImgTex> images;	// by key (src, fit, size ...)
 		std::map<std::string, std::string> latest;	// src -> its last key made (drawn scaled while another size is made)
@@ -414,6 +420,8 @@ namespace banana
 			if (n == "charging") { Library* lib = dynamic_cast<Library*>(m->src); out = EV(lib && lib->power().charging ? 1.0 : 0.0); return true; }
 			if (n == "batteryMode") { out = EV(m->src->batteryMode()); return true; }
 			if (n == "online") { out = EV(m->src->online() ? 1.0 : 0.0); return true; }
+			// the screen's picture (the theme's "background"): glass boxes blur it, so a theme draws it with "fill"
+			if (n == "wallpaper") { out = EV(curScreen == 0 ? rnds::themeFiles.wallTop : rnds::themeFiles.wallBottom); return true; }
 			if (n == "motion") { out = EV(m->src->topMotion() ? 1.0 : 0.0); return true; }
 			if (n == "brand") { out = EV(rnds::brandNote); return true; }
 			if (n == "accent" || n == "accent.base") { out = EV(hex(rnds::accent.base)); return true; }
@@ -588,6 +596,103 @@ namespace banana
 			if (tt.tex) m->be->draw(tt.tex, std::floor(x * s) - tt.padX, std::floor(y * s) - tt.padY, (float)tt.tex->w, (float)tt.tex->h, col);
 		}
 
+		// the signed distance from a rounded box (half sizes hw, hh, corners rad: top left, top right, bottom right, bottom
+		// left) of the point px, py from its centre; grow: the box made that much bigger all round
+		static float boxDistance(float px, float py, float hw, float hh, const float rad[4], float grow)
+		{
+			float r = std::min(std::min(hw, hh), px < 0 ? (py < 0 ? rad[0] : rad[3]) : (py < 0 ? rad[1] : rad[2]));
+			r = std::max(0.0f, r + grow);
+			float qx = std::fabs(px) - (hw + grow) + r, qy = std::fabs(py) - (hh + grow) + r;
+			float ox = std::max(qx, 0.0f), oy = std::max(qy, 0.0f);
+			return std::sqrt(ox * ox + oy * oy) + std::min(std::max(qx, qy), 0.0f) - r;
+		}
+
+		// a box blur of radius r, three passes each way: close to a Gaussian, and as fast for any r (once per theme)
+		static void boxBlur(rnds::Bitmap& b, int r)
+		{
+			if (r <= 0 || b.empty() || b.alpha) return;
+			std::vector<uint8_t> tmp(b.px.size());
+			auto pass = [&](const uint8_t* src, uint8_t* dst, int n, int lines, size_t step, size_t lineStep)
+			{
+				int win = 2 * r + 1;
+				for (int l = 0; l < lines; l++)
+				{
+					const uint8_t* s0 = src + l * lineStep;
+					uint8_t* d0 = dst + l * lineStep;
+					for (int ch = 0; ch < 4; ch++)
+					{
+						// the edges held: the window reaches past them as the edge pixel repeated
+						auto at = [&](int i) { return (int)s0[(size_t)std::min(std::max(i, 0), n - 1) * step + ch]; };
+						int sum = 0;
+						for (int i = -r; i <= r; i++) sum += at(i);
+						for (int i = 0; i < n; i++)
+						{
+							d0[(size_t)i * step + ch] = (uint8_t)((sum + win / 2) / win);
+							sum += at(i + r + 1) - at(i - r);
+						}
+					}
+				}
+			};
+			for (int k = 0; k < 3; k++)
+			{
+				pass(b.px.data(), tmp.data(), b.w, b.h, 4, (size_t)b.w * 4);		// across
+				pass(tmp.data(), b.px.data(), b.h, b.w, (size_t)b.w * 4, 4);		// down
+			}
+		}
+
+		// the screen's picture blurred by r device px, filled to the screen as the theme's pictures are (RndsUI and an
+		// image with "fit": "fill"), so a glass piece lines up with the picture under it; null when there is none
+		const rnds::Bitmap* backdrop(int screen, int r)
+		{
+			if (blurredAt[screen] != r)
+			{
+				blurredAt[screen] = r;
+				blurred[screen] = rnds::Bitmap();
+				const std::string& p = screen == 0 ? rnds::themeFiles.wallTop : rnds::themeFiles.wallBottom;
+				rnds::Bitmap b = p.empty() ? rnds::Bitmap() : rnds::decodeFile(p);
+				if (!b.empty() && !b.alpha)
+				{
+					b = rnds::resize(b, (int)std::lround(W * s), (int)std::lround(H * s));
+					boxBlur(b, r);
+					blurred[screen] = std::move(b);
+				}
+			}
+			return blurred[screen].empty() ? nullptr : &blurred[screen];
+		}
+
+		// a glass box's piece of the blurred picture: the part under the box (at x, y device px), its corners rounded
+		rnds::TexPtr glassPiece(int screen, int x, int y, int w, int h, const float rad[4], int r)
+		{
+			char kb[160];
+			snprintf(kb, sizeof kb, "%d|%d|%d|%d|%d|%g,%g,%g,%g|%d", screen, x, y, w, h, rad[0], rad[1], rad[2], rad[3], r);
+			auto it = glassPieces.find(kb);
+			if (it != glassPieces.end()) return it->second;
+			const rnds::Bitmap* bd = backdrop(screen, r);
+			if (!bd || w <= 0 || h <= 0 || (size_t)w * h > 4096u * 4096u) return nullptr;
+			rnds::Bitmap b;
+			b.w = w; b.h = h;
+			b.px.assign((size_t)w * h * 4, 0);
+			float hw = w / 2.0f, hh = h / 2.0f;
+			for (int j = 0; j < h; j++)
+			{
+				int sy = std::min(std::max(y + j, 0), bd->h - 1);
+				for (int i = 0; i < w; i++)
+				{
+					float cov = std::min(1.0f, std::max(0.0f, 0.5f - boxDistance(i + 0.5f - hw, j + 0.5f - hh, hw, hh, rad, 0)));
+					if (cov <= 0) continue;
+					int sx = std::min(std::max(x + i, 0), bd->w - 1);
+					const uint8_t* src = &bd->px[((size_t)sy * bd->w + sx) * 4];
+					uint8_t* o = &b.px[((size_t)j * w + i) * 4];
+					o[0] = src[0]; o[1] = src[1]; o[2] = src[2];
+					o[3] = (uint8_t)std::lround(cov * 255);
+				}
+			}
+			rnds::TexPtr t = m->be->upload(b, false);
+			if (glassPieces.size() > 200) glassPieces.clear();
+			glassPieces[kb] = t;
+			return t;
+		}
+
 		// a rounded box's pixels: fill (a colour or a gradient), border, and a soft shadow, by its signed distance
 		rnds::TexPtr shape(int w, int h, const float rad[4], uint32_t fill, const std::vector<std::pair<float, uint32_t>>& stops, float angle,
 			float border, uint32_t borderColor, float blur, float spread, uint32_t shadowColor, int& padOut)
@@ -605,18 +710,10 @@ namespace banana
 			if (b.w <= 0 || b.h <= 0 || (size_t)b.w * b.h > 4096u * 4096u) return nullptr;
 			b.px.assign((size_t)b.w * b.h * 4, 0);
 			float hw = w / 2.0f, hh = h / 2.0f;
-			float maxR = std::min(hw, hh);
 			// the gradient's direction (CSS: 180deg runs top to bottom)
 			float ar = (angle - 90) * 3.14159265f / 180, dx = std::cos(ar), dy = std::sin(ar);
 			float span = std::fabs(w * dx) + std::fabs(h * dy);
-			auto sdf = [&](float px, float py, float grow)	// px, py from the centre
-			{
-				float r = std::min(maxR, px < 0 ? (py < 0 ? rad[0] : rad[3]) : (py < 0 ? rad[1] : rad[2]));
-				r = std::max(0.0f, r + grow);
-				float qx = std::fabs(px) - (hw + grow) + r, qy = std::fabs(py) - (hh + grow) + r;
-				float ox = std::max(qx, 0.0f), oy = std::max(qy, 0.0f);
-				return std::sqrt(ox * ox + oy * oy) + std::min(std::max(qx, qy), 0.0f) - r;
-			};
+			auto sdf = [&](float px, float py, float grow) { return boxDistance(px, py, hw, hh, rad, grow); };	// px, py from the centre
 			auto ch = [](uint32_t c, int sh) { return ((c >> sh) & 255) / 255.0f; };
 			for (int y = 0; y < b.h; y++)
 				for (int x = 0; x < b.w; x++)
@@ -705,22 +802,28 @@ namespace banana
 			color(c, "shadow.color", shc);
 			float blur = (float)num(c, "shadow.blur", 0) * k * s, spread = (float)num(c, "shadow.spread", 0) * k * s;
 			float sx = (float)num(c, "shadow.x", 0) * k * s, sy = (float)num(c, "shadow.y", 0) * k * s;
-			if (!hasFill && stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24)) return;
+			// glass: the screen's picture blurred under the box ("glass": its blur, or { "blur" }), the fill over it
+			int glass = (int)std::lround(num(c, has(c, "glass.blur") ? "glass.blur" : "glass", 0) * k * s);
+			if (!hasFill && stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24) && glass <= 0) return;
 			float dx = x * s, dy = y * s, dw = w * s, dh = h * s;
-			bool plain = stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24) && rad[0] <= 0 && rad[1] <= 0 && rad[2] <= 0 && rad[3] <= 0;
+			bool plain = glass <= 0 && stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24) && rad[0] <= 0 && rad[1] <= 0 && rad[2] <= 0 && rad[3] <= 0;
 			if (plain) { m->be->fill(std::round(dx), std::round(dy), std::round(dx + dw) - std::round(dx), std::round(dy + dh) - std::round(dy), colorFrom(fill, f.opacity)); return; }
 			int iw = (int)std::lround(dw), ih = (int)std::lround(dh);
 			if (iw <= 0 || ih <= 0) return;
 			rnds::Color tint(1, 1, 1, f.opacity);
-			if (shc >> 24 && (sx != 0 || sy != 0))
+			if (shc >> 24 && (sx != 0 || sy != 0 || glass > 0))
 			{
-				// the shadow offset: drawn on its own, under the box
+				// the shadow offset (or under glass): drawn on its own, under the box
 				int pad;
 				float zero[4] = { rad[0], rad[1], rad[2], rad[3] };
 				rnds::TexPtr st = shape(iw, ih, zero, 0, {}, 0, 0, 0, blur, spread, shc, pad);
 				if (st) m->be->draw(st, std::round(dx + sx) - pad, std::round(dy + sy) - pad, (float)st->w, (float)st->h, tint);
 				shc = 0;
 			}
+			if (glass > 0)
+				if (rnds::TexPtr g = glassPiece(f.screen, (int)std::round(dx), (int)std::round(dy), iw, ih, rad, glass))
+					m->be->draw(g, std::round(dx), std::round(dy), (float)g->w, (float)g->h, tint);
+			if (!hasFill && stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24)) return;	// (glass alone)
 			int pad;
 			rnds::TexPtr t = shape(iw, ih, rad, hasFill ? fill : 0, stops, angle, border, bc, blur, spread, shc, pad);
 			if (t) m->be->draw(t, std::round(dx) - pad, std::round(dy) - pad, (float)t->w, (float)t->h, tint);
@@ -932,7 +1035,7 @@ namespace banana
 			else if (n->type == "group")
 			{
 				// a group can paint a box behind its children too
-				if (has(c, "fill") || has(c, "gradient.stops.0") || has(c, "gradient.0") || has(c, "border") || has(c, "border.width") || has(c, "shadow.color")) drawRect(c, ax0, ay0, aw, ah, cf);
+				if (has(c, "fill") || has(c, "gradient.stops.0") || has(c, "gradient.0") || has(c, "border") || has(c, "border.width") || has(c, "shadow.color") || has(c, "glass") || has(c, "glass.blur")) drawRect(c, ax0, ay0, aw, ah, cf);
 			}
 			bool clip = flag(c, "clip");
 			if (clip) m->be->pushClip(std::round(ax0 * s), std::round(ay0 * s), std::round(aw * s), std::round(ah * s));
@@ -1087,6 +1190,11 @@ namespace banana
 					natural(tc, itemW, itemH, f.k, nw, nh);
 					at += (float)(dirn == "row" ? num(tc, "w", nw >= 0 ? nw : itemW, itemW) : num(tc, "h", nh >= 0 ? nh : itemH, itemH)) + gap;
 				}
+				// "justify": the run of items centred in the list's box, or at its end (a row of hints in the middle)
+				std::string j = str(c, "justify", "start");
+				float room = (dirn == "row" ? w : h) - (n > 0 ? at - gap : 0);
+				float off = j == "center" ? room / 2 : j == "end" ? room : 0;
+				if (off > 0) for (float& v : flowAt) v += off;
 			}
 			for (int v : order)
 			{
@@ -1156,6 +1264,7 @@ namespace banana
 			for (int screen = 0; screen < 2; screen++)
 			{
 				const char* side = screen == 0 ? "top" : "bottom";
+				curScreen = screen;
 				m->be->beginScreen(screen);
 				Scope ss;
 				ss.parent = &vs;
