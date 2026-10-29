@@ -27,24 +27,24 @@ for i in 1 2 3 4 5 6 7 8 9 10; do pidof bananad >/dev/null || break; sleep 0.1; 
 /usr/libexec/banana/wifi down 2>/dev/null
 /usr/libexec/banana/bluetooth down 2>/dev/null   # (its pairings saved on the card)
 hwclock -w 2>/dev/null
-# the panels' brightness as it is now, for bananad to restore at the next boot ("<top> <bottom>" in thousandths): only
-# the settings rows, F + volume and the DS emulators' menus wrote the file, so a level set any other way (or set a moment
-# before the shutdown, or a file never written at all) came back as the kernel's 50%. Idle-dimmed: the levels from
-# before (/run/banana/dim); a panel at 0 (the game panel's idle "off") keeps the level saved before. (A panel switched
-# off with bl_power, by a one-panel program or the menu's display going away, still has its level in brightness.)
+# the panels' brightness, as Android keeps it: the level the user chose, saved when they chose it (the settings rows,
+# F + volume, the DS emulators' menus), never the panels' level at the shutdown. That one was often lower than chosen:
+# the menu's idle dim of the bottom screen, the game panel's dim, a turn-off from sleep after an idle dim, and the next
+# boot came back at 10% with the user's 40% lost (three times in a day). Only a card with no saved level at all gets
+# the panels' level now, so the next boot has something better than the kernel's 50%.
 bl_pm() {
     local b=/sys/class/backlight/$1 m v
     m=$(cat $b/max_brightness 2>/dev/null); v=$(cat $b/brightness 2>/dev/null)
     [ "${m:-0}" -gt 0 ] && [ "${v:-0}" -gt 0 ] && echo $(( (v * 1000 + m / 2) / m ))
 }
-if [ -f /run/banana/dim ]; then
-    cp /run/banana/dim /data/banana/backlight 2>/dev/null
-else
-    read old_t old_b 2>/dev/null < /data/banana/backlight
-    t=$(bl_pm backlight1); b=$(bl_pm backlight0)
-    t=${t:-$old_t}; b=${b:-${old_b:-$old_t}}
-    [ -n "$t" ] || t=$b; [ -n "$b" ] || b=$t
-    [ -n "$t" ] && [ "$t $b" != "$old_t $old_b" ] && echo "$t $b" > /data/banana/backlight
+if [ ! -s /data/banana/backlight ]; then
+    if [ -f /run/banana/dim ]; then
+        cp /run/banana/dim /data/banana/backlight 2>/dev/null
+    else
+        t=$(bl_pm backlight1); b=$(bl_pm backlight0)
+        [ -n "$t" ] || t=$b; [ -n "$b" ] || b=$t
+        [ -n "$t" ] && echo "$t $b" > /data/banana/backlight
+    fi
 fi
 # turned off with the charger in: started again into charging (rcS, bananad --charge) as a phone does; a restart
 # leaves its own mark, so the RK817's memory of a charger that started it isn't taken for a new one
