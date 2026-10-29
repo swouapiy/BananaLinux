@@ -91,5 +91,37 @@ echo 0 > /run/test/lid; sleep 1.2
 finish
 ev $EV_KEY $KEY_POWER 0
 [ $r = 0 ] && ok "the lid opened, still held: exit 0, the boot goes on" || bad "exit $r"
+
+echo "charging 7. the start guard (a phone's, the stock RG DS's numbers): from charging, power starts only at 6% and"
+echo "   3.75 V; without a charger, under 3.6 V it turns off again; with one, too low goes to charging"
+B=/sys/class/power_supply/battery
+echo 4 > $B/capacity; echo 3700000 > $B/voltage_now; echo 1 > $CH/online
+: > /data/banana/.charge-next
+BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" --charge & CB=$!
+asleep && ok "asleep, charging at 4%" || bad "not asleep"
+ev $EV_KEY $KEY_POWER 1; wake; sleep 2.2; ev $EV_KEY $KEY_POWER 0
+kill -0 $CB 2>/dev/null && ok "held at 4%, 3.70 V: not started, still charging" || bad "it started too low"
+grep -q "the power button: the battery too low to start (4%, 3700 mV), charging on until 6% and 3.75 V" /data/banana/logs/charging.log &&
+    ok "charging.log: too low to start" || bad "charging.log: $(tail -n1 /data/banana/logs/charging.log)"
+echo 6 > $B/capacity; echo 3800000 > $B/voltage_now
+sleep 0.3; ev $EV_KEY $KEY_POWER 1; wake; sleep 1.4
+finish
+ev $EV_KEY $KEY_POWER 0
+[ $r = 0 ] && ok "held at 6%, 3.80 V: exit 0, it starts" || bad "exit $r"
+echo 0 > $CH/online; echo 2 > $B/capacity; echo 3550000 > $B/voltage_now
+charge; [ $r = 3 ] && ok "pressed at 3.55 V without a charger: exit 3, off again" || bad "exit $r"
+grep -q "the battery too low to start (3550 mV): turned off again" /data/banana/logs/charging.log &&
+    ok "charging.log: turned off again" || bad "charging.log: $(tail -n1 /data/banana/logs/charging.log)"
+echo 3650000 > $B/voltage_now
+charge; [ $r = 1 ] && ok "at 3.65 V without a charger: exit 1, it starts (2% is the user's to use)" || bad "exit $r"
+echo 1 > $CH/online; echo 3700000 > $B/voltage_now
+BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" --charge & CB=$!
+asleep && ok "pressed at 2% with a charger in: charging while off instead" || bad "not charging"
+grep -q "charging while off (the battery too low to start, the charger in)" /data/banana/logs/charging.log &&
+    ok "charging.log: too low, the charger in" || bad "charging.log: $(tail -n1 /data/banana/logs/charging.log)"
+echo 0 > $CH/online; : > /sys/class/rtc/rtc0/wakealarm; wake
+finish
+[ $r = 3 ] && ok "the charger out: exit 3" || bad "exit $r"
+echo 50 > $B/capacity; rm -f $B/voltage_now
 rm -rf $CH
 umount /sys/devices/system/cpu
