@@ -83,7 +83,7 @@ static struct {
 	int idle_in_games;		/* the idle timers (dim, sleep, off) in games too, not only in the menu */
 	int recorder;			/* the flight recorder (below): everything bananad sees, written to banana/logs/sessions */
 	int lid_start;			/* the power button (or reset) starts it with the lid shut too; no: off again at once */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 12, 60, 0, 0, 0 };
+} cfg = { "auto", 5, 8, 10, 1, 2000, 0, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 12, 60, 0, 0, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
@@ -1715,6 +1715,49 @@ static int lid_shut_now(void)
 	return shut;
 }
 
+/* ---- the start guard, a phone's (Android's charger mode, Rockchip's on the stock RG DS: uboot-low-power-voltage 3.6 V,
+ * uboot-exit-charge-level 6%, uboot-exit-charge-voltage 3.75 V): starting draws a burst of current, and a nearly empty
+ * battery sags under it and cuts out half way, a start-and-die loop that also wears the cell */
+#define START_MIN_UV	3600000	/* without a charger: under this, not started at all */
+#define START_CHG_PCT	6	/* from charging while off: at least this */
+#define START_CHG_UV	3750000	/* and this */
+
+/* the battery's voltage now (microvolts), -1 unknown */
+static int battery_uv(void)
+{
+	char bat[256] = "", p[320];
+	int pct = -1, charging = 0;
+	if (!battery_state(bat, sizeof bat, &pct, &charging)) return -1;
+	snprintf(p, sizeof p, "/sys/class/power_supply/%s/voltage_now", bat);
+	return read_int(p, -1);
+}
+
+/* the phone's "battery too low" picture, on the one light there is: the red LED blinks three times */
+static void blink_too_low(void)
+{
+	char red[300];
+	led_path("status", red, sizeof red);
+	if (!red[0]) return;
+	for (int i = 0; i < 3; i++) {
+		led_set(red, "on", 255);
+		usleep(250000);
+		led_set(red, "off", 255);
+		usleep(250000);
+	}
+}
+
+/* enough to start from charging: the percent and the voltage both (the gauge alone can be wrong after a long rest) */
+static int start_ok(int *pct_out, int *uv_out)
+{
+	char bat[256] = "";
+	int pct = -1, charging = 0;
+	battery_state(bat, sizeof bat, &pct, &charging);
+	int uv = battery_uv();
+	if (pct_out) *pct_out = pct;
+	if (uv_out) *uv_out = uv;
+	return (pct < 0 || pct >= START_CHG_PCT) && (uv < 0 || uv >= START_CHG_UV);
+}
+
 static int charge_mode(void)
 {
 	/* a restart (rcK's mark): the RK817 still says what started it the first time, a charger perhaps */
@@ -1728,6 +1771,23 @@ static int charge_mode(void)
 	int lid_start = !why && !cfg.lid_start && lid_shut_now();
 	if (lid_start && charger_online()) why = "started with the lid shut, the charger in";
 	if (lid_start && !why) { charge_log("started with the lid shut: turned off again"); return 3; }
+	/* the start guard: a press of the power button with the battery too low. Without a charger, under 3.6 V twice a
+	 * second apart (not a moment's sag): off again. With one in, under 6% or 3.75 V: charging while off, as the
+	 * stock system's charge mode */
+	if (!why) {
+		int uv = battery_uv();
+		if (!charger_online() && uv > 0 && uv < START_MIN_UV) {
+			sleep(1);
+			int uv2 = battery_uv();
+			if (uv2 > 0 && uv2 < START_MIN_UV) {
+				charge_log("the battery too low to start (%d mV): turned off again; charge it first", uv2 / 1000);
+				blink_too_low();
+				return 3;
+			}
+		}
+		int pct;
+		if (charger_online() && !start_ok(&pct, &uv)) why = "the battery too low to start, the charger in";
+	}
 	if (!why || !charger_online()) return 1;
 	char bat[256] = "";
 	int pct = -1, charging = 0;
@@ -1779,7 +1839,15 @@ static int charge_mode(void)
 			while (read(pf[i].fd, &ev, sizeof ev) == (ssize_t)sizeof ev)
 				if (ev.type == EV_KEY && ev.code == KEY_POWER) held = ev.value ? (held ? held : now) : 0;
 		}
-		if (held && now - held >= 1.0 && !lid_shut_now()) { r = 0; break; }	/* (not with the lid shut: open it first) */
+		if (held && now - held >= 1.0 && !lid_shut_now()) {	/* (not with the lid shut: open it first) */
+			int sp, suv;
+			if (start_ok(&sp, &suv)) { r = 0; break; }
+			/* too low to start yet (6% and 3.75 V): the red light says so, and it charges on */
+			charge_log("the power button: the battery too low to start (%d%%, %d mV), charging on until %d%% and %.2f V",
+				sp, suv / 1000, START_CHG_PCT, START_CHG_UV / 1e6);
+			blink_too_low();
+			held = 0;
+		}
 		if (now < look) continue;
 		look = now + 2;
 		/* the kernel's wakeup count before the look, written back before the suspend: a cable pulled out between the
