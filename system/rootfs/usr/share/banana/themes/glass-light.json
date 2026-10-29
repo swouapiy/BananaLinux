@@ -24,7 +24,10 @@
     "bshare-receive": "glass/icons/bshare-receive.png", "bshare-send": "glass/icons/bshare-send.png",
     "bshare-phone": "glass/icons/bshare-phone.png", "bshare-computer": "glass/icons/bshare-computer.png",
     "bshare-handheld": "glass/icons/bshare-handheld.png", "bshare-accept": "glass/icons/bshare-accept.png",
-    "bshare-decline": "glass/icons/bshare-decline.png"
+    "bshare-decline": "glass/icons/bshare-decline.png",
+    // the volume and brightness keys' bubble
+    "level-volume": "glass/icons/level-volume.png", "level-mute": "glass/icons/level-mute.png",
+    "level-brightness": "glass/icons/level-brightness.png"
   },
 
   "vars": {

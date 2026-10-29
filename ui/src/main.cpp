@@ -741,10 +741,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
 	HealthNotice health;
+	std::string levelLabel;	// (level <Volume|Brightness> <percent>: the keys' bubble, until "level off")
+	int levelPercent = 0;
 	be.overlay = [&](int screen)
 	{
 		if (screen != 0) return;
-		if (low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		if (!levelLabel.empty()) settings.level(levelLabel, levelPercent);
+		else if (low.showing(now)) settings.notice(low.title, low.body, low.percent);
 		else if (health.showing(now)) settings.notice(health.title, health.body, -1);
 		else settings.drawToast(now);
 	};
@@ -756,6 +759,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		cs >> op;
 		ui.update(now);
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		else if (op == "level") { std::string l; int p = 0; cs >> l >> p; levelLabel = l == "off" ? "" : l; levelPercent = p; }
 		else if (op == "homeid")
 		{
 			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games)

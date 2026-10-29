@@ -2236,6 +2236,20 @@ namespace banana
 		const Color light = Color::hex(0xf1ede2), bar = Color::hex(0xffe68a), off = Color::hex(0x3a3540), red = Color::hex(0xff8a96);
 		const float w = 310, h = 42, x0 = (640 - w) / 2, y0 = 4, x1 = x0 + w, cy = y0 + h / 2;
 		box("osd", false, x0, y0, w, h);
+		if (glassLook.blur > 0)
+		{
+			// a Glass theme: its own icon (a speaker, crossed out at 0, or a sun), a smooth bar as its sliders', the percent
+			const char* name = sun ? "level-brightness" : percent <= 0 ? "level-mute" : "level-volume";
+			bool drawn = pictureIcon(name, x0 + 10, y0 + 5, 1, false);
+			char pt[8];
+			snprintf(pt, sizeof pt, "%d%%", percent);
+			float ptw = text(pt, true, 19, 0, 0, light, false, 0, true);
+			text(pt, true, 19, x1 - 16 - ptw, y0 + 11, light);
+			float gx0 = x0 + (drawn ? 54 : 16), gx1 = x1 - 16 - text("100%", true, 19, 0, 0, light, false, 0, true) - 12;
+			pill(gx0, cy - 3, gx1 - gx0, 6, Color(1, 1, 1, 0.22f));
+			if (percent > 0) pill(gx0, cy - 3, std::max(6.0f, (gx1 - gx0) * percent / 100.0f), 6, Color(1, 1, 1, 1));
+			return;
+		}
 		int k = std::max(2, (int)std::lround(2 * s));	// device px per icon pixel
 		const char* const* ic = sun ? SUN : percent <= 0 ? MUTE : VOL;
 		float ix = std::round(X(x0 + 14)), iy = std::round(X(cy)) - 6 * k;

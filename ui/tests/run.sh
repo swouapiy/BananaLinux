@@ -316,10 +316,11 @@ for size in 640x480 1024x768; do
         "$HERE/banana-ui" --headless "$OUT/$size-glass-$g-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
             --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
             --theme "$HERE/../system/rootfs/usr/share/banana/themes/glass-$g.json" \
-            --script "home 0; wait 1000; shot home; press a; wait 1000; shot lib; press b; press start; wait 600; shot set; press a; wait 600; shot page" \
+            --script "home 0; wait 1000; shot home; press a; wait 1000; shot lib; press b; press start; wait 600; shot set; press a; wait 600; shot page; \
+                press b; press b; level Volume 60; shot level; level off" \
             2> "$glog" || { echo "FAIL $size: banana-ui (glass $g) exited $?"; fail=1; }
         grep -q "theme:" "$glog" && { echo "FAIL $size: glass $g: $(grep 'theme:' "$glog" | head -3)"; fail=1; }
-        for s in home lib set page; do
+        for s in home lib set page level; do
             for p in top bot; do
                 f=$OUT/$size-glass-$g-$s-$p.png
                 [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }

@@ -34,7 +34,8 @@ example's file name replaces that example.
         "gba": "mine/gba.png"      in roms/, and banana/systems.conf.default lists them all); Settings' icons
       },                           too, by their names: picture, music, moon, nds, gamepad, phone, gear,
                                    bshare-receive, bshare-send, bshare-accept, bshare-decline, bshare-phone,
-                                   bshare-computer, bshare-handheld
+                                   bshare-computer, bshare-handheld; the volume and brightness keys' bubble:
+                                   level-volume, level-mute, level-brightness
                                    (any size: fitted, smooth)
       "sounds": {                  the menu's sounds (WAV): scroll, select, back, fav, ready, insert; "off"
         "scroll": "mine/tick.wav", for none (they change at the next start of the menu)
