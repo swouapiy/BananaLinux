@@ -1830,6 +1830,9 @@ static int charge_mode(void)
 	for (int i = 0; i < n; i++) while (read(pf[i].fd, &ev, sizeof ev) > 0) {}	/* (what came before isn't for us) */
 	double t0 = mono(), held = 0, look = 0;
 	int full = -1, out = 0, r = -1, slept = 0, cant_sleep = 0, wc_missed = 0;
+	/* how long the power button is held to start it: a second, half of one more when the press is what woke it (its
+	 * wake took about a second and a half already: Android's charger mode wants 2 s in all, POWER_ON_KEY_TIME) */
+	double need = 1.0;
 	char wc[32] = "", woke[200] = "";	/* (the wakeup count at the look; what woke the last sleep, for the log) */
 	write_file("/sys/class/rtc/rtc0/device/power/wakeup", "enabled");	/* (the looks' alarm: before main() sets it) */
 	while (r < 0) {
@@ -1837,9 +1840,12 @@ static int charge_mode(void)
 		double now = mono();
 		for (int i = 0; i < n; i++) {
 			while (read(pf[i].fd, &ev, sizeof ev) == (ssize_t)sizeof ev)
-				if (ev.type == EV_KEY && ev.code == KEY_POWER) held = ev.value ? (held ? held : now) : 0;
+				if (ev.type == EV_KEY && ev.code == KEY_POWER) {
+					held = ev.value ? (held ? held : now) : 0;
+					if (!ev.value) need = 1.0;	/* (let go: the next press is a new one) */
+				}
 		}
-		if (held && now - held >= 1.0 && !lid_shut_now()) {	/* (not with the lid shut: open it first) */
+		if (held && now - held >= need && !lid_shut_now()) {	/* (not with the lid shut: open it first) */
 			int sp, suv;
 			if (start_ok(&sp, &suv)) { r = 0; break; }
 			/* too low to start yet (6% and 3.75 V): the red light says so, and it charges on */
@@ -1896,7 +1902,7 @@ static int charge_mode(void)
 			unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = { 0 };
 			if (ioctl(pf[i].fd, EVIOCGKEY(sizeof keys), keys) >= 0 &&
 			    (keys[KEY_POWER / (8 * sizeof(long))] & (1UL << (KEY_POWER % (8 * sizeof(long))))) && !held)
-				held = mono();
+				{ held = mono(); need = 0.5; }
 		}
 	}
 	if (slept && !r) hooks("post", 0);	/* (starting: USB and Wi-Fi back) */
