@@ -165,6 +165,23 @@ def main(cli):
         run("refresh")
         run("remove", "shelf")
         check("storeapps" not in open(hidden).read().lower(), "a builtin entry for the Apps shelf can't hide it")
+        # GitHub's catalog without Bshare (one older than this system): the system's built-in apps are still listed,
+        # and can be removed and put back
+        net = os.path.join(t, "net", "catalog.json")
+        os.makedirs(os.path.dirname(net))
+        with open(net, "w") as f:
+            json.dump({"apps": [a for a in cat["apps"] if a["id"] not in ("bshare", "shelf")]}, f)
+        env["RNDS_STORE_MAIN_CATALOG"] = "file://" + net
+        o = run("refresh")
+        check(o.strip().endswith("OK"), "refresh with GitHub's catalog: " + o.strip())
+        check(row("bshare")[7:8] == ["installed"], "GitHub's catalog without Bshare: Bshare still listed, installed")
+        check(row("shelf") == [], "only the system's builtin entries are added (not the test's shelf one)")
+        o = run("remove", "bshare")
+        check(o.strip().endswith("DONE") and "bshare" in open(hidden).read().split(), "remove Bshare there: hidden")
+        o = run("install", "bshare")
+        check(o.strip().splitlines()[-1] == "DONE 0.4.2" and "bshare" not in open(hidden).read().split(),
+              "install Bshare there: back on the menu")
+        env["RNDS_STORE_MAIN_CATALOG"] = "file://" + t + "/nowhere/catalog.json"
         # no network at all: OFFLINE, and what it knew is kept
         env["RNDS_STORE_API"] = "file://" + t + "/nowhere/{repo}.json"
         o = run("refresh")
