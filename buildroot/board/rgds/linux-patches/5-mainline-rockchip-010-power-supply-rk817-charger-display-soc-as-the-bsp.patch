@@ -19,10 +19,10 @@ taken for charge that flowed. The capacity property reports dsoc; the
 counter, soc and what is saved in the PMIC's NVRAM stay the gauge's.
 
 diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
-index 5e417ad..2c1d60f 100644
+index ce90ab9..ea68153 100644
 --- a/drivers/power/supply/rk817_charger.c
 +++ b/drivers/power/supply/rk817_charger.c
-@@ -75,6 +75,20 @@ struct rk817_charger {
+@@ -78,6 +78,20 @@ struct rk817_charger {
  	 */
  	int soc;
  
@@ -43,7 +43,7 @@ index 5e417ad..2c1d60f 100644
  	/*
  	 * Capacity of battery when fully charged, equal or less than design
  	 * capacity depending upon wear. BSP kernel saves to nvram in mAh,
-@@ -219,6 +233,77 @@ static void rk817_bat_calib_cur(struct rk817_charger *charger)
+@@ -222,6 +236,77 @@ static void rk817_bat_calib_cur(struct rk817_charger *charger)
   * note that only the fcc_mah is really used by this driver, the other values
   * are to ensure we can remain backwards compatible with the BSP kernel.
   */
@@ -121,7 +121,7 @@ index 5e417ad..2c1d60f 100644
  static int rk817_record_battery_nvram_values(struct rk817_charger *charger)
  {
  	u8 bulk_reg[3];
-@@ -302,6 +387,7 @@ static int rk817_bat_calib_cap(struct rk817_charger *charger)
+@@ -305,6 +390,7 @@ static int rk817_bat_calib_cap(struct rk817_charger *charger)
  		put_unaligned_be32(charge_now_adc, bulk_reg);
  		regmap_bulk_write(rk808->regmap, RK817_GAS_GAUGE_Q_INIT_H3,
  				  bulk_reg, 4);
@@ -129,7 +129,7 @@ index 5e417ad..2c1d60f 100644
  
  		charger->soc_cal = 1;
  		dev_dbg(charger->dev,
-@@ -340,6 +426,7 @@ static int rk817_bat_calib_cap(struct rk817_charger *charger)
+@@ -343,6 +429,7 @@ static int rk817_bat_calib_cap(struct rk817_charger *charger)
  			regmap_bulk_write(rk808->regmap,
  					  RK817_GAS_GAUGE_Q_INIT_H3,
  					  bulk_reg, 4);
@@ -137,7 +137,7 @@ index 5e417ad..2c1d60f 100644
  		}
  	}
  
-@@ -489,6 +576,8 @@ static void rk817_read_props(struct rk817_charger *charger)
+@@ -492,6 +579,8 @@ static void rk817_read_props(struct rk817_charger *charger)
  
  	/* Calibrate battery capacity and soc. */
  	rk817_bat_calib_cap(charger);
@@ -146,7 +146,7 @@ index 5e417ad..2c1d60f 100644
  }
  
  static int rk817_bat_get_prop(struct power_supply *ps,
-@@ -563,8 +652,11 @@ static int rk817_bat_get_prop(struct power_supply *ps,
+@@ -566,8 +655,11 @@ static int rk817_bat_get_prop(struct power_supply *ps,
  		val->intval = charger->bat_voltage_min_design_uv;
  		break;
  	case POWER_SUPPLY_PROP_CAPACITY:
@@ -160,7 +160,7 @@ index 5e417ad..2c1d60f 100644
  		if (val->intval > 100)
  			val->intval = 100;
  		if (val->intval < 0)
-@@ -845,6 +937,7 @@ static void rk817_bat_ocv_recalibrate(struct rk817_charger *charger)
+@@ -848,6 +940,7 @@ static void rk817_bat_ocv_recalibrate(struct rk817_charger *charger)
  	put_unaligned_be32(charge_now_adc, bulk_reg);
  	regmap_bulk_write(rk808->regmap, RK817_GAS_GAUGE_Q_INIT_H3,
  			  bulk_reg, 4);
@@ -168,7 +168,7 @@ index 5e417ad..2c1d60f 100644
  	rk817_record_battery_nvram_values(charger);
  }
  
-@@ -966,6 +1059,7 @@ rk817_read_or_set_full_charge_on_boot(struct rk817_charger *charger,
+@@ -969,6 +1062,7 @@ rk817_read_or_set_full_charge_on_boot(struct rk817_charger *charger,
  			  bulk_reg, 4);
  	if (ret < 0)
  		return ret;
@@ -176,7 +176,7 @@ index 5e417ad..2c1d60f 100644
  
  	/* Set QMAX value to max design capacity. */
  	tmp = CHARGE_TO_ADC((charger->bat_charge_full_design_uah / 1000),
-@@ -1212,6 +1306,7 @@ static int rk817_charger_probe(struct platform_device *pdev)
+@@ -1215,6 +1309,7 @@ static int rk817_charger_probe(struct platform_device *pdev)
  		return -ENOMEM;
  
  	charger->rk808 = rk808;
@@ -184,7 +184,7 @@ index 5e417ad..2c1d60f 100644
  
  	charger->dev = &pdev->dev;
  	platform_set_drvdata(pdev, charger);
-@@ -1377,6 +1472,9 @@ static void rk817_bat_sleep_adjust(struct rk817_charger *charger)
+@@ -1386,6 +1481,9 @@ static void rk817_bat_sleep_adjust(struct rk817_charger *charger)
  	if (charge_uah > charger->fcc_mah * 1000)
  		charge_uah = charger->fcc_mah * 1000;
  	charger->soc = div_s64((s64)charge_uah * 100, charger->fcc_mah);
@@ -194,7 +194,7 @@ index 5e417ad..2c1d60f 100644
  
  	/* Flags were cleared at suspend: any pair now is from this sleep. */
  	charger->relax_voltage_uv = rk817_bat_relax_voltage_uv(charger, false);
-@@ -1419,6 +1517,7 @@ static void rk817_bat_sleep_adjust(struct rk817_charger *charger)
+@@ -1428,6 +1526,7 @@ static void rk817_bat_sleep_adjust(struct rk817_charger *charger)
  	put_unaligned_be32(tmp, bulk_reg);
  	regmap_bulk_write(rk808->regmap, RK817_GAS_GAUGE_Q_INIT_H3,
  			  bulk_reg, 4);

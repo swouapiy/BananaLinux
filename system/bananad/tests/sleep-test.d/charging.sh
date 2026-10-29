@@ -9,7 +9,8 @@ mkdir -p $CH; echo USB > $CH/type; echo 0 > $CH/online
 echo 1 > /sys/class/backlight/backlight0/bl_power; echo 0 > /sys/class/backlight/backlight0/bl_power
 charge() { r=0; BANANAD_TEST_LID=/run/test/lid "$W/bananad" --charge || r=$?; }
 # the background one's end, up to 6 s (then stopped: a FAIL, not a hung test), its exit status in r
-finish() { for i in $(seq 60); do kill -0 $CB 2>/dev/null || break; sleep 0.1; done; kill $CB 2>/dev/null || true; r=0; wait $CB || r=$?; }
+# the background one's end, up to 15 s (the charger out: off 10 s later, as Android's charger mode), its exit status in r
+finish() { for i in $(seq 150); do kill -0 $CB 2>/dev/null || break; sleep 0.1; done; kill $CB 2>/dev/null || true; r=0; wait $CB || r=$?; }
 
 echo 0 > /run/test/lid      # (the lid open: a scenario before may have left it shut, and shut is charging 5's)
 echo "charging 1. not a charger's start (no mark, no PMIC to ask), or no charger: on with the boot at once"
@@ -63,8 +64,17 @@ asleep && ok "asleep again after the look" || bad "awake after the look"
     bad "green $(cat $L/green:power/brightness), amber $(cat $L/amber:charging/brightness)"
 grep -q "full after" /data/banana/logs/charging.log && ok "charging.log: full" || bad "full not logged"
 echo 0 > $CH/online; wake                                             # the cable out woke it
+sleep 2.5
+[ "$(cat $L/green:power/brightness)$(cat $L/amber:charging/brightness)" = 00 ] && ok "the cable out: the lights off at once" || bad "lights still on"
+kill -0 $CB 2>/dev/null && ok "still on for now (off 10 s later, as Android)" || bad "off at once"
+echo 1 > $CH/online; sleep 2.5                                         # back within the 10 s
+kill -0 $CB 2>/dev/null && ok "the cable back within 10 s: charging on" || bad "turned off although the cable came back"
+grep -q "the charger back: charging on" /data/banana/logs/charging.log && ok "charging.log: back" || bad "charging.log: $(tail -n2 /data/banana/logs/charging.log)"
+[ "$(cat $L/green:power/brightness)" = 255 ] && ok "back: green again (full)" || bad "green $(cat $L/green:power/brightness)"
+asleep && ok "back: asleep again, charging" || bad "not asleep again"
+echo 0 > $CH/online; wake                                              # out for good (its interrupt wakes it)
 finish
-[ $r = 3 ] && ok "the charger out: exit 3 (rcS turns it off)" || bad "exit $r"
+[ $r = 3 ] && ok "the charger out 10 s: exit 3 (rcS turns it off)" || bad "exit $r"
 [ "$(cat $L/green:power/brightness)$(cat $L/amber:charging/brightness)" = 00 ] && ok "the LEDs off" || bad "LEDs left on"
 grep -q "the charger pulled out: turning off after [0-9]* min: battery [0-9]*% (the last wake: " /data/banana/logs/charging.log &&
     ok "charging.log: what woke it last" || bad "charging.log: $(grep 'pulled out' /data/banana/logs/charging.log | tail -n1)"

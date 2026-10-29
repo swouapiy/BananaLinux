@@ -1758,6 +1758,7 @@ static int start_ok(int *pct_out, int *uv_out)
 	return (pct < 0 || pct >= START_CHG_PCT) && (uv < 0 || uv >= START_CHG_UV);
 }
 
+static int uevent_open(void);
 static int charge_mode(void)
 {
 	/* a restart (rcK's mark): the RK817 still says what started it the first time, a charger perhaps */
@@ -1828,8 +1829,15 @@ static int charge_mode(void)
 	if (d) closedir(d);
 	struct input_event ev;
 	for (int i = 0; i < n; i++) while (read(pf[i].fd, &ev, sizeof ev) > 0) {}	/* (what came before isn't for us) */
-	double t0 = mono(), held = 0, look = 0;
-	int full = -1, out = 0, r = -1, slept = 0, cant_sleep = 0, wc_missed = 0;
+	int keys_n = n;
+	/* the kernel's uevents (the battery's, the charger's): a look at once when one comes, so the lights follow the
+	 * cable while it is awake, not at the next look */
+	int uev = uevent_open();
+	if (uev >= 0 && n < 16) pf[n++] = (struct pollfd){ uev, POLLIN, 0 };
+	/* Android's charger mode (healthd_mode_charger): the cable pulled out turns the lights off at once and the handheld
+	 * off 10 s later (UNPLUGGED_SHUTDOWN_TIME), the cable back meanwhile calls that off; awake until then */
+	double t0 = mono(), held = 0, look = 0, unplugged = 0;
+	int full = -1, r = -1, slept = 0, cant_sleep = 0, wc_missed = 0, busy = 0;
 	/* how long the power button is held to start it: a second, half of one more when the press is what woke it (its
 	 * wake took about a second and a half already: Android's charger mode wants 2 s in all, POWER_ON_KEY_TIME) */
 	double need = 1.0;
@@ -1838,12 +1846,17 @@ static int charge_mode(void)
 	while (r < 0) {
 		poll(pf, n, held ? 100 : look ? 2000 : 0);	/* (the first look at once) */
 		double now = mono();
-		for (int i = 0; i < n; i++) {
+		for (int i = 0; i < keys_n; i++) {
 			while (read(pf[i].fd, &ev, sizeof ev) == (ssize_t)sizeof ev)
 				if (ev.type == EV_KEY && ev.code == KEY_POWER) {
 					held = ev.value ? (held ? held : now) : 0;
 					if (!ev.value) need = 1.0;	/* (let go: the next press is a new one) */
 				}
+		}
+		if (uev >= 0 && (pf[n - 1].revents & POLLIN)) {
+			char buf[2048];
+			while (recv(uev, buf, sizeof buf, MSG_DONTWAIT) > 0) {}
+			look = 0;	/* (the charger or the battery changed: looked at now) */
 		}
 		if (held && now - held >= need && !lid_shut_now()) {	/* (not with the lid shut: open it first) */
 			int sp, suv;
@@ -1859,8 +1872,17 @@ static int charge_mode(void)
 		/* the kernel's wakeup count before the look, written back before the suspend: a cable pulled out between the
 		 * two (its event already in) calls the suspend off instead of being slept through (the kernel's way) */
 		read_str("/sys/power/wakeup_count", wc, sizeof wc);
-		out = charger_online() ? 0 : out + 1;
-		if (out >= 2) { r = 3; break; }	/* (one look missed: a cable wiggled) */
+		if (!charger_online()) {
+			if (!unplugged) {
+				unplugged = now;
+				led_set(amber, "off", level);
+				led_set(green, "off", level);
+				full = -1;	/* (back: the lights set again) */
+				charge_log("the charger pulled out: off in 10 s unless it comes back");
+			} else if (now - unplugged >= 10) { r = 3; break; }
+			continue;	/* (awake until then, a look every 2 s) */
+		}
+		if (unplugged) { unplugged = 0; charge_log("the charger back: charging on"); }
 		char st[32] = "", p[320];
 		battery_state(bat, sizeof bat, &pct, &charging);
 		snprintf(p, sizeof p, "/sys/class/power_supply/%s/status", bat);
@@ -1875,7 +1897,7 @@ static int charge_mode(void)
 		/* nothing to wait for awake: asleep, as a phone charging while off, until the power button, the cable
 		 * coming out or the next look in 10 minutes (the LED amber or green). Not while the cable looks out (its
 		 * second look comes awake), nor after a suspend that failed (awake then, as before) */
-		if (held || out || cant_sleep) continue;
+		if (held || cant_sleep) continue;
 		if (!slept) { hooks("pre", 0); sleep_mode(); }	/* (USB and Wi-Fi off, as for a sleep) */
 		if (wc[0] && write_file("/sys/power/wakeup_count", wc) && wc_missed++ < 3) { look = 0; continue; }
 		wc_missed = 0;
@@ -1894,11 +1916,17 @@ static int charge_mode(void)
 		}
 		rtc_alarm(0);
 		if (!sr) wake_sources_fired(woke, sizeof woke);
-		if (sr) { cant_sleep = 1; charge_log("it can't sleep while charging (%s): awake instead", strerror(err)); }
+		/* a sleep refused (busy: an event came as it went, the cable's perhaps): tried again at the next look; three in a
+		 * row, awake from then on */
+		if (sr) {
+			busy++;
+			if (busy >= 3) cant_sleep = 1;
+			charge_log("a sleep refused while charging (%s)%s", strerror(err), cant_sleep ? ": awake from now on" : ": again at the next look");
+		} else busy = 0;
 		slept++;
 		look = 0;	/* (the look at once after the wake) */
 		/* the power button held: the press that woke it may be over before its event is read, or still going */
-		for (int i = 0; i < n; i++) {
+		for (int i = 0; i < keys_n; i++) {
 			unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = { 0 };
 			if (ioctl(pf[i].fd, EVIOCGKEY(sizeof keys), keys) >= 0 &&
 			    (keys[KEY_POWER / (8 * sizeof(long))] & (1UL << (KEY_POWER % (8 * sizeof(long))))) && !held)
