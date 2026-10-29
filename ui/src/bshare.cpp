@@ -330,9 +330,10 @@ namespace
 	{
 		if (!session) return;
 		Session& s = *session;
-		receiveState(s, what);
+		// (logged first: a reader that sees the state's end finds the log line too)
 		logLine(std::string("received ") + std::to_string(s.done) + " of " + std::to_string(s.files.size()) + " files (" +
 			std::to_string(s.got) + " bytes) from " + s.from + " (" + s.ip + "): " + what);
+		receiveState(s, what);
 		session.reset();
 	}
 
