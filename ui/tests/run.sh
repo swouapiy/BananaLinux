@@ -412,6 +412,17 @@ for size in 640x480 1024x768; do
     grep -q '^bshare_receive = ask$' "$FX/data/settings.conf" || { echo "FAIL $size: bshare: Options' Receive when closed didn't turn to Ask"; fail=1; }
     grep -q "^serve$" "$BRUN/args" || { echo "FAIL $size: bshare: the helper wasn't started to serve"; fail=1; }
     sed -i '/^bshare_/d' "$FX/data/settings.conf"
+    # a device that asks for a PIN (LocalSend's Require PIN): the helper says "pin", the keyboard comes up on its own,
+    # the PIN typed and START: the same file sent again with it
+    : > "$BRUN/args"; rm -f "$BRUN/bshare-send"
+    printf '#!/bin/sh\necho "$@" >> "%s/args"\nif [ "$1" = send ] && [ "$2" = --pin ]; then printf "done\\tMy Mac\\t1\\t1\\t1000\\t1000\\n" > "%s/bshare-send"; elif [ "$1" = send ]; then printf "pin\\tMy Mac\\t0\\t1\\t0\\t1000\\n" > "%s/bshare-send"; fi\nexit 0\n' "$BRUN" "$BRUN" "$BRUN" > "$BRUN/helper"
+    run_bs "homeid bshare; press a; wait 1; shot bs-pin-home; press down; press a; shot bs-pin-send; press a; shot bs-pin-devices; press a; \
+        press down; press a; press a; press down; press a; press a; press a; shot bs-pin-files; press start; shot bs-pin-ready; press start; wait 1; \
+        shot bs-pin-status; sleep 800; shot bs-pin; type 4242; press start; sleep 800; shot bs-pin-sent"
+    for i in $(seq 30); do grep -q "^send --pin" "$BRUN/args" && break; sleep 0.1; done
+    grep -q "^send mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" && grep -q "^send --pin 4242 mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" ||
+        { echo "FAIL $size: bshare: the PIN wasn't asked for and sent: $(cat "$BRUN/args")"; fail=1; }
+    sed -i '/^bshare_/d' "$FX/data/settings.conf"
 
     if [ -x "$HERE/banana-fetch" ]; then
         dlog=$OUT/$size-downloads.log; NAS=$OUT/nas; RUN=$OUT/run

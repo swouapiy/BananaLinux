@@ -169,6 +169,10 @@ class H(http.server.BaseHTTPRequestHandler):
         if self.path.startswith("/api/localsend/v2/prepare-upload"):
             j = json.loads(data)
             if os.path.exists(T + "/decline"): return self.reply(403)
+            if os.path.exists(T + "/pin"):   # (LocalSend's Require PIN: ?pin=..., else 401)
+                want = open(T + "/pin").read().strip()
+                q = dict(p.split("=") for p in self.path.split("?")[1].split("&")) if "?" in self.path else {}
+                if q.get("pin") != want: return self.reply(401, json.dumps({"message": "PIN required" if "pin" not in q else "Invalid PIN"}).encode())
             state["files"] = {k: v["fileName"] for k, v in j["files"].items()}
             open(T + "/out/info.json", "w").write(json.dumps(j["info"]))
             return self.reply(200, json.dumps({"sessionId": "S1", "files": {k: "tok-" + k for k in j["files"]}}).encode())
@@ -195,6 +199,17 @@ cmp -s "$T/send/shot.png" "$T/out/shot.png" && ok "the screenshot arrived whole"
 save2" ] && ok "the folder's files, in their folder" || bad "Saves/: $(ls -R "$T/out")"
 grep -q '"alias": "Swou"' "$T/out/info.json" && ok "the handheld named itself (its DS name)" || bad "info: $(cat "$T/out/info.json")"
 grep -q "^done	My Mac	3	3	" "$T/run/bshare-send" && ok "bshare-send: done, 3 of 3" || bad "bshare-send: $(cat "$T/run/bshare-send")"
+echo "bshare 6. a device that asks for a PIN (LocalSend's Require PIN): 401 is \"pin\", a wrong one \"badpin\", the right one sends"
+echo 4242 > "$T/pin"
+"$B" send mac-fp "$T/send/shot.png" 2>>"$T/send.log" && bad "no PIN but exit 0" || ok "no PIN: exit 1"
+grep -q "^pin	My Mac" "$T/run/bshare-send" && ok "bshare-send: pin (the menu asks for it)" || bad "bshare-send: $(cat "$T/run/bshare-send")"
+"$B" send --pin 1111 mac-fp "$T/send/shot.png" 2>>"$T/send.log" && bad "a wrong PIN but exit 0" || ok "a wrong PIN: exit 1"
+grep -q "^badpin	My Mac" "$T/run/bshare-send" && ok "bshare-send: badpin" || bad "bshare-send: $(cat "$T/run/bshare-send")"
+rm -f "$T/out/shot.png"
+"$B" send --pin 4242 mac-fp "$T/send/shot.png" 2>>"$T/send.log" && ok "the right PIN: exit 0" || bad "the right PIN: exit $? ($(tail -n1 "$T/send.log"))"
+cmp -s "$T/send/shot.png" "$T/out/shot.png" && ok "sent with the PIN" || bad "shot.png not sent with the PIN"
+rm -f "$T/pin"
+[ -s "$T/data/banana/bshare/cert.pem" ] && [ -s "$T/data/banana/bshare/key.pem" ] && ok "its certificate made, kept on the card (LocalSend asks for it)" || bad "no certificate: $(ls "$T/data/banana" 2>&1)"
 touch "$T/decline"
 "$B" send mac-fp "$T/send/shot.png" 2>>"$T/send.log" && bad "declined but exit 0" || ok "declined: exit 1"
 grep -q "^declined	My Mac" "$T/run/bshare-send" && ok "bshare-send: declined" || bad "bshare-send: $(cat "$T/run/bshare-send")"

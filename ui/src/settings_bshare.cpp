@@ -170,6 +170,10 @@ namespace banana
 		std::set<std::string> marked;
 		pid_t sender = 0;
 		std::string sendLine, sendTo;
+		// the last send's device and files, sent again with the PIN the device asked for (LocalSend's Require PIN)
+		std::string lastFp;
+		std::vector<std::string> lastFiles;
+		bool pinAsked = false;
 		double lookedAt = 0;
 
 		std::string conf() const { return ui->data + "/settings.conf"; }
@@ -240,6 +244,16 @@ namespace banana
 			std::string sl = readAll(bsRun() + "/bshare-send");
 			if (sl != sendLine) { sendLine = sl; changed = true; }
 			if (sender > 0 && waitpid(sender, nullptr, WNOHANG) == sender) { sender = 0; changed = true; }
+			// the device asks for a PIN (or the one typed was wrong): the keyboard, once a send
+			if (sender == 0 && !pinAsked && !lastFiles.empty() && (sendLine.compare(0, 4, "pin\t") == 0 || sendLine.compare(0, 7, "badpin\t") == 0))
+			{
+				pinAsked = true;
+				bool wrong = sendLine.compare(0, 7, "badpin\t") == 0;
+				ui->startEntry(Settings::ENTRY_BSHARE_PIN, wrong ? "Wrong PIN for" : "PIN for", sendTo, Settings::BSHARE, "");
+				ui->entryHelp = std::string(wrong ? "That PIN wasn't right. " : "") + sendTo +
+					" asks for a PIN: it is in LocalSend there (Settings, Require PIN). START sends with it, B gives up.";
+				changed = true;
+			}
 			std::vector<Peer> ps;
 			std::stringstream pin(readAll(bsRun() + "/bshare-peers"));
 			while (std::getline(pin, l))
@@ -422,14 +436,29 @@ namespace banana
 			return NONE;
 		}
 
-		// Send (or START on the Send page): the device and the files chosen, then the helper sends them
-		Result send()
+		// the PIN typed for the last send: the same files to the same device again, with it ("": given up)
+		Result entered(const std::string& pin)
+		{
+			if (pin.empty() || lastFp.empty() || lastFiles.empty()) { message = "Nothing was sent."; return MOVED; }
+			deviceFp = lastFp;
+			marked = std::set<std::string>(lastFiles.begin(), lastFiles.end());
+			return send(pin);
+		}
+
+		// Send (or START on the Send page): the device and the files chosen, then the helper sends them (with the
+		// PIN the device asked for)
+		Result send(const std::string& pin = "")
 		{
 			if (sending()) { message = "A send is under way: Sending shows it."; return MOVED; }
-			if (deviceFp.empty() || !deviceThere()) { message = "Choose a device first: a phone or computer with LocalSend open."; sel[SEND] = 0; return MOVED; }
+			if (deviceFp.empty() || (pin.empty() && !deviceThere())) { message = "Choose a device first: a phone or computer with LocalSend open."; sel[SEND] = 0; return MOVED; }
 			if (marked.empty()) { message = "Choose the files first."; sel[SEND] = 1; return MOVED; }
-			std::vector<std::string> a = { helper(), "send", deviceFp };
+			std::vector<std::string> a = { helper(), "send" };
+			if (!pin.empty()) { a.push_back("--pin"); a.push_back(pin); }
+			a.push_back(deviceFp);
 			for (auto& w : marked) a.push_back(w);
+			lastFp = deviceFp;
+			lastFiles.assign(marked.begin(), marked.end());
+			pinAsked = false;
 			sendTo = deviceName;
 			unlink((bsRun() + "/bshare-send").c_str());
 			sendLine.clear();
@@ -635,10 +664,12 @@ namespace banana
 				t.label = "Send";
 				std::string who = c.size() >= 2 ? c[1] : sendTo;
 				std::string what = c.empty() ? (sender > 0 ? "waiting" : "") : c[0];
-				t.title = what == "waiting" ? "Waiting for " + who : what == "sending" ? "Sending to " + who : what == "done" ? "Sent to " + who :
+				t.title = what == "pin" ? who + " asks for a PIN" : what == "badpin" ? "Wrong PIN for " + who :
+					what == "waiting" ? "Waiting for " + who : what == "sending" ? "Sending to " + who : what == "done" ? "Sent to " + who :
 					what == "declined" ? who + " said no" : what == "busy" ? who + " is busy" : what == "stopped" ? "Stopped" : what == "partly" ? "Partly sent" : what.empty() ? "" : "It didn't work";
 				t.accent = c.size() >= 6 ? c[2] + " of " + c[3] + " files" : "";
-				t.help = what == "waiting" ? "It asks there first." : what == "sending" ? "You can leave: it carries on." :
+				t.help = what == "pin" || what == "badpin" ? "The PIN is in LocalSend there (Settings, Require PIN). Send again to type it." :
+					what == "waiting" ? "It asks there first." : what == "sending" ? "You can leave: it carries on." :
 					what == "done" ? "All the files arrived." : what == "declined" ? "Nothing was sent." : what == "error" ? "The device couldn't be reached. Is LocalSend open, on the same Wi-Fi?" : "";
 				if (c.size() >= 6 && atoll(c[5].c_str()) > 0)
 				{
@@ -803,6 +834,15 @@ namespace banana
 	}
 
 	void Settings::closeBshare() { if (bs) bs->close(); }
+	Settings::Result Settings::finishBshareEntry()
+	{
+		std::string text = pw;
+		pw.clear();
+		page = BSHARE;
+		message.clear();
+		return bs ? bs->entered(text) : MOVED;
+	}
+
 	Settings::Result Settings::pressBshare(Key k) { return bs ? bs->press(k) : NONE; }
 	Settings::Result Settings::touchBshare(float cx, float cy) { return bs ? bs->touch(cx, cy) : NONE; }
 	void Settings::renderBshare() { if (bs) bs->render(); }

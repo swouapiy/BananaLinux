@@ -37,6 +37,10 @@
 #include <mutex>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <openssl/evp.h>
+#include <openssl/obj_mac.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
 #include <poll.h>
 #include <random>
 #include <set>
@@ -139,6 +143,73 @@ namespace
 	// ---- who this handheld is ------------------------------------------------------------------------------------
 	struct Me { std::string alias, model, fingerprint; };
 
+	// The certificate a send shows: LocalSend's apps (protocol 2.1 on) ask a sender over HTTPS for a TLS client
+	// certificate, and close the connection without one, before their user sees anything; they know the device by
+	// its SHA-256. Made once (an EC P-256 key, self-signed, ten years), kept in banana/bshare on the card.
+	std::string certPath, keyPath;
+
+	std::string derFingerprint(X509* x)
+	{
+		unsigned char* der = nullptr;
+		int n = i2d_X509(x, &der);
+		if (n <= 0) return "";
+		unsigned char md[EVP_MAX_MD_SIZE];
+		unsigned int ml = 0;
+		EVP_Digest(der, (size_t)n, md, &ml, EVP_sha256(), nullptr);
+		OPENSSL_free(der);
+		std::string h;
+		char b[3];
+		for (unsigned i = 0; i < ml; i++) { snprintf(b, sizeof b, "%02X", md[i]); h += b; }
+		return h;
+	}
+
+	// the certificate's fingerprint, the certificate made first if there is none ("" when it can't be)
+	std::string ensureCert()
+	{
+		std::string dir = data + "/banana/bshare";
+		mkdir(dir.c_str(), 0755);
+		std::string cp = dir + "/cert.pem", kp = dir + "/key.pem", fp;
+		if (FILE* f = fopen(cp.c_str(), "r"))
+		{
+			X509* x = PEM_read_X509(f, nullptr, nullptr, nullptr);
+			fclose(f);
+			if (x && access(kp.c_str(), R_OK) == 0) fp = derFingerprint(x);
+			X509_free(x);
+			if (!fp.empty()) { certPath = cp; keyPath = kp; return fp; }
+		}
+		EVP_PKEY* key = nullptr;
+		EVP_PKEY_CTX* kc = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, nullptr);
+		bool ok = kc && EVP_PKEY_keygen_init(kc) > 0 && EVP_PKEY_CTX_set_ec_paramgen_curve_nid(kc, NID_X9_62_prime256v1) > 0 &&
+			EVP_PKEY_keygen(kc, &key) > 0;
+		EVP_PKEY_CTX_free(kc);
+		X509* x = ok ? X509_new() : nullptr;
+		if (x)
+		{
+			std::random_device rd;
+			X509_set_version(x, 2);
+			ASN1_INTEGER_set(X509_get_serialNumber(x), (long)(rd() & 0x7fffffff));
+			X509_gmtime_adj(X509_getm_notBefore(x), 0);
+			X509_gmtime_adj(X509_getm_notAfter(x), 3650L * 24 * 3600);
+			X509_set_pubkey(x, key);
+			X509_NAME* nm = X509_get_subject_name(x);
+			X509_NAME_add_entry_by_txt(nm, "CN", MBSTRING_ASC, (const unsigned char*)"Bshare", -1, -1, 0);
+			X509_set_issuer_name(x, nm);
+			ok = X509_sign(x, key, EVP_sha256()) > 0;
+		}
+		if (ok)
+		{
+			FILE* k = fopen(kp.c_str(), "w");
+			FILE* c = fopen(cp.c_str(), "w");
+			ok = k && c && PEM_write_PrivateKey(k, key, nullptr, nullptr, 0, nullptr, nullptr) && PEM_write_X509(c, x);
+			if (k) { fclose(k); chmod(kp.c_str(), 0600); }
+			if (c) fclose(c);
+			if (ok) { fp = derFingerprint(x); certPath = cp; keyPath = kp; }
+		}
+		X509_free(x);
+		EVP_PKEY_free(key);
+		return fp;
+	}
+
 	Me me()
 	{
 		Me m;
@@ -146,7 +217,9 @@ namespace
 		while (!board.empty() && (board.back() == '\n' || board.back() == ' ')) board.pop_back();
 		m.model = board == "rgds" ? "RG DS" : "RG DS Plus";
 		m.alias = m.model;	// (the DS's name instead, read each time: dsName)
-		// the same fingerprint from one start to the next (LocalSend's apps know a device by it)
+		// the same fingerprint from one start to the next (LocalSend's apps know a device by it): the certificate's
+		m.fingerprint = ensureCert();
+		if (!m.fingerprint.empty()) return m;
 		std::string idf = data + "/banana/bshare.id";
 		m.fingerprint = readFile(idf);
 		while (!m.fingerprint.empty() && (m.fingerprint.back() == '\n')) m.fingerprint.pop_back();
@@ -851,6 +924,12 @@ namespace
 		curl_easy_setopt(c, CURLOPT_URL, url.c_str());
 		curl_easy_setopt(c, CURLOPT_SSL_VERIFYPEER, 0L);	// (LocalSend's certificates are its apps' own, self-signed)
 		curl_easy_setopt(c, CURLOPT_SSL_VERIFYHOST, 0L);
+		if (!certPath.empty())
+		{
+			// (the certificate LocalSend's apps ask for: ensureCert)
+			curl_easy_setopt(c, CURLOPT_SSLCERT, certPath.c_str());
+			curl_easy_setopt(c, CURLOPT_SSLKEY, keyPath.c_str());
+		}
 		curl_easy_setopt(c, CURLOPT_CONNECTTIMEOUT, 5L);
 		curl_easy_setopt(c, CURLOPT_NOSIGNAL, 1L);
 		curl_easy_setopt(c, CURLOPT_WRITEFUNCTION, toString);
@@ -858,7 +937,8 @@ namespace
 		return c;
 	}
 
-	int send(const std::string& fp, const std::vector<std::string>& paths)
+	// pin: the PIN the other side asked for (LocalSend's "Require PIN"), "" none
+	int send(const std::string& fp, const std::vector<std::string>& paths, const std::string& pin)
 	{
 		signal(SIGTERM, onSendStop);
 		signal(SIGINT, onSendStop);
@@ -898,7 +978,14 @@ namespace
 		body += "}}";
 		sendState("waiting");
 		std::string reply;
-		CURL* c = curlFor(root + "prepare-upload", reply);
+		std::string ask = root + "prepare-upload";
+		if (!pin.empty())
+		{
+			char* e = curl_easy_escape(nullptr, pin.c_str(), 0);
+			ask += std::string("?pin=") + e;
+			curl_free(e);
+		}
+		CURL* c = curlFor(ask, reply);
 		curl_slist* h = curl_slist_append(nullptr, "Content-Type: application/json");
 		curl_easy_setopt(c, CURLOPT_HTTPHEADER, h);
 		curl_easy_setopt(c, CURLOPT_POSTFIELDS, body.c_str());
@@ -913,7 +1000,8 @@ namespace
 		if (sendStop) { sendState("stopped"); return 1; }
 		if (rc != CURLE_OK || (code != 200 && code != 204))
 		{
-			const char* what = code == 403 ? "declined" : code == 409 ? "busy" : "error";
+			// (401: a PIN, asked for or wrong: the menu asks the user for it and sends again)
+			const char* what = code == 401 ? (pin.empty() ? "pin" : "badpin") : code == 403 ? "declined" : code == 409 ? "busy" : "error";
 			sendState(what);
 			logLine("send " + std::to_string(files.size()) + " files to " + sending.alias + " (" + to.ip + "): " + what +
 				(rc != CURLE_OK ? std::string(" (") + curl_easy_strerror(rc) + ")" : " (" + std::to_string(code) + ")"));
@@ -985,7 +1073,8 @@ int main(int argc, char** argv)
 	if (const char* e = getenv("BSHARE_PORT")) port = atoi(e);
 	std::string cmd = argc > 1 ? argv[1] : "";
 	if (cmd == "serve") return serve();
-	if (cmd == "send" && argc > 3) return send(argv[2], std::vector<std::string>(argv + 3, argv + argc));
-	fprintf(stderr, "usage: banana-bshare serve | send <fingerprint> <path>...\n");
+	if (cmd == "send" && argc > 5 && !strcmp(argv[2], "--pin")) return send(argv[4], std::vector<std::string>(argv + 5, argv + argc), argv[3]);
+	if (cmd == "send" && argc > 3) return send(argv[2], std::vector<std::string>(argv + 3, argv + argc), "");
+	fprintf(stderr, "usage: banana-bshare serve | send [--pin <pin>] <fingerprint> <path>...\n");
 	return 2;
 }

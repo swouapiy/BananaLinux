@@ -49,8 +49,8 @@ banana-fetch: $(FETCH_SRC) $(wildcard src/fetch/*.h) src/zipdir.h
 # Bshare (the shelf's tile): files to and from phones and computers with LocalSend, run by banana-ui while Receive
 # is on or its page is open (settings_bshare.cpp)
 banana-bshare: src/bshare.cpp src/json.cpp src/json.h
-	$(CXX) $(CXXFLAGS) $(shell $(PKG_CONFIG) --cflags libcurl) $(LDFLAGS) -o $@ src/bshare.cpp src/json.cpp \
-		$(shell $(PKG_CONFIG) --libs libcurl) -lpthread
+	$(CXX) $(CXXFLAGS) $(shell $(PKG_CONFIG) --cflags libcurl libcrypto) $(LDFLAGS) -o $@ src/bshare.cpp src/json.cpp \
+		$(shell $(PKG_CONFIG) --libs libcurl libcrypto) -lpthread
 
 # the game panel's DRM lease for RetroArch (preloaded by run-retroarch)
 CC ?= gcc
