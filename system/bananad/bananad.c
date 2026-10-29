@@ -1240,8 +1240,13 @@ static void audio_route(void)
 	/* the control the volume keys change, for the settings screen's Volume (amixer -c <card> sset <control>) */
 	f = fopen("/run/banana/mixer.new", "w");
 	if (f) {
+		/* while Bluetooth headphones are being called back (hold, sound to the codec and nowhere loud) the keys change
+		 * the speakers' level: the one heard once the wait ends without them, as Android keeps the speaker's volume
+		 * until the headphones are really there (the keys had changed the silent codec's: the user's 40% came back
+		 * as 93% or 30% depending on how long the wait took) */
+		int vol_card = hold && card_speaker >= 0 && !headphones ? card_speaker : card_play;
 		if (bt) fprintf(f, "bluealsa %s\n", bt_pcm);	/* (the volume script: the headphones' own volume) */
-		else fprintf(f, "%d %s\n", card_play, strcmp(cfg.mixer, "auto") ? cfg.mixer : card_play == card_speaker ? "PCM" : "Master");
+		else fprintf(f, "%d %s\n", vol_card, strcmp(cfg.mixer, "auto") ? cfg.mixer : vol_card == card_speaker ? "PCM" : "Master");
 		fclose(f);
 		rename("/run/banana/mixer.new", "/run/banana/mixer");
 	}
