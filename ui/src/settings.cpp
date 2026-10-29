@@ -1734,9 +1734,9 @@ namespace banana
 	// theme's tint and a hairline edge (the accent's when on), the picked row the accent. False: not one of those
 	bool Settings::glassBox(const std::string& kind, bool on, float x, float y, float w, float h)
 	{
-		bool screen = kind == "screen", pick = kind == "pick", key = kind == "kbd";
-		float radius = kind == "hero" ? 18 : kind == "slot" ? 14 : kind == "bubble" ? 16 : kind == "face" ? 20 : kind == "osd" ? 12 : 0;
-		if (!screen && !pick && !key && radius <= 0) return false;
+		bool screen = kind == "screen", pick = kind == "pick", key = kind == "kbd", card = kind == "osd";
+		float radius = kind == "hero" ? 18 : kind == "slot" ? 14 : kind == "bubble" ? 16 : kind == "face" ? 20 : 0;
+		if (!screen && !pick && !key && !card && radius <= 0) return false;
 		int sw = (int)std::lround(X(640)), sh = (int)std::lround(X(480));
 		int dx = (int)std::lround(X(x)), dy = (int)std::lround(X(y)), dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 		if (dw <= 0 || dh <= 0) return true;
@@ -1757,6 +1757,29 @@ namespace banana
 			const Cached& c = keep(it);
 			if (c.tex) be->draw(c.tex, 0, 0, (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
 			else be->fill(0, 0, (float)sw, (float)sh, pal(light).screenBg);
+			return true;
+		}
+		if (card)
+		{
+			// a pop-up card (a notification, a toast, the volume's bubble): over games too, so not glass (it would show
+			// the menu's picture there): smoked and nearly solid in both Glass themes (its text is light), a hairline edge
+			snprintf(kb, sizeof kb, "glass:osd:%dx%d", dw, dh);
+			auto it = cache.find(kb);
+			if (it == cache.end())
+			{
+				rnds::BoxStyle st;
+				st.radius = X(16);
+				st.bg = colour(0xeb16181f);
+				st.border = std::max(1.0f, std::round(s));
+				st.borderColor = colour(0x40ffffff);
+				rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
+				Cached c;
+				c.tex = be->upload(pb.bmp, true);
+				c.ox = pb.originX; c.oy = pb.originY;
+				it = put(kb, c, pb.bmp);
+			}
+			const Cached& c = keep(it);
+			be->draw(c.tex, dx - c.ox, dy - c.oy, (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
 			return true;
 		}
 		if (pick || key)

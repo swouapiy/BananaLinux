@@ -56,6 +56,7 @@ namespace banana
 		static std::deque<Made> made;
 		if (screen < 0 || screen > 1) return nullptr;
 		const std::string& p = screen == 0 ? rnds::themeFiles.wallTop : rnds::themeFiles.wallBottom;
+		if (rnds::themeFiles.wallTop.empty() && rnds::themeFiles.wallBottom.empty()) made.clear();	// (another theme now: let them go)
 		for (const Made& m : made)
 			if (m.screen == screen && m.path == p && m.w == w && m.h == h && m.r == r) return m.b.empty() ? nullptr : &m.b;
 		rnds::Bitmap b = p.empty() || w <= 0 || h <= 0 ? rnds::Bitmap() : rnds::decodeFile(p);
@@ -77,11 +78,23 @@ namespace banana
 		b.w = w; b.h = h;
 		b.px.assign((size_t)w * h * 4, 0);
 		float hw = w / 2.0f, hh = h / 2.0f;
+		// only the corners need the rounded box's distance: everywhere else the piece is the picture, solid (a list's
+		// rows make theirs again at each step while they scroll)
+		int rc = (int)std::ceil(std::min(std::max(std::max(rad[0], rad[1]), std::max(rad[2], rad[3])), std::min(hw, hh))) + 1;
 		for (int j = 0; j < h; j++)
 		{
 			int sy = std::min(std::max(y + j, 0), bd.h - 1);
+			bool band = j < rc || j >= h - rc;
 			for (int i = 0; i < w; i++)
 			{
+				if (!band || (i >= rc && i < w - rc))
+				{
+					int sx = std::min(std::max(x + i, 0), bd.w - 1);
+					const uint8_t* src = &bd.px[((size_t)sy * bd.w + sx) * 4];
+					uint8_t* o = &b.px[((size_t)j * w + i) * 4];
+					o[0] = src[0]; o[1] = src[1]; o[2] = src[2]; o[3] = 255;
+					continue;
+				}
 				float cov = std::min(1.0f, std::max(0.0f, 0.5f - boxDistance(i + 0.5f - hw, j + 0.5f - hh, hw, hh, rad, 0)));
 				if (cov <= 0) continue;
 				int sx = std::min(std::max(x + i, 0), bd.w - 1);
