@@ -57,7 +57,12 @@ check(open(T + "/data/roms/gba/Peel Quest.gba", "rb").read() == game, "the game 
 check(open(T + "/data/banana/received/beach.jpg", "rb").read() == photo, "the photo in banana/received")
 st = open(T + "/run/bshare-receive").read()
 check(st.startswith("done\tTest Phone\t2\t2\t") and st.strip().endswith("both"), "bshare-receive: done, both places (%s)" % st.strip())
-log = open(T + "/data/banana/logs/bshare.log").read()
+# (the helper writes the end of the transfer, then its log line: give it a moment)
+for _ in range(20):
+    log = open(T + "/data/banana/logs/bshare.log").read()
+    if "received 2 of 2 files" in log:
+        break
+    time.sleep(0.1)
 check("received 2 of 2 files" in log and "Test Phone" in log, "logged")
 
 print("bshare 3. names: no way out of the folder, folders kept, nothing overwritten, chunked")
