@@ -1,0 +1,59 @@
+#!/bin/sh
+# Developer options > Shutdown log (settings.conf's shutdown_log): where a power-off stops. Some turn-offs leave the
+# handheld drawing 150-180 mA for hours (battery-while-off.txt) instead of nothing: as if it never got to the PMIC's
+# power-off. With the option on:
+#   step <what>  rcK: each step of the shutdown, with the time and the battery's current, in logs/shutdown.txt (synced
+#                at once, so a shutdown that stops leaves its last step on the card)
+#   arm          rcK, last thing before the card goes: a mark on the card, and the watchdog started (opened and
+#                closed without its magic "V", it keeps counting: about 30 s). A power-off that works cuts it with
+#                the power; one that hangs is reset by it instead, and the kernel's log of the hang survives the
+#                reset in RAM (pstore's ramoops, the region the DT reserves)
+#   boot         rcS, once the card is mounted: the mark there and a pstore record = the last power-off hung. Its
+#                record saved to logs/shutdown-hung-<time>.txt, and the exit status 0: rcS turns the handheld off
+#                again, as it was meant to be. No record (a power-off cuts the RAM) = it got to the end; 1
+L=/data/banana/logs
+F=$L/shutdown.txt
+P=/data/banana/.shutdown-pending
+D=${PSTORE:-/sys/fs/pstore}	# (the tests' stand-in)
+on() { grep -q '^ *shutdown_log *= *on' /data/banana/settings.conf 2>/dev/null; }
+line() {
+    read up rest < /proc/uptime
+    c=$(cat /sys/class/power_supply/battery/current_now 2>/dev/null)
+    printf '%s %8s s  %5s mA  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$up" "$(( ${c:-0} / 1000 ))" "$1" >> $F
+}
+case "$1" in
+step)
+    on || exit 0
+    mkdir -p $L 2>/dev/null
+    line "$2"
+    sync
+    ;;
+arm)
+    on || exit 0
+    : > $P
+    sync
+    # everything the kernel says from here into the record, not only errors (the boot's quiet, loglevel=3), and each
+    # device's "shutdown" line before its driver's: the last one in the record is where it stopped
+    { echo 8 > /proc/sys/kernel/printk; echo Y > /sys/module/kernel/parameters/initcall_debug; } 2>/dev/null
+    if [ -c /dev/watchdog ] && { printf x > /dev/watchdog; } 2>/dev/null; then
+        line "the card unmounted next; the watchdog armed (a power-off that hangs is reset)"
+    else line "the card unmounted next; no watchdog: a power-off that hangs won't be reset"; fi
+    sync
+    ;;
+boot)
+    [ -f $P ] || exit 1
+    rm -f $P
+    grep -q " $D " /proc/mounts || mount -t pstore pstore $D 2>/dev/null
+    R=$(ls $D/console-ramoops* 2>/dev/null | head -n 1)
+    if [ -z "$R" ]; then
+        line "boot: the last power-off got to the end (no record of a hang)"
+        exit 1
+    fi
+    H=$L/shutdown-hung-$(date '+%Y%m%d-%H%M%S').txt
+    cp "$R" "$H" 2>/dev/null
+    rm -f $D/* 2>/dev/null   # (read: freed, so the next hang has its own)
+    line "boot: the last power-off HUNG and the watchdog reset it; the kernel's last messages: $(basename $H). Off again"
+    sync
+    exit 0
+    ;;
+esac

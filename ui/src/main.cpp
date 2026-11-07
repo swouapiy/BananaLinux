@@ -2460,7 +2460,12 @@ int main(int argc, char** argv)
 			break;
 		}
 		case Settings::REBOOT: logf("restarting"); recordEvent("menu", "restart (Settings)"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
-		case Settings::POWEROFF: logf("shutting down"); recordEvent("menu", "shut down (Settings)"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
+		case Settings::POWEROFF:
+			logf("shutting down"); recordEvent("menu", "shut down (Settings)");
+			// (rcK: off, not a restart, as bananad's power button leaves it: the charger's start into charging,
+			// and the shutdown log's watchdog, go by it)
+			if (FILE* f = fopen("/run/banana/poweroff", "w")) fclose(f);
+			kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
 		default: break;
 		}
 		dirty = true;

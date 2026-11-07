@@ -73,6 +73,12 @@ data || {
 }
 /usr/libexec/banana/data-layout
 mark "rcS: data partition ready"
+# Developer options > Shutdown log: the last power-off hung and the watchdog reset it. Where it stopped is saved to
+# banana/logs (the helper), and the handheld goes off again, as it was meant to be (straight off: nothing has started)
+if /usr/libexec/banana/shutdown-log boot; then
+    mark "rcS: the last power-off hung: off again"
+    sync; umount /data 2>/dev/null; poweroff -f
+fi
 # the boot's milestones on the card every 2 s until the menu is up: a boot that stops leaves where it stopped
 # (banana/logs/boot-progress.txt)
 /usr/libexec/banana/boot-guard progress

@@ -26,6 +26,21 @@
 		stdout-path = "serial2:1500000n8";
 	};
 
+	// the kernel's log kept through a reset (pstore's ramoops, the region stock Android uses): read at the next boot
+	// when a shutdown hung and the watchdog reset it (Developer options > Shutdown log)
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		ramoops@110000 {
+			compatible = "ramoops";
+			reg = <0x0 0x110000 0x0 0xf0000>;
+			record-size = <0x20000>;
+			console-size = <0x80000>;
+		};
+	};
+
 	adc_keys_back: adc-keys-back {
 		compatible = "adc-keys";
 		io-channels = <&saradc 0>;

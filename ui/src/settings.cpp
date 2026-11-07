@@ -983,6 +983,10 @@ namespace banana
 		add(DEV, "gear", "Sleep timing log", "How long each part of the handheld takes to sleep and to wake.", power, "sleep_debug",
 			{ "Off", "On" }, { "no", "yes" });
 		items.back().hints = { "Not logged.", "Written to banana/logs/sleep-devices.log after each wake." };
+		add(DEV, "gear", "Shutdown log", "Where turning off stops, for a handheld that drains its battery while off.", menu, "shutdown_log",
+			{ "Off", "On" }, { "off", "on" });
+		items.back().hints = { "Not logged.",
+			"Each step in banana/logs/shutdown.txt. A power-off that hangs restarts, saves where it stopped, and turns off again." };
 		add(DEV, "moon", "Night test", "Six hours on battery, then off. Report in banana/logs/night-test.txt. Press A twice.",
 			"", "night_test", { "" }, { "" }, Item::ACTION);
 		add(DEV, "gear", "Hide developer options", "Takes this row away again. Seven A's on About's Version bring it back. Press A twice.",

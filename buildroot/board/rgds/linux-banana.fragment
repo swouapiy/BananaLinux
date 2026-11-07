@@ -203,3 +203,8 @@ CONFIG_DEFAULT_HOSTNAME="banana"
 CONFIG_SND_DEBUG=y
 CONFIG_SND_VERBOSE_PROCFS=y
 CONFIG_SND_PCM_XRUN_DEBUG=y
+# the kernel's last messages kept in RAM that a reset doesn't clear (pstore's ramoops, the region the DT reserves as
+# stock Android does): Developer options > Shutdown log arms the watchdog at the end of a shutdown, so a power-off that
+# hangs is reset instead, and the next boot saves /sys/fs/pstore's record of where it stopped to logs/
+CONFIG_PSTORE_RAM=y
+CONFIG_PSTORE_CONSOLE=y

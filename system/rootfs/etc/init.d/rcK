@@ -4,6 +4,9 @@
 # save and the card is unmounted can't put the handheld to sleep instead of off (bananad itself still runs: it TERMs
 # a game on its own shutdown and waits for it)
 touch /run/banana/powering-off 2>/dev/null
+# Developer options > Shutdown log: each step on the card as it's done (nothing when the option is off)
+S=/usr/libexec/banana/shutdown-log
+$S step "$([ -f /run/banana/poweroff ] && echo "turning off" || echo "restarting"): the games and the menu asked to quit"
 # the game's process group first (banana-ui starts each game in its own session; a poweroff over SSH reaches
 # BananaDS, SuperDrastic and the ports too, and they write their saves), then the menu; waited for until they are
 # gone, up to 3 s, instead of a second whatever happened
@@ -21,16 +24,24 @@ if pidof banana-ui retroarch drastic >/dev/null || { [ -n "$G" ] && kill -0 "$G"
     [ -n "$G" ] && kill -KILL -"$G" 2>/dev/null
     killall -KILL banana-ui retroarch drastic 2>/dev/null
     sleep 0.2
+    $S step "a game or the menu still running after 3 s: killed"
 fi
+$S step "the games and the menu gone; stopping bananad"
 # then bananad, while the card is still mounted: it writes the flight recorder's last lines out and goes (killed after
 # the unmount, the last half-minute of a recording was lost at every restart)
 killall bananad 2>/dev/null
 for i in 1 2 3 4 5 6 7 8 9 10; do pidof bananad >/dev/null || break; sleep 0.1; done
+$S step "bananad $(pidof bananad >/dev/null && echo "still running after 1 s" || echo gone); turning file sharing off"
 /usr/libexec/banana/share down 2>/dev/null     # a computer's open files on the card
+$S step "turning SSH off"
 /usr/libexec/banana/ssh down 2>/dev/null
+$S step "turning Wi-Fi off"
 /usr/libexec/banana/wifi down 2>/dev/null
+$S step "turning Bluetooth off"
 /usr/libexec/banana/bluetooth down 2>/dev/null   # (its pairings saved on the card)
+$S step "saving the clock to the RTC"
 hwclock -w 2>/dev/null
+$S step "saving the brightness and the boot's log"
 # the panels' brightness, as Android keeps it: the level the user chose, saved when they chose it (the settings rows,
 # F + volume, the DS emulators' menus), never the panels' level at the shutdown. That one was often lower than chosen:
 # the menu's idle dim of the bottom screen, the game panel's dim, a turn-off from sleep after an idle dim, and the next
@@ -61,6 +72,8 @@ else
     touch /data/banana/.restart
 fi
 /usr/libexec/banana/boot-log off   # the boot's log, complete, whenever the handheld is turned off; the battery noted
+# (a power-off only: a restart and the start into charging are resets, they'd look like a hang to the next boot)
+if [ -f /run/banana/poweroff ] && [ -z "$CHARGE" ]; then $S arm; else $S step "the card unmounted next"; fi
 sync
 umount /data 2>/dev/null || mount -o remount,ro /data
 sync

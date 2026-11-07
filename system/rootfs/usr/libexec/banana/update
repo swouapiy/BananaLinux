@@ -64,7 +64,8 @@ boot_rw() { mount -o remount,rw /boot || fail "the boot partition can't be writt
 boot_ro() { sync; mount -o remount,ro /boot 2>/dev/null; }
 default_slot() { sed -n 's/^DEFAULT *//p' /boot/extlinux/extlinux.conf 2>/dev/null | head -n 1; }
 # extlinux.conf with <slot> the default, on stdout. The kernel options for a faster boot (0.4.2: RCU grace periods
-# expedited, the CPU's top clock until the menu sets its own, the touchscreens probed beside the rest) added to every
+# expedited, the CPU's top clock until the menu sets its own, the touchscreens probed beside the rest; 0.5.2.2: the
+# watchdog left running through a power-off, for Developer options > Shutdown log) added to every
 # APPEND line that lacks them: a card made before 0.4.2 never had them, as an update only changed DEFAULT
 extlinux_for() {
     sed -e "s/^DEFAULT .*/DEFAULT $1/" \
@@ -72,6 +73,7 @@ extlinux_for() {
 /rcupdate\.rcu_expedited=/!s/[[:space:]]*$/ rcupdate.rcu_expedited=1/
 /cpufreq\.default_governor=/!s/[[:space:]]*$/ cpufreq.default_governor=performance/
 /driver_async_probe=/!s/[[:space:]]*$/ driver_async_probe=Goodix-TS/
+/watchdog\.stop_on_reboot=/!s/[[:space:]]*$/ watchdog.stop_on_reboot=0/
 }' "$2"
 }
 # the new extlinux.conf looks whole: <slot> the default, as many LABEL and APPEND lines as before, each APPEND still with
