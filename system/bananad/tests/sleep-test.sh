@@ -117,7 +117,8 @@ gstate() { awk '{print $3}' /proc/$GAME/stat; }
 start() {   # start [bananad.conf lines]
     echo "s2idle [deep]" > /sys/power/mem_sleep     # the kernel's file always lists both
     printf '%s\n' "autosleep_minutes = 0" "sleep_check_hours = 0" "$@" > /data/banana/bananad.conf
-    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" & BD=$!
+    # (the lid's sleep at once here, as before its 3 s: LID_DELAY=3 for the scenario that times it)
+    BANANAD_TEST_LID_DELAY=${LID_DELAY:-0} BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" & BD=$!
     sleep 0.5
 }
 stop() { kill $BD 2>/dev/null; wait $BD 2>/dev/null || true; rm -f /run/test/wake.asleep; }   # (killed asleep: no wake)
@@ -306,11 +307,11 @@ kill -9 -$GAME 2>/dev/null || true
 POWEROFF=0
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
 
-echo "13. the lid shut and opened in a flick: one short sleep (or the sleep called off), then awake for good"
+echo "13. the lid shut and opened in a flick: no sleep at all (the open comes before the lid's sleep is due), then awake for good"
 start
 ev $EV_SW $SW_LID 1; ev $EV_SW $SW_LID 0       # (the lid's file says open: it was only a moment)
-# the open event read before the suspend began calls it off (wake_inputs); read after, it is a short sleep
-if asleep; then ok "slept on the close"; wake; else grep -q 'called off: the lid opened' /data/banana/logs/sleep.log && ok "the sleep called off by the open" || bad "neither a sleep nor a called-off one"; fi
+asleep 2>/dev/null && { bad "slept on a flick"; wake; } || ok "no sleep on a flick"
+grep -q 'lid closed: ' /data/banana/logs/sleep.log && ok "the close noted in sleep.log" || bad "the close not noted"
 asleep && bad "back to sleep after the flick" || ok "awake after the wake, the open event not taken again"
 [ "$(gstate)" != T ] && ok "game running" || bad "game still stopped"
 stop

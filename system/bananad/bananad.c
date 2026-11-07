@@ -103,7 +103,10 @@ static char bottom_bl[64];	/* the bottom panel's backlight name; banana-ui's idl
 static int headphones;
 static int fn_held, power_down, lid_closed;
 static int lid_retry_off;	/* a suspend failed with the lid shut: no retry until it opens */
-static double lid_sleep_at;	/* the lid shut in a DS game: the sleep a moment later, once the game has seen it */
+static double lid_sleep_at;	/* the lid shut: the sleep a moment later (lid_closing) */
+static pid_t lid_paused;	/* the game's group stopped by the lid closing, 0 none (lid_closing) */
+static double lid_pause_at;	/* a DS game: its pause a moment after the close, once it has seen it */
+static double lid_delay = 3;	/* seconds from the close to the sleep (the sleep test's BANANAD_TEST_LID_DELAY) */
 static double menu_sleep_at;	/* the menu's Sleep (banana-ui wrote /run/banana/sleep-now and sent SIGHUP): a moment later,
 				 * once the button that chose it is let go */
 static double power_since, last_input, ignore_power_until;
@@ -744,6 +747,31 @@ static void panel_off_again(void)
 		snprintf(p, sizeof p, "%s/bl_power", bl);
 		write_file(p, "4");
 	}
+}
+
+static int ds_game(void);
+/* the lid closed (lid sleep on): the game paused (all of its group, as a sleep does), the panels dark, the sleep due in
+ * 3 s; a DS game paused half a second on (it reads the lid itself first) */
+static void lid_closing(double now)
+{
+	backlights_power(0);
+	lid_sleep_at = now + lid_delay;
+	lid_paused = 0;
+	lid_pause_at = 0;
+	pid_t game = pid_of("/run/banana/game.pid");
+	pid_t pg = game ? getpgid(game) : 0;
+	if (pg > 0 && ds_game()) lid_pause_at = now + (lid_delay < 0.5 ? lid_delay : 0.5);
+	else if (pg > 0) { kill(-pg, SIGSTOP); lid_paused = pg; }
+	sleep_log("lid closed: %s, the panels dark; asleep in 3 s", pg > 0 ? (lid_pause_at ? "the DS game pausing" : "game paused") : "the menu");
+}
+/* the lid open again before the sleep: the game on, the panels lit, as if nothing happened */
+static void lid_reopened(void)
+{
+	if (lid_paused > 0) kill(-lid_paused, SIGCONT);
+	lid_paused = 0;
+	lid_pause_at = 0;
+	backlights_power(1);
+	panel_off_again();
 }
 
 static int charger_online(void);
@@ -1905,14 +1933,27 @@ static int charge_mode(void)
 	 * off 10 s later (UNPLUGGED_SHUTDOWN_TIME), the cable back meanwhile calls that off; awake until then */
 	double t0 = mono(), held = 0, look = 0, unplugged = 0;
 	int full = -1, r = -1, slept = 0, cant_sleep = 0, wc_missed = 0, busy = 0;
+	/* the pre-sleep hooks (Wi-Fi and USB off) in a child, beside the loop: run in line they took a minute at times (the
+	 * Wi-Fi's module still coming up this early in the boot), and the power button and the cable went unheard meanwhile:
+	 * the charging light stayed on that long after the cable came out, and holding power to start did nothing. Android's
+	 * charger mode answers both at once, whatever else it does */
+	pid_t pre = 0;
+	int pre_done = 0;
+	double pre_t = 0;
 	/* how long the power button is held to start it: a second, half of one more when the press is what woke it (its
 	 * wake took about a second and a half already: Android's charger mode wants 2 s in all, POWER_ON_KEY_TIME) */
 	double need = 1.0;
 	char wc[32] = "", woke[200] = "";	/* (the wakeup count at the look; what woke the last sleep, for the log) */
 	write_file("/sys/class/rtc/rtc0/device/power/wakeup", "enabled");	/* (the looks' alarm: before main() sets it) */
 	while (r < 0) {
-		poll(pf, n, held ? 100 : look ? 2000 : 0);	/* (the first look at once) */
+		poll(pf, n, held || pre > 0 ? 100 : look ? 2000 : 0);	/* (the first look at once) */
 		double now = mono();
+		if (pre > 0 && waitpid(pre, NULL, WNOHANG) == pre) {
+			pre = 0; pre_done = 1;
+			if (now - pre_t > 2) charge_log("the pre-sleep steps (Wi-Fi and USB off) took %.0f s", now - pre_t);
+			sleep_mode();
+			look = 0;	/* (asleep now: looked at once) */
+		}
 		for (int i = 0; i < keys_n; i++) {
 			while (read(pf[i].fd, &ev, sizeof ev) == (ssize_t)sizeof ev)
 				if (ev.type == EV_KEY && ev.code == KEY_POWER) {
@@ -1965,7 +2006,16 @@ static int charge_mode(void)
 		 * coming out or the next look in 10 minutes (the LED amber or green). Not while the cable looks out (its
 		 * second look comes awake), nor after a suspend that failed (awake then, as before) */
 		if (held || cant_sleep) continue;
-		if (!slept) { hooks("pre", 0); sleep_mode(); }	/* (USB and Wi-Fi off, as for a sleep) */
+		if (!pre_done) {
+			/* (USB and Wi-Fi off, as for a sleep: in a child; asleep once it is done) */
+			if (!pre) {
+				pre_t = now;
+				pre = fork();
+				if (pre == 0) { hooks_run("pre"); _exit(0); }
+				if (pre < 0) { pre = 0; hooks("pre", 0); pre_done = 1; sleep_mode(); }
+			}
+			if (!pre_done) continue;
+		}
 		if (wc[0] && write_file("/sys/power/wakeup_count", wc) && wc_missed++ < 3) { look = 0; continue; }
 		wc_missed = 0;
 		/* the next look in 20 s: the cable's going wakes it at once (the RK817's interrupt), but should that ever be
@@ -2000,7 +2050,20 @@ static int charge_mode(void)
 				{ held = mono(); need = 0.5; }
 		}
 	}
-	if (slept && !r) hooks("post", 0);	/* (starting: USB and Wi-Fi back) */
+	/* starting: USB and Wi-Fi back. Pre-sleep steps still at work (power pressed in the first moments): left to end on
+	 * their own, the post ones after them, in the background, so the start isn't held up */
+	if (pre > 0) {
+		if (!r) {
+			pid_t w = fork();
+			if (w == 0) {
+				/* (not this one's child: its end watched, a zombie counting as ended) */
+				char st;
+				while (kill(pre, 0) == 0 && (st = proc_state(pre)) != 'Z' && st != 0) usleep(100000);
+				hooks_run("post");
+				_exit(0);
+			}
+		}
+	} else if (pre_done && !r) hooks("post", 0);
 	for (int i = 0; i < n; i++) close(pf[i].fd);
 	unlink("/run/banana/charging");
 	battery_state(bat, sizeof bat, &pct, &charging);
@@ -2332,17 +2395,22 @@ static void handle(const struct input_event *e)
 	if (e->type == EV_KEY) { last_input = now; undim(); }
 	if (e->type == EV_SW && e->code == SW_LID) {
 		lid_closed = e->value;
-		if (!lid_closed) { if (lid_sleep_at > 0) say("lid opened again before the sleep"); undim(); lid_retry_off = 0; lid_sleep_at = 0; lid_held = 0; }
-		/* a DS game: the panels dark now, the sleep 1.5 s later, so the game sees its lid close first (BananaDS and
-		 * SuperDrastic read the hall sensor too: its sleep mode, its lid sound); opened before that, no sleep */
-		if (lid_closed && cfg.lid_sleep && ds_game()) { lid_sleep_at = now + 1.5; backlights_power(0); say("lid shut in a DS game: asleep in 1.5 s"); }
+		if (!lid_closed) {
+			if (lid_sleep_at > 0) { lid_reopened(); say("lid opened again before the sleep: game and panels back"); }
+			undim(); lid_retry_off = 0; lid_sleep_at = 0; lid_held = 0;
+		}
+		/* closing: the game paused and the panels dark at once, the sleep 3 s later (Anbernic's own Linux waits 3 s,
+		 * its launcher's hall timer), so a peek or a lid that bounces open again is back at once, with no sleep and wake.
+		 * A DS game sees its lid close first (BananaDS and SuperDrastic read the hall sensor too: its sleep mode, its lid
+		 * sound): its pause half a second on */
+		if (lid_closed && cfg.lid_sleep && !transfer_hold()) lid_closing(now);
 		/* a download running (no game): dark and awake until it is done, as a phone finishes one with its screen off */
 		else if (lid_closed && cfg.lid_sleep && transfer_hold()) {
 			backlights_power(0);
 			if (!lid_held) sleep_log("lid closed during a download: dark and awake until it is done");
 			lid_held = 1;
 		}
-		else if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
+		else if (lid_closed && cfg.lid_sleep) {}	/* (lid_closing above) */
 		else if (!lid_closed || !cfg.lid_sleep) { backlights_power(!lid_closed); if (!lid_closed) panel_off_again(); }	/* no sleep: at least the panels go dark */
 		return;
 	}
@@ -2523,6 +2591,7 @@ int main(int argc, char **argv)
 		snprintf(test_asleep, sizeof test_asleep, "%s.asleep", getenv("BANANAD_TEST_WAKE"));
 	}
 	test_lid = getenv("BANANAD_TEST_LID");
+	if (getenv("BANANAD_TEST_LID_DELAY")) lid_delay = atof(getenv("BANANAD_TEST_LID_DELAY"));
 	if (argc > 1 && !strcmp(argv[1], "--charge")) {	/* rcS's, before the menu: charging while off (above) */
 		load_conf("/etc/banana/bananad.conf");
 		load_conf("/data/banana/bananad.conf");
@@ -2625,6 +2694,7 @@ int main(int argc, char **argv)
 		if (recst.on && sel_down && !sel_marked && wait > 0.1) wait = 0.1;	/* (Select held: the marker at 2 s) */
 		if (sound_child > 0 && wait > 0.05) wait = 0.05;	/* the sound's setup running: its end looked for (the first second or so) */
 		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
+		if (lid_pause_at > 0) { double d = lid_pause_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (menu_sleep_at > 0) { double d = menu_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (wait > 1 && night_test_every() > 0) wait = 1;	/* (the night test's request for the next sleep looked for) */
 		if (recst.on && sel_down && !sel_marked && wait > 0.1) wait = 0.1;	/* (Select held: the marker at 2 s) */
@@ -2704,7 +2774,18 @@ int main(int argc, char **argv)
 		if (cfg.autosleep_min > 0 && idle && now - last_input >= cfg.autosleep_min * 60.0 &&
 		    !pid_of("/run/banana/awake.pid") && !pid_of("/run/banana/files.pid") && !transfer_hold())
 			suspend_now("idle");
-		if (lid_sleep_at > 0 && now >= lid_sleep_at) { lid_sleep_at = 0; if (lid_closed) suspend_now("lid closed"); }
+		if (lid_pause_at > 0 && now >= lid_pause_at && lid_closed) {
+			lid_pause_at = 0;
+			pid_t game = pid_of("/run/banana/game.pid");
+			pid_t pg = game ? getpgid(game) : 0;
+			if (pg > 0) { kill(-pg, SIGSTOP); lid_paused = pg; }
+		}
+		if (lid_sleep_at > 0 && now >= lid_sleep_at) {
+			lid_sleep_at = 0;
+			lid_pause_at = 0;
+			lid_paused = 0;	/* (suspend_now stops the group again and lets it go on at the wake) */
+			if (lid_closed) suspend_now("lid closed");
+		}
 		if (menu_sleep_at > 0 && now >= menu_sleep_at) { menu_sleep_at = 0; suspend_now("the menu's Sleep"); }
 		/* never sleeping (autosleep_minutes 0): off after poweroff_minutes without input, as a held power button does
 		 * (the game saves first); not on the charger */

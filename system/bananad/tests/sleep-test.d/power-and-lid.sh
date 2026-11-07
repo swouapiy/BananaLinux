@@ -57,11 +57,10 @@ kill -9 -$GAME 2>/dev/null || true
 POWEROFF=0
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
 
-echo "power 5. the lid shut and opened in a flick: one short sleep, then awake for good"
+echo "power 5. the lid shut and opened in a flick: no sleep (the lid's sleep comes later than the open), awake for good"
 start
 ev $EV_SW $SW_LID 1; ev $EV_SW $SW_LID 0       # (the lid's file says open: it was only a moment)
-asleep && ok "slept on the close" || bad "no sleep on the close"
-wake
+asleep 2>/dev/null && { bad "slept on a flick"; wake; } || ok "no sleep on a flick"
 asleep && bad "back to sleep after the flick" || ok "awake after the wake, the open event not taken again"
 [ "$(gstate)" != T ] && ok "game running" || bad "game still stopped"
 stop
@@ -87,3 +86,29 @@ asleep 2>/dev/null && bad "it slept: the new setting wasn't read" || ok "no slee
 echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0; sleep 0.3
 stop
 rm -f /run/banana/game.pid
+
+echo "power 9. the lid closed: the game paused and the panels dark at once, the sleep 3 s later; opened before, back at once"
+echo $GAME > /run/banana/game.pid
+echo 0 > /sys/class/backlight/backlight0/bl_power
+LID_DELAY=3 start
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+sleep 0.3
+[ "$(gstate)" = T ] && ok "game paused at once" || bad "game not paused at the close ($(gstate))"
+[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark at once" || bad "panels lit after the close"
+[ -e /run/test/wake.asleep ] && bad "asleep before the 3 s" || ok "not asleep yet"
+sleep 0.7
+echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0          # opened 1 s after the close
+sleep 0.3
+[ "$(gstate)" != T ] && ok "game on again when the lid opened" || bad "game still paused after the open"
+[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels lit when the lid opened" || bad "panels dark after the open"
+sleep 3
+[ -e /run/test/wake.asleep ] && bad "slept although the lid was opened" || ok "no sleep: the lid was open again in time"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1          # closed for good
+sleep 1.5
+[ -e /run/test/wake.asleep ] && bad "asleep before the 3 s" || ok "still awake 1.5 s after the close"
+asleep && ok "asleep 3 s after the close" || bad "no sleep after the close"
+[ "$(gstate)" = T ] && ok "game paused while asleep" || bad "game running while asleep"
+echo 0 > /run/test/lid; wake
+[ "$(gstate)" != T ] && ok "game running after the wake" || bad "game still paused after the wake"
+grep -q 'lid closed: game paused, the panels dark; asleep in 3 s' /data/banana/logs/sleep.log && ok "logged" || bad "the close not logged"
+stop

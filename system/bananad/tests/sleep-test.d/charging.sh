@@ -132,6 +132,26 @@ grep -q "charging while off (the battery too low to start, the charger in)" /dat
 echo 0 > $CH/online; : > /sys/class/rtc/rtc0/wakealarm; wake
 finish
 [ $r = 3 ] && ok "the charger out: exit 3" || bad "exit $r"
+echo "charging 8. slow pre-sleep steps (the Wi-Fi's, a minute on the device once) don't hold up the cable or the power button"
+mkdir -p /etc/banana/sleep.d && mount -t tmpfs none /etc/banana/sleep.d
+printf '#!/bin/sh\n[ "$1" = pre ] && sleep 6\nexit 0\n' > /etc/banana/sleep.d/50-slow; chmod +x /etc/banana/sleep.d/50-slow
+echo 1 > $CH/online; echo 50 > $B/capacity; echo 4000000 > $B/voltage_now   # (enough to start: the guard passes)
+: > /data/banana/.charge-next
+BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" --charge & CB=$!
+sleep 0.5
+[ "$(cat $L/amber:charging/brightness)" = 255 ] && ok "amber at once, the steps still running" || bad "amber $(cat $L/amber:charging/brightness)"
+echo 0 > $CH/online                                                  # pulled out during the steps
+sleep 2.5
+[ "$(cat $L/amber:charging/brightness)" = 0 ] && ok "the cable out during the steps: the light off within 2.5 s" || bad "the light still on"
+echo 1 > $CH/online; sleep 2.5                                         # back
+ev $EV_KEY $KEY_POWER 1; sleep 1.5; ev $EV_KEY $KEY_POWER 0           # held 1.5 s, the steps still running
+finish
+[ $r = 0 ] && ok "held power started it during the steps: exit 0" || bad "exit $r"
+tail -n1 /data/banana/logs/charging.log | grep -q "the power button: starting" && ok "charging.log: started" || bad "charging.log: $(tail -n1 /data/banana/logs/charging.log)"
+sleep 6                                                                # (the steps end, then the post ones, in the background)
+umount /etc/banana/sleep.d
+
 echo 50 > $B/capacity; rm -f $B/voltage_now
 rm -rf $CH
 umount /sys/devices/system/cpu
+
