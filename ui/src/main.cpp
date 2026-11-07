@@ -51,6 +51,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <functional>
+#include <iterator>
 #include <future>
 #include <list>
 #include <sys/stat.h>
@@ -67,6 +68,9 @@
 #endif
 #include <sys/inotify.h>
 #include <set>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <sys/wait.h>
@@ -282,6 +286,7 @@ struct Options
 	std::string systems = "/etc/banana/systems.conf", roms = "/data/roms", data = "/data/banana";
 	std::string top = "DSI-2", touch = "fe5e0000.i2c";
 	std::string headless, script;
+	long repeat = 1;	// --repeat: the script run this many times over (the soak test)
 	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
 	int w = 640, h = 480;
 };
@@ -436,8 +441,9 @@ static void bootMark(const char* what)
 }
 
 // ---- the low-battery notice ---------------------------------------------------------------------------------------
-// At 20% (the LED turns red), 10% and 5% (it blinks), on the battery: a notice over the top panel for 8 s, which any
-// button hides. Each step once, until the charger has been on; a step passed during a game shows when the menu is
+// At 20% (the LED turns red), 15%, 10%, 5% (it blinks) and each percent below, on the battery (the user's steps, as
+// Android warns): a banner at the top for 5 s, which any button hides. Each step once, until the charger has been on;
+// during a RetroArch game on the game panel and in RetroArch's own message, during another game when the menu is
 // back. bananad does the shutting down (battery_shutdown_percent); this only says it is coming.
 struct LowBattery
 {
@@ -455,21 +461,21 @@ struct LowBattery
 			shownStep = 101;
 			return hide(now);
 		}
-		int step = p.percent <= 5 ? 5 : p.percent <= 10 ? 10 : p.percent <= 20 ? 20 : 0;
+		int step = p.percent <= 5 ? std::max(1, p.percent) : p.percent <= 10 ? 10 : p.percent <= 15 ? 15 : p.percent <= 20 ? 20 : 0;
 		if (!step || step >= shownStep) return false;
 		shownStep = step;
 		percent = p.percent;
-		until = now + 8000;
+		until = now + 5000;
 		std::string off = std::to_string(shutdownAt) + "%";
-		if (step == 5)
+		if (step <= 5)
 		{
 			title = "Battery nearly empty: " + std::to_string(percent) + "%";
-			body = "Save your game now. At " + off + " Banana closes it and shuts down.";
+			body = "Save your game now. At " + off + " Banana shuts down.";
 		}
 		else
 		{
 			title = "Battery low: " + std::to_string(percent) + "%";
-			body = step == 10 ? "Plug in the charger soon. At " + off + " Banana closes the game and shuts down."
+			body = step == 10 ? "Plug in the charger soon. At " + off + " Banana saves and shuts down."
 				: "Time to find the charger.";
 		}
 		return true;
@@ -482,20 +488,92 @@ struct LowBattery
 	}
 };
 
-// Bshare's news (its helper's files, settings_bshare.cpp): a device asking to send, a transfer done or declined;
-// shown as the battery's notice is (the banner at the top, 4 s, any press hides it), looked at once a second
-struct BshareNotice
+// The boot's hardware check (/usr/libexec/banana/health): the parts that matter and weren't found, named in
+// /run/banana/health-notice (by the early check before the menu, and by the late one, up to 20 s on, for the
+// touchscreen, the Wi-Fi and the GPU). Shown as the battery's notice is, until a press or 12 s; again only when the
+// file changes, so a notice seen isn't shown at every wake.
+struct HealthNotice
+{
+	std::string title, body;
+	double until = 0;
+	long long seen = -1;	// the file's mtime (ns) when last read
+	bool showing(double now) const { return until > now; }
+	bool show(const std::string& parts, double now)
+	{
+		bool several = parts.find(',') != std::string::npos;
+		title = "Not found: " + parts;
+		body = std::string("Banana started without ") + (several ? "them" : "it") + ". A restart may help; banana/logs/health.txt has the details.";
+		until = now + 12000;
+		return true;
+	}
+	// boot-guard went back to the version before an update that didn't start (its mark, moved to /run): said once
+	void showRollback(double now)
+	{
+		title = "The update didn't start";
+		body = "Banana went back to the version before it by itself. banana/logs/updates.log has the details.";
+		until = now + 15000;
+	}
+	// true when a new notice came
+	bool check(double now)
+	{
+		if (access("/run/banana/rolled-back", F_OK) == 0)
+		{
+			unlink("/run/banana/rolled-back");
+			showRollback(now);
+			return true;
+		}
+		struct stat st;
+		if (stat("/run/banana/health-notice", &st) != 0) return false;
+		long long m = (long long)st.st_mtim.tv_sec * 1000000000LL + st.st_mtim.tv_nsec;
+		if (m == seen) return false;
+		seen = m;
+		std::ifstream f("/run/banana/health-notice");
+		std::string parts;
+		std::getline(f, parts);
+		return !parts.empty() && show(parts, now);
+	}
+	bool hide(double now)
+	{
+		bool was = showing(now);
+		until = 0;
+		return was;
+	}
+};
+
+// ---- the other notifications --------------------------------------------------------------------------------------
+// What changed that is worth a word, shown as the battery's notice is (the banner at the top, 4 s, any press hides
+// it): Wi-Fi connected, Bluetooth headphones connected or gone, the flight recorder on. Looked at once a second; a
+// newer one replaces the one showing. Not said: what a sleep does by itself (the Wi-Fi going and coming back within
+// two minutes awake, the headphones' hold through a sleep).
+struct EventNotice
 {
 	std::string title, body;
 	int sign = 1;			// Settings::banner's
 	uint32_t accent = 0x6ad07a;
-	double until = 0, lookedAt = -1e9;
-	std::string bsReq, bsRecv = "?", bsSend = "?";	// the request, receive and send, as last read ("?": not yet)
+	double until = 0, lookedAt = -1e9, wifiDownAt = -1e9;
+	int recording = -1, wifi = -1, bt = -1;	// (-1: not looked at yet)
+	std::string bsReq, bsRecv = "?", bsSend = "?";	// Bshare's request, receive and send, as last read ("?": not yet)
+	bool btHeld = false;	// the headphones gone for a sleep: their coming back isn't news
 	bool showing(double now) const { return until > now; }
 	bool hide(double now) { bool was = showing(now); until = 0; return was; }
 	void show(const std::string& t, const std::string& b, int sg, uint32_t acc, double now)
 	{
 		title = t; body = b; sign = sg; accent = acc; until = now + 4000;
+	}
+	static std::string address()
+	{
+		std::string a;
+		ifaddrs* ifs = nullptr;
+		if (getifaddrs(&ifs) != 0) return a;
+		for (ifaddrs* i = ifs; i && a.empty(); i = i->ifa_next)
+			if (i->ifa_addr && i->ifa_addr->sa_family == AF_INET && i->ifa_name && !strcmp(i->ifa_name, "wlan0"))
+			{
+				char b[INET_ADDRSTRLEN] = "";
+				inet_ntop(AF_INET, &((sockaddr_in*)i->ifa_addr)->sin_addr, b, sizeof b);
+				a = b;
+			}
+		freeifaddrs(ifs);
+		return a;
 	}
 	// true when a new one came
 	bool check(double now)
@@ -503,6 +581,36 @@ struct BshareNotice
 		if (now - lookedAt < 1000) return false;
 		lookedAt = now;
 		bool came = false;
+		int rec = access("/run/banana/recording", F_OK) == 0;
+		if (rec != recording)
+		{
+			if (rec) { show("Flight recorder on", "Hold Select for 2 seconds to mark a moment.", 3, 0xff5a4f, now); came = true; }
+			recording = rec;
+		}
+		std::string op;
+		{ std::ifstream f("/sys/class/net/wlan0/operstate"); std::getline(f, op); }
+		int up = op == "up";
+		if (up != wifi)
+		{
+			if (up && wifi >= 0 && now - wifiDownAt > 120000)
+			{
+				std::string a = address();
+				show("Wi-Fi connected", a.empty() ? "" : "Address " + a, 1, 0x5ac8fa, now);
+				came = true;
+			}
+			if (!up) wifiDownAt = now;
+			wifi = up;
+		}
+		int head = access("/run/banana/bt/audio", F_OK) == 0;
+		if (head != bt)
+		{
+			bool held = access("/run/banana/bt/hold", F_OK) == 0;
+			if (bt >= 0 && head && !btHeld) { show("Bluetooth headphones connected", "The sound plays through them.", 1, 0x5ac8fa, now); came = true; }
+			if (bt >= 0 && !head && !held) { show("Bluetooth headphones disconnected", "The sound is back on the speakers.", 2, 0xffb340, now); came = true; }
+			btHeld = !head && held;
+			bt = head;
+		}
+		// Bshare: a device asking to send, a transfer done (its helper's files, settings_bshare.cpp)
 		const char* run = getenv("BSHARE_RUN");
 		std::string dir = run && *run ? run : "/run/banana";
 		auto read = [&](const char* n) { std::ifstream f(dir + "/" + n); std::stringstream s; s << f.rdbuf(); return s.str(); };
@@ -600,7 +708,7 @@ struct FetchNotice
 static int shutdownPercent(const std::string& data)
 {
 	return atoi(getConfValue(data + "/bananad.conf", "battery_shutdown_percent",
-		getConfValue("/etc/banana/bananad.conf", "battery_shutdown_percent", "3")).c_str());
+		getConfValue("/etc/banana/bananad.conf", "battery_shutdown_percent", "0")).c_str());
 }
 
 // a game in the library by its path, launched as A on it in its own system's shelf would (false: not in the library)
@@ -860,16 +968,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settings.artCount = [&] { return artCount(lib); };
 	LowBattery low;
+	HealthNotice health;
 	FetchNotice fetchNotice;
 	fetchNotice.check(o.data, now);	// (the jobs finished before: not news)
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
 	be.overlay = [&](int screen)
 	{
 		if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		else if (screen == 0 && health.showing(now)) settings.notice(health.title, health.body, -1);	// (-1: no battery)
 		else if (screen == 0 && fetchNotice.showing(now)) settings.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
 			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
 	};
+	for (long pass = 0; pass < o.repeat; pass++, ss.clear(), ss.seekg(0))
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -900,6 +1011,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "filesdone") { for (int i = 0; i < 3000 && settings.filesWorking(); i++) usleep(10000); }
 		// fetchdone: banana-fetch's runner said a job finished (fetch.finished), as the device's loop hears of it
 		else if (op == "fetchdone") { if (fetchNotice.check(o.data, now)) { logf("notice: %s: %s", fetchNotice.title.c_str(), fetchNotice.body.c_str()); settings.offerSd2Roms(); } }
+		else if (op == "resumeboot") resumeAfterPoweroff(lib, o.data, nullptr);	// as at boot after Power off after sleeping
+		else if (op == "rss")
+		{
+			// rss: the memory in use now (the soak test reads these over a long run for a leak)
+			std::ifstream f("/proc/self/status");
+			std::string l;
+			while (std::getline(f, l)) if (l.compare(0, 6, "VmRSS:") == 0) logf("rss %s", l.c_str() + 6 + strspn(l.c_str() + 6, " \t"));
+		}
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -909,6 +1028,20 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (low.check(lib.power(), shutdownPercent(o.data), now)) logf("battery %d%%: notice %s", lib.testPower.percent, low.showing(now) ? low.title.c_str() : "hidden");
 		}
 		else if (op == "looking") { cs >> looking; ui.update(now); ui.render(); logf("looking %d", looking); }
+		else if (op == "rollbacknotice")
+		{
+			// rollbacknotice: boot-guard's notice after it went back to the version before (/run/banana/rolled-back)
+			health.showRollback(now);
+			logf("notice: %s", health.title.c_str());
+		}
+		else if (op == "healthnotice")
+		{
+			// healthnotice <parts>: the hardware check's notice, as /run/banana/health-notice would bring it
+			std::string parts;
+			std::getline(cs >> std::ws, parts);
+			health.show(parts, now);
+			logf("health notice: %s", health.title.c_str());
+		}
 		else if (op == "press")
 		{
 			std::string b; cs >> b;
@@ -918,6 +1051,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
+			if (health.hide(now)) logf("press %s: health notice hidden", b.c_str());
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
 			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
 			{
@@ -1951,7 +2085,16 @@ int main(int argc, char** argv)
 		else if (a == "--roms") o.roms = next();
 		else if (a == "--data") o.data = next();
 		else if (a == "--headless") o.headless = next();
-		else if (a == "--script") o.script = next();
+		else if (a == "--repeat") o.repeat = std::max(1L, atol(next().c_str()));
+		else if (a == "--script")
+		{
+			o.script = next();
+			if (!o.script.empty() && o.script[0] == '@')	// @file: a script too long for the command line (the soak test's)
+			{
+				std::ifstream f(o.script.substr(1));
+				o.script.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+			}
+		}
 		else if (a == "--theme") o.theme = next();
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
@@ -2105,6 +2248,8 @@ int main(int argc, char** argv)
 	ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
 	Worker worker;
 	worker.start(uiPtr);
+	// the boot reached the menu: a new system on trial is kept (boot-guard), the breadcrumbs stop
+	if (FILE* f = fopen("/run/banana/boot-ok", "w")) fclose(f);
 	// the first boot after the installation: the setup (Wi-Fi, the time zone, the accounts) before anything else; or a
 	// setup a restart cut off (a language picked on its first slide, a power cut, the setup again from Settings)
 	// (an update from 0.4.x too: its setup-done is the old setup's, and 0.5.0's runs once, from what the card has)
@@ -2180,7 +2325,7 @@ int main(int argc, char** argv)
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
 	if (settingsView.bshareReceiving()) Settings::bshareServe(true);	// (Bshare's Receive on: seen from the start)
 	LowBattery low;
-	BshareNotice bsNotice;
+	HealthNotice health;	// (the early check's notice is there before the menu: the loop's first pass shows it)
 	FetchNotice fetchNotice;
 	fetchNotice.check(o.data, nowMs());	// (the jobs finished before the menu started: not news)
 	bool fetchDone = false;				// /run/banana/fetch.finished written: a Files job finished
@@ -2194,6 +2339,23 @@ int main(int argc, char** argv)
 	std::string osdLabel;
 	int osdPercent = 0;
 	double osdUntil = 0;
+	EventNotice events;		// Wi-Fi, Bluetooth headphones, the flight recorder
+	int gameNoticeScreen = -1;	// a RetroArch game's panel (gamePanel): the notifications there meanwhile
+	// the notification showing, if any (the battery's first, then the hardware check's or an update's, then the rest)
+	auto drawNotice = [&](double t)
+	{
+		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
+		else if (health.showing(t)) settingsView.notice(health.title, health.body, -1);	// (-1: no battery)
+		else if (events.showing(t)) settingsView.banner(events.title, events.body, events.sign, events.accent);
+		else if (fetchNotice.showing(t)) settingsView.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
+		else return false;
+		return true;
+	};
+	auto noticeTitle = [&](double t) -> std::string
+	{
+		return low.showing(t) ? low.title : health.showing(t) ? health.title : events.showing(t) ? events.title :
+			fetchNotice.showing(t) ? fetchNotice.title : "";
+	};
 	// the games being read again (QA: after an update the game list was empty for a while, then everything came, and
 	// nothing said the menu was at work): a pop-up while the second SD card is being mounted (sd2 marks it) and while
 	// a change on the card waits for the list to be read again (2 s after the copying went quiet; on the home screen)
@@ -2207,14 +2369,13 @@ int main(int argc, char** argv)
 	};
 	be.overlay = [&](int screen)
 	{
+		if (screen == gameNoticeScreen) { drawNotice(nowMs()); return; }
 		if (screen != 0) return;
 		double t = nowMs();
 		// the flight recorder recording (bananad's /run/banana/recording): a small red dot in the top corner
 		if (access("/run/banana/recording", F_OK) == 0)
 			be.fill(std::round(disp.width() - 16 * scale), std::round(6 * scale), std::round(6 * scale), std::round(6 * scale), rnds::Color::hex(0xff3b30));
-		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
-		else if (bsNotice.showing(t)) settingsView.banner(bsNotice.title, bsNotice.body, bsNotice.sign, bsNotice.accent);
-		else if (fetchNotice.showing(t)) settingsView.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
+		if (drawNotice(t)) {}
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
 		else if (int k = looking())
 			settingsView.popup(k == 2 ? "Reading the second SD card" : "Looking for games",
@@ -2312,8 +2473,9 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
 		{
-			bool lowWas = low.hide(nowMs()), bsWas = bsNotice.hide(nowMs()), fetchWas = fetchNotice.hide(nowMs());	// (all hidden, whichever showed)
-			if (lowWas || bsWas || fetchWas) dirty = true;
+			bool lowWas = low.hide(nowMs()), healthWas = health.hide(nowMs()), eventWas = events.hide(nowMs()),
+				fetchWas = fetchNotice.hide(nowMs());	// (all hidden, whichever showed)
+			if (lowWas || healthWas || eventWas || fetchWas) dirty = true;
 		}
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && resumeLater.until > 0)
 		{
@@ -2438,6 +2600,7 @@ int main(int argc, char** argv)
 			settingsView.gameRom(gameRomPath);
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 		}
+		gameNoticeScreen = panelScreen;	// (the notifications on the panel meanwhile)
 		be.invalidate();
 		bool want = true;
 		// the game's end wakes the loop at once (a pidfd is readable then): the 100 ms poll alone kept the menu up to that
@@ -2474,6 +2637,23 @@ int main(int argc, char** argv)
 						gameComp.feed(rep.data(), rep.size());
 					}
 				}
+			}
+			{
+				// the notifications meanwhile: on the panel (lit), and in RetroArch's own message on the game's screen
+				bool was = !noticeTitle(t).empty(), came = false;
+				if (low.check(lib.power(), shutdownPercent(o.data), t) && low.showing(t)) came = true;
+				if (health.check(t)) came = true;
+				if (events.check(t)) came = true;
+				std::string nt = noticeTitle(t);
+				if (came && !nt.empty())
+				{
+					bottomIdle.activity(t);
+					std::string m = "SHOW_MSG " + nt + "\n";
+					if (write(cmdFd, m.data(), m.size()) < 0) {}
+					logf("notice in a game: %s", nt.c_str());
+					recordEvent("notice", "%s", nt.c_str());
+				}
+				if (came || was != !nt.empty()) want = true;
 			}
 			{
 				std::lock_guard<std::mutex> l(worker.uiLock);
@@ -2571,6 +2751,7 @@ int main(int argc, char** argv)
 					});
 		}
 		if (pidFd >= 0) ::close(pidFd);
+		gameNoticeScreen = -1;
 	};
 
 	auto runGame = [&](int game)
@@ -2867,6 +3048,7 @@ int main(int argc, char** argv)
 			disp.close();
 		}
 		long secs = (long)((nowMs() - start) / 1000);
+		nas::pauseRunner(fetchPaths, false);
 		logf("game ended after %ld s (status %d)", secs, status);
 		recordEvent("game", "ended after %ld s (status %d)", secs, status);
 		int openTries = 0;
@@ -3113,16 +3295,19 @@ int main(int argc, char** argv)
 			if (low.check(lib.power(), shutdownPercent(o.data), now))
 			{
 				dirty = true;
-				if (low.showing(now)) recordEvent("notice", "%s", low.title.c_str());
+				if (low.showing(now)) { recordEvent("notice", "%s", low.title.c_str()); sound.play("notify"); }
 			}
 		}
-		if (bsNotice.check(now)) { logf("notice: %s", bsNotice.title.c_str()); dirty = true; }
 		if (fetchDone)
 		{
 			fetchDone = false;
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (fetchNotice.check(o.data, now)) { logf("notice: %s", fetchNotice.title.c_str()); settingsView.offerSd2Roms(); dirty = true; }
 		}
+		// the hardware check's notice: new or changed (the late check writes it after the menu is up; /run/banana's
+		// watch wakes the loop when it's moved into place)
+		if (health.check(now)) { logf("health notice: %s", health.title.c_str()); recordEvent("notice", "%s", health.title.c_str()); dirty = true; sound.play("notify"); }
+		if (events.check(now)) { logf("notice: %s", events.title.c_str()); recordEvent("notice", "%s", events.title.c_str()); dirty = true; sound.play("notify"); }
 
 		bool want;
 		{
@@ -3193,9 +3378,14 @@ int main(int argc, char** argv)
 			int left = (int)(low.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
-		if (bsNotice.showing(now))
+		if (health.showing(now))
 		{
-			int left = (int)(bsNotice.until - now) + 1;
+			int left = (int)(health.until - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
+		if (events.showing(now))
+		{
+			int left = (int)(events.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
 		if (fetchNotice.showing(now))
@@ -3204,7 +3394,7 @@ int main(int argc, char** argv)
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
 		{
-			int left = (int)(bsNotice.lookedAt + 5000 - now) + 1;	// (a look at least every 5 s: the menu idle isn't woken more)
+			int left = (int)(events.lookedAt + 5000 - now) + 1;	// (a look at least every 5 s: the menu idle isn't woken more)
 			if (left > 0 && (timeout < 0 || left < timeout)) timeout = left;
 		}
 		if (osdUntil > now)
@@ -3323,8 +3513,10 @@ int main(int argc, char** argv)
 		settingsView.closeServers();	// (banana-fetch's session first: its answers wake the loop through the worker's eventfd)
 	}
 	worker.finish();
-	// not straight after a game: a shutdown from it (the power button held) gives rcK's 3 s to its saves instead
-	if (shuttingDown && disp.isOpen() && settings["splash"] != "off" && nowMs() - gameEnded > 2000)
+	// not straight after a game: a shutdown from it (the power button held) gives rcK's 3 s to its saves instead;
+	// not when it turns off from sleep either (bananad's mark): the panels are dark, nobody would see it
+	if (shuttingDown && disp.isOpen() && settings["splash"] != "off" && nowMs() - gameEnded > 2000 &&
+		access("/run/banana/quiet-shutdown", F_OK) != 0)
 	{
 		logf("shutdown animation");
 		playOutro(disp, be, o, variant, sound);

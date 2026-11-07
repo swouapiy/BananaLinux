@@ -1,0 +1,34 @@
+#!/bin/sh
+# What a sleep cost the battery, in banana/logs/sleep.log: the gauge's counter (charge_now, kept right across a
+# sleep) before and after, and the average current over the whole sleep. The number to compare with ROCKNIX's and
+# the stock firmware's, and to see what a change to the sleep saved. Not on the charger: it charges then.
+B=; for d in /sys/class/power_supply/*; do [ "$(cat $d/type 2>/dev/null)" = Battery ] && { B=$d; break; }; done
+[ -n "$B" ] || exit 0
+F=/run/banana/sleep-battery
+charger() { for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && return 0; done; return 1; }
+now() { echo "$(date +%s) $(cat $B/charge_now 2>/dev/null || echo -) $(cat $B/capacity 2>/dev/null) $(cat $B/voltage_avg 2>/dev/null || cat $B/voltage_now 2>/dev/null || echo 0)"; }
+case $1 in
+pre)
+    charger && { rm -f $F; exit 0; }
+    # (whole or not at all: a wake's post runs in the background, and a sleep 2 s later read this half written)
+    now > $F.new && mv -f $F.new $F
+    ;;
+post|off)    # off: turned off from sleep (the battery check, or asleep long enough)
+    how=; [ "$1" = off ] && how=', then turned off'
+    [ -f $F ] || exit 0
+    read -r t0 q0 p0 v0 < $F; rm -f $F
+    charger && exit 0   # plugged in meanwhile: the counter went up
+    set -- $(now); t1=$1 q1=$2 p1=$3 v1=$4
+    for x in "$t0" "$q0" "$p0" "$v0" "$q1" "$p1" "$v1"; do case $x in ''|*[!0-9-]*) exit 0 ;; esac; done   # one missing
+    [ "$q0" != - ] && [ "$q1" != - ] || exit 0
+    # under 10 minutes the gauge's own steps outweigh what the sleep drew (a minute read as 460 mA)
+    s=$((t1 - t0)); [ $s -ge 600 ] || exit 0
+    used=$(( (q0 - q1) / 1000 ))                # mAh
+    # the average current, mA: used over hours, to the nearest tenth
+    t=$(( ((q0 - q1) * 36 + s / 2) / s )); ma=$((t / 10)); tenth=$((t % 10))
+    printf '%s battery while asleep: %s%% %s mV -> %s%% %s mV, %s mAh in %d.%d h: %d.%d mA on average%s\n' \
+        "$(date '+%Y-%m-%d %H:%M:%S')" "$p0" $((v0 / 1000)) "$p1" $((v1 / 1000)) $used $((s / 3600)) $((s % 3600 / 360)) \
+        $ma ${tenth#-} "$how" >> /data/banana/logs/sleep.log
+    ;;
+esac
+exit 0

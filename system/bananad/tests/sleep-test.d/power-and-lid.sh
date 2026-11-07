@@ -66,24 +66,8 @@ asleep && bad "back to sleep after the flick" || ok "awake after the wake, the o
 [ "$(gstate)" != T ] && ok "game running" || bad "game still stopped"
 stop
 
-echo "power 6. a charger plugged in while asleep with the lid shut: awake and dark, not asleep (the charging light stays on)"
-start
-echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
-asleep && ok "asleep" || bad "no sleep"
-mkdir -p /sys/class/power_supply/charger
-echo USB > /sys/class/power_supply/charger/type; echo 1 > /sys/class/power_supply/charger/online
-wake      # the plug woke it; the lid is still shut
-asleep 2>/dev/null && bad "back to sleep on the charger" || ok "awake on the charger"
-[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark" || bad "backlight bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
-a=$(cat /sys/class/leds/amber:charging/brightness)
-[ -n "$a" ] && [ "$a" != 0 ] && ok "charging light on ($a)" || bad "charging light off ('$a')"
-[ "$(gstate)" = T ] && ok "game still paused" || bad "game running with the lid shut ($(gstate))"
-echo 0 > /run/test/lid; sleep 1
-[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels back when the lid opens" || bad "panels still dark"
-[ "$(gstate)" != T ] && ok "game running again" || bad "game still paused"
-rm -rf /sys/class/power_supply/charger
-stop
-
+# (power 6, "awake and dark on the charger", is upstream's design; here it sleeps on the charger as a phone does,
+# the charging light lit: sleep-test.sh's scenario 14)
 echo "power 7. one low battery reading while awake isn't a shutdown (a load spike); it takes two in a row"
 echo 2 > /sys/class/power_supply/battery/capacity
 start "battery_shutdown_percent = 3"

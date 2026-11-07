@@ -93,6 +93,8 @@ namespace banana
 		bool typing() const { return mOpen && page == KEYBOARD; }
 		bool devOn = false;		// System's Developer options row unlocked (settings.conf's developer; PR #94)
 		int aboutTaps = 0;		// A's on System > About so far (seven unlock it)
+		void toRow(const std::string& key);		// the cursor on that row, in its group's list
+		std::map<std::string, std::string> recShown;	// each setting as shown, for the recorder's "old -> new"
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
 
 		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other
@@ -188,6 +190,7 @@ namespace banana
 			std::string mirror;						// a hotkeys page's L2 to R3 (INFO): the row whose value it shows
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
+			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
 			int at = 0;
 			enum Kind { CHOICE, BRIGHTNESS, VOLUME, INFO, ACTION, PAGE } kind = CHOICE;
 		};

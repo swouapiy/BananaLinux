@@ -11,6 +11,9 @@
 /ui/tests/input-test
 /ui/tests/nds-pages-test
 /ui/fuzz/out/
+/ui/banana-fetch
+/ui/tests/servers/share/
+/ui/tests/servers/tls/
 /system/bananad/bananad
 /system/bananad/banana-panel-tune
 *.o
@@ -21,3 +24,4 @@ __pycache__/
 *.pyc
 /ui/tests/nds-rom-test
 /ui/tests/nds-rom-dump
+/ui/banana-bshare

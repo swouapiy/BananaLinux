@@ -329,7 +329,53 @@ namespace banana
 	// two texts joined, each translated on its own: the joined text has no line of its own in a translation, so a help
 	// with a note added for one handheld (the RG DS Plus's shader note) stayed English (i18n report, 2026-10-25)
 	static std::string joinTr(const std::string& a, const std::string& b) { return lang::tr(a) + " " + lang::tr(b); }
-	static const char* PLUS_SHADER_NOTE = "On the Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes. Give such a game None on its own page (X in the library).";
+	static const char* PLUS_SHADER_NOTE = "A heavy 3D game may slow down with one after a while: set it to None (X in the library).";
+	static const char* DEV = "Developer options";	// the Developer options list's section: opened from System, not a tile
+
+	// what each DS shader looks like, a hint each (Settings > Nintendo DS > Shader); the card's own last
+	static std::vector<std::string> shaderHints(const std::vector<std::string>& values)
+	{
+		static const std::pair<const char*, const char*> known[] = {
+			{ "none", "Smooth scaling. The lightest: no extra work for the chip." },
+			{ "ds-integer", "Every DS pixel an exact square, no blur." },
+			{ "ds-crisp", "Sharp, evenly sized pixels, without blur." },
+			{ "ds-crisp-color", "Sharp, even pixels, in the DS's own duller colours." },
+			{ "ds-grid", "The fine grid of the DS's screen." },
+			{ "ds-grid-color", "The DS's screen grid, in its own duller colours." },
+			{ "ds-fsr", "Smooth, clean edges. The heaviest." },
+			{ "lcd1x-nds", "A handheld LCD's look, in the DS's colours." },
+			{ "lcd1x", "A handheld LCD's look." },
+			{ "lcd3x", "A handheld LCD's look, with stronger lines." },
+			{ "zfast-lcd", "A light LCD look." },
+			{ "nds-color", "The DS's own, duller colours." },
+			{ "retro-v2", "A soft retro pixel look." },
+			{ "bevel", "Each pixel with a raised edge." },
+			{ "sharp-bilinear", "Sharp pixels with smooth edges." },
+			{ "sharp-bilinear-scanlines", "Sharp pixels with a TV's scanlines." },
+			{ "zfast-crt", "An old TV's scanlines." },
+			{ "fxaa", "Jagged edges softened." },
+			{ "ds-integer-fill", "Exact square pixels, filling more of the screen." },
+			{ "ds-grid-2x", "The DS's screen grid, at double size." },
+			{ "nnddss-dot-mizai", "Round dots, like a printed picture (MiZai)." },
+			{ "nnddss-dot-mizai-rgds", "MiZai's dots, tuned for the RG DS screens." },
+			{ "nnddss-retro-tiles", "Each pixel a small tile." },
+			{ "drastic-lcd1x", "DraStic's LCD look." },
+			{ "drastic-lcd1x-nds-color", "DraStic's LCD look, in the DS's colours." },
+			{ "drastic-quilez", "DraStic's smooth pixel scaling." },
+			{ "drastic-sharp-bilinear", "DraStic's sharp pixels with smooth edges." },
+			{ "drastic-sharp-bilinear-nds-color", "DraStic's sharp pixels, in the DS's colours." },
+			{ "drastic-zfast-lcd", "DraStic's light LCD look." },
+			{ "drastic-zfast-lcd-nds-color", "DraStic's light LCD look, in the DS's colours." },
+		};
+		std::vector<std::string> h;
+		for (auto& v : values)
+		{
+			const char* t = "Your own shader, from banana/shaders on the card.";
+			for (auto& k : known) if (v == k.first) { t = k.second; break; }
+			h.push_back(t);
+		}
+		return h;
+	}
 
 	// Settings > Nintendo DS > Shader's choices: Banana's shaders, then the card's own (banana/shaders/<name>.frag,
 	// SuperDrastic's shader format: README.txt there). Made again each time Settings loads the row (load()), so a shader
@@ -445,22 +491,29 @@ namespace banana
 				if (kind == Item::INFO) items.back().mirror = key;
 			}
 		};
+		// each row: what it is, in a sentence (help); then what the chosen option does, short and plain (hint)
+		auto hint = [&](std::vector<std::string> h) { items.back().hints = h; };
 		const char* D = "Display & sound";
 		{
 			// Banana's three, then the themes in banana/themes on the card and the image's examples (theme.h)
 			std::vector<std::string> names = { "Dark", "Light", "Carts" }, values = { "dark", "light", "carts" };
 			for (auto& t : userThemes()) { names.push_back(t.name); values.push_back(t.value); }
-			add(D, "picture", "Theme", "ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).",
+			add(D, "picture", "Theme", "How the menu looks. Your own themes go in banana/themes on the card (its README says how).",
 				menu, "theme", names, values);
+			std::vector<std::string> h = { "Dark colours, easy on the eyes.", "Light colours, for daylight.",
+				"Your games as cartridges on a shelf. Still experimental." };
+			while (h.size() < names.size()) h.push_back("A theme from banana/themes on the card.");
+			hint(h);
 		}
 		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
 			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
-		add(D, "picture", "Text on accent", "The text on the selection's colour. Auto picks dark or light, whichever reads better on the accent.", menu, "accent_text",
+		add(D, "picture", "Text on accent", "The colour of the text on the selection.", menu, "accent_text",
 			{ "Auto", "Dark", "Light" }, { "auto", "dark", "light" });
+		hint({ "Dark or light, whichever reads better on the accent colour.", "Always dark text.", "Always light text." });
 		// each panel its own backlight (N2); F + volume steps both
-		add(D, "picture", "Top brightness", "The top screen's backlight. F + volume changes both screens anywhere, in games too.", "", "top",
+		add(D, "picture", "Top brightness", "How bright the top screen is. F + volume changes both screens anywhere, in games too.", "", "top",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
-		add(D, "picture", "Bottom brightness", "The bottom screen's backlight. F + volume changes both screens anywhere, in games too.", "", "bottom",
+		add(D, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens anywhere, in games too.", "", "bottom",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
 		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
@@ -478,38 +531,55 @@ namespace banana
 			add(ML, "picture", "DS cartridges", "What the Nintendo DS cartridges on the bottom screen show. Box art: the covers fetched by Box art (a game without one shows its own icon). Game icon: every game's own icon from the cartridge, as the DSi menu shows it. The top screen keeps the box art.", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
 		}
 		const char* P = "Sleep & power";
-		add(P, "moon", "Sleep when idle", "In the menu, after this long with no button pressed. Never while a game is running.", power, "autosleep_minutes",
-			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
-		add(P, "moon", "Dim when idle", "In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.", power, "dim_minutes",
+		// the idle chain: dim, sleep, off (bananad.conf)
+		add(P, "moon", "Dim when idle", "Lowers the screens when you leave the handheld alone.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
-		add(P, "moon", "Closing the lid", "Sleep with the lid: the game pauses, opening the lid carries on where you were.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
-		add(P, "moon", "Power off after sleeping", "Asleep this long (not while charging), the game is saved where you are and the handheld turns itself off, so the battery keeps for weeks. Press power to start it again: it goes straight back into the game.",
-			power, "poweroff_after_sleep_minutes", { "Never", "15 minutes", "30 minutes", "1 hour", "2 hours" }, { "0", "15", "30", "60", "120" });
-		add(P, "moon", "Waking up", "Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.",
-			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
-		add(P, "moon", "LEDs", "Green, red when the battery is low, blinking red when nearly empty, amber while charging.", power, "led_brightness",
+		hint({ "The screens never dim.", "Screens dim after 1 minute without use.", "Screens dim after 2 minutes without use.",
+			"Screens dim after 5 minutes without use." });
+		add(P, "moon", "Sleep when idle", "Puts the handheld to sleep when you leave it alone. Your game pauses.", power, "autosleep_minutes",
+			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
+		hint({ "It never falls asleep by itself.", "Sleeps after 5 minutes without use.", "Sleeps after 10 minutes without use.",
+			"Sleeps after 15 minutes without use.", "Sleeps after 30 minutes without use." });
+		add(P, "moon", "Turn off when idle", "Turns the handheld off after it has slept for a while. Your game saves first.", power, "poweroff_minutes",
+			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour", "3 hours", "6 hours" }, { "0", "5", "10", "15", "30", "60", "180", "360" });
+		hint({ "It stays asleep until you wake it.", "Turns off after 5 minutes asleep.", "Turns off after 10 minutes asleep.",
+			"Turns off after 15 minutes asleep.", "Turns off after 30 minutes asleep.", "Turns off after 1 hour asleep.",
+			"Turns off after 3 hours asleep.", "Turns off after 6 hours asleep." });
+		add(P, "moon", "Idle timers", "Where dimming, sleep and turning off can happen.", power, "idle_in_games",
+			{ "In the menu", "Everywhere" }, { "no", "yes" });
+		hint({ "Only in the menu. A game is never interrupted.", "In the menu and in games. Touching the screen counts as use." });
+		add(P, "moon", "Closing the lid", "What happens when you close the lid.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
+		hint({ "It sleeps. Open the lid to carry on where you were.", "The screens go dark, but the game keeps running." });
+		add(P, "moon", "Waking up", "How the handheld wakes from sleep.", power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
+		hint({ "Wakes up quickly.", "Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong." });
+		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
+		hint({ "Full brightness.", "Softer lights.", "No lights." });
+		add(P, "moon", "LED while asleep", "The power light while the handheld sleeps.", power, "led_sleep", { "On", "Off" }, { "on", "off" });
+		hint({ "The light stays on, so you can tell it's asleep, not off.", "The light goes out while it sleeps." });
 		// Nintendo DS: what both emulators share (the emulator, quick resume, the DS's language and name, the buttons),
 		// then a page for each emulator's own settings, in that emulator's files, both whichever is chosen (to set one up
 		// before switching to it). Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
 		const char* N = "Nintendo DS";
 		add(N, "nds", "Emulator", "SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on F; each keeps its own settings on its page below. X on a game in the library picks one for that game alone.",
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
-		add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
+		hint({ "DraStic: the fastest. Its own settings are below.", "Banana's own, built on melonDS: the most accurate. Its own settings are below." });
+		add(N, "nds", "Quick resume", "What quitting a game does.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
+		hint({ "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place, even through a shutdown. Next time the game carries on from there." });
 		// the DS's own language (its firmware's), in both emulators at once: a game that has several picks it (#22)
-		add(N, "nds", "DS language", "The language the DS itself is set to: a game that has several starts in it. Both emulators.",
+		add(N, "nds", "DS language", "The language the DS itself is set to. A game with several languages starts in this one.",
 			"", "ds_language", { "English", "Japanese", "French", "German", "Italian", "Spanish" }, { "1", "0", "2", "3", "4", "5" });
 		// L2, R2, L3 and R3's jobs, the same in both emulators (the DS buttons page below; nds-buttons)
 		add(N, "nds", "Buttons", "What L2, R2, L3 and R3 do in a DS game, the same in both emulators: swap the screens, fast-forward, blow on the mic, save or load a state, the menu, one of the DS's buttons, or nothing. F + R saves and F + L loads a state in both.", "", "ds_buttons", {}, {}, Item::PAGE);
 		// the DS's own name (its firmware's user name), in both emulators at once: what a game calls you (#30)
-		add(N, "nds", "DS name", "The name the DS itself is set to, as on a real one: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Both emulators; empty: Dr DraStic in SuperDrastic, Banana in BananaDS.",
+		add(N, "nds", "DS name", "The name the DS itself is set to, as on a real one: what games and Mario Kart's records call you. 10 characters at most.",
 			"", "ds_name", {}, {}, Item::PAGE);
 		add(N, "nds", "SuperDrastic", "SuperDrastic's own settings: its shader, 3D, CPU clock, frame pacing, microphone and low latency, its hotkeys, and its resets.", "", "nds_superdrastic", {}, {}, Item::PAGE);
 		add(N, "nds", "BananaDS", "BananaDS's own settings: its shader, 3D, edge marking and fog, frame pacing, CPU clock, timing, microphone and low latency, its hotkeys, and its reset.", "", "nds_bananads", {}, {}, Item::PAGE);
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
-		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 in a frame on the RG DS). Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None: smooth scaling, no GPU work. Your own: .frag files in banana/shaders (letters, digits and . _ + - in the name).";
+		std::string shaderHelpS = "The look of the DS screens. Your own go in banana/shaders.";
 		if (board_() == "rgds-plus") shaderHelpS = joinTr(shaderHelpS, PLUS_SHADER_NOTE);
 		const char* shaderHelp = shaderHelpS.c_str();
 		// the BananaDS page (Nintendo DS > BananaDS): /data/bananads/bananads.conf
@@ -557,9 +627,11 @@ namespace banana
 				sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
 			add(SD, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
 				sd, "DSFLIP_PACE", { "Panels", "DS rate" }, { "panels", "ds" });
+			hint({ "A new frame every screen refresh: the smoothest. Games run 0.3% fast, the sound matched.", "The DS's own speed. A frame shows twice about every 6 seconds." });
 			// (Off first: SuperDrastic's own default, as in 0.4.2; its scale is not BananaDS's)
 			add(SD, "nds", "Microphone", "How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
 				sd, "DSHOOK_MIC_THRESH", { "Off", "Medium", "High", "Low" }, { "0", "0.15", "0.03", "0.3" });
+			hint({ "Games hear nothing. The in-game menu's Blow still works.", "Speaking and blowing get through.", "Quieter sounds get through too.", "Only loud sounds get through." });
 			// experimental: SuperDrastic's DSFLIP_LOWLAT (run-drastic): no queue, each frame at the next vblank, DraStic held
 			add(SD, "nds", "Low latency (experimental)", "Experimental. On: no frame queue: each frame goes to the panels at the next refresh it can make, so a press shows about a refresh and a half (20-25 ms) sooner, the sound a little sooner too. Uneven frames (2x, heavy scenes) can show as small stutters the queue would hide, more on the RG DS Plus.",
 				sd, "DSFLIP_LOWLAT", { "Off", "On" }, { "0", "1" });
@@ -572,7 +644,7 @@ namespace banana
 		// Other systems (RetroArch): what every game shares, then pages: Second screen (the game panel and its companions),
 		// Picture & sound, Emulators (each system's core, when it has a choice) and Buttons (a page for each system)
 		const char* O = "Other systems";
-		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.",
+		add(O, "gamepad", "Screen", "Which screen other systems' games play on.",
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
 		add(O, "gamepad", "RetroAchievements", "Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.",
 			"/data/retroarch/retroarch.cfg", "cheevos_hardcore_mode_enable", { "Softcore", "Hardcore" }, { "false", "true" });
@@ -676,7 +748,7 @@ namespace banana
 		{
 			std::vector<std::string> names, tzs;
 			for (auto& z : ZONES) { names.push_back(z.name); tzs.push_back(z.tz); }
-			add(S, "gear", "Time zone", "The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.",
+			add(S, "gear", "Time zone", "Your time zone, for the clock and your games. Summer time is included.",
 				menu, "timezone", names, tzs);
 		}
 		add(S, "gear", "Updates", "A new version of Banana: checking for it, downloading and installing it, test versions, a daily check, and going back to the version before.", "", "sys_updates", {}, {}, Item::PAGE);
@@ -704,7 +776,7 @@ namespace banana
 		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.", "", "setup", {}, {}, Item::PAGE);
 		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults, the time zone too (the language stays). Your games, saves and the emulators' settings are untouched. Press A twice.",
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the DS emulator, Quick resume, each system's emulator (core), and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.",
+		add(S, "gear", "Reset emulator settings", "Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "About", "", "", "about", {}, {}, Item::INFO);
 		if (!readCredits().empty())
@@ -793,15 +865,15 @@ namespace banana
 			}
 		}
 		const char* PW = "Power";
-		add(PW, "moon", "Sleep", "The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.", "", "sleep", { "" }, { "" }, Item::ACTION);
+		add(PW, "moon", "Sleep", "Puts the handheld to sleep, as a press of the power button does. Your game pauses.", "", "sleep", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
 		// the Home server page (Network > Home server)
 		const char* HS = "Home server";
 		add(HS, "phone", "Server", "", "", "hs_server", {}, {}, Item::PAGE);
-		add(HS, "phone", "Sync now", "Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.",
+		add(HS, "phone", "Sync now", "Copies the server's games to the card and syncs saves both ways, in the background. Your own files are never replaced or deleted.",
 			"", "hs_sync", {}, {}, Item::PAGE);
-		add(HS, "phone", "Games", "Download: the server's games for the systems below come to the card (and leave it when they leave the server). Saves only: the games stay as they are and only the saves sync.",
+		add(HS, "phone", "Games", "What comes from the server.",
 			menu, "homesync_roms", { "Download", "Saves only" }, { "on", "off" });
 		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot: the RG DS Plus
 		{
@@ -810,7 +882,8 @@ namespace banana
 		}
 		add(HS, "phone", "Save states", "On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). Quick-resume states never sync.",
 			menu, "homesync_states", { "Off", "On" }, { "off", "on" });
-		add(HS, "phone", "Auto sync", "Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.",
+		hint({ "Only the games' own saves sync.", "Save states sync too (on Romhost, its Devices page decides). Quick-resume states never do." });
+		add(HS, "phone", "Auto sync", "When syncing happens by itself.",
 			menu, "homesync_auto", { "Off", "Leaving a game", "And on Wi-Fi" }, { "off", "quit", "both" });
 		add(HS, "phone", "Systems", "Which systems sync on this handheld. A skipped system's games stay as they are on the card.", "", "hs_systems", {}, {}, Item::PAGE);
 		add(HS, "phone", "Games to sync", "All: every game of the systems above comes to the card. Chosen: only the games ticked in Choose games (a game unticked later stays on the card until you delete it).",
@@ -823,8 +896,46 @@ namespace banana
 			const char* HSS = "Home server systems";
 			struct { const char* id; const char* name; } sy[] = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
 				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" } };
-			for (auto& s : sy) add(HSS, "phone", s.name, "Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.", menu, (std::string("homesync.") + s.id).c_str(), { "Sync", "Skip" }, { "on", "off" });
+			for (auto& s : sy)
+			{
+				add(HSS, "phone", s.name, "Whether this system syncs with the home server.", menu, (std::string("homesync.") + s.id).c_str(), { "Sync", "Skip" }, { "on", "off" });
+				hint({ "Its games and saves sync with the server.", "Its games stay as they are on this handheld." });
+			}
 		}
+		// the About page (System > About): a row per fact, its value on the right, read again whenever the page shows
+		// (refreshInfo). A seven times on Version unlocks the Developer options, as a phone's build number does
+		{
+			const char* AB = "About";
+			struct { const char* key; const char* label; const char* help; } rows[] = {
+				{ "ab_model", "Device", "The handheld, as its device tree names it." },
+				{ "ab_version", "Version", "The version of Banana running, and its slot (a or b: Update writes the other one)." },
+				{ "ab_kernel", "Kernel", "The Linux kernel's version." },
+				{ "ab_retroarch", "RetroArch", "RetroArch's version. It updates with Banana." },
+				{ "ab_chip", "Processor", "The chip, and how many cores it has." },
+				{ "ab_memory", "Memory", "The memory in use now, of all there is." },
+				{ "ab_storage", "Storage", "The space left on the card, of all there is." },
+				{ "ab_storage2", "Second card", "The space left on the card in the second slot, of all there is." },
+				{ "ab_battery", "Battery", "How full the battery is, and whether it is charging." },
+				{ "ab_wifi", "Wi-Fi", "The network the handheld is on." },
+				{ "ab_ip", "IP address", "The handheld's address on the network: for File sharing and SSH." },
+				{ "ab_mac", "Wi-Fi MAC address", "The Wi-Fi chip's own address, for a router that lets in only the devices it knows." },
+				{ "ab_bt", "Bluetooth", "Whether Bluetooth is on." },
+				{ "ab_uptime", "Up time", "How long since the handheld started (time asleep included)." },
+			};
+			for (auto& r : rows) add(AB, "gear", r.label, r.help, "", r.key, { "" }, { "" }, Item::INFO);
+		}
+		// the Developer options list: opened from that row, not a tile (DEV: no tile, as Power and Hotkeys)
+		add(DEV, "gear", "Flight recorder", "Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi.", power, "recorder",
+			{ "Off", "On" }, { "off", "on" });
+		items.back().hints = { "Not recording.",
+			"Recording to banana/logs/sessions, even after a restart. Hold Select for 2 seconds to mark a moment (the light blinks twice)." };
+		add(DEV, "gear", "Sleep timing log", "How long each part of the handheld takes to sleep and to wake.", power, "sleep_debug",
+			{ "Off", "On" }, { "no", "yes" });
+		items.back().hints = { "Not logged.", "Written to banana/logs/sleep-devices.log after each wake." };
+		add(DEV, "moon", "Night test", "Six hours on battery (wakes, then asleep with and without the light), then off. Report in banana/logs/night-test.txt. Press A twice.",
+			"", "night_test", { "" }, { "" }, Item::ACTION);
+		add(DEV, "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About > Version brings it back). Press A twice.",
+			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 		addShelfRows();
 		// the sections in the order they first come, those with a tile first (the grid is the first groups) and each
 		// section's rows together: a subpage's rows are added beside the row that opens it, wherever that is
@@ -836,7 +947,7 @@ namespace banana
 			{ "Other systems", { "Buttons", "Picture & sound", "Quick resume", "Screen", "Second screen", "Emulators", "Frontend", "RetroAchievements", "Reset RetroArch" } },
 			{ "Display & sound", { "Volume", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
 			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
-			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
+			{ "Sleep & power", { "Dim when idle", "Sleep when idle", "Turn off when idle", "Idle timers", "Closing the lid", "Waking up", "LEDs", "LED while asleep" } },
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
@@ -959,20 +1070,27 @@ namespace banana
 			std::getline(f, model, '\0');
 		}
 		int battery = -1;
+		bool charging = false;
 		if (DIR* d = opendir("/sys/class/power_supply"))
 		{
 			while (dirent* e = readdir(d))
 			{
 				std::string b = std::string("/sys/class/power_supply/") + e->d_name;
-				if (readLine(b + "/type") == "Battery") { battery = atoi(readLine(b + "/capacity").c_str()); break; }
+				if (readLine(b + "/type") == "Battery") battery = atoi(readLine(b + "/capacity").c_str());
+				else if (readLine(b + "/online") == "1") charging = true;	// (a charger: the rk817's gauge says Discharging)
 			}
 			closedir(d);
 		}
-		struct statvfs vf;
-		char space[64] = "";
-		if (statvfs("/data", &vf) == 0)
-			snprintf(space, sizeof space, "%.1f GB free of %.1f GB", vf.f_bavail * (double)vf.f_frsize / 1e9, vf.f_blocks * (double)vf.f_frsize / 1e9);
-		// Wi-Fi: the address, if there is one
+		// "12.3 of 59.4 GB free": a mounted card's space
+		auto space = [](const char* at) -> std::string
+		{
+			struct statvfs vf;
+			if (statvfs(at, &vf) != 0 || vf.f_blocks == 0) return "";
+			char b[64];
+			snprintf(b, sizeof b, "%.1f of %.1f GB free", vf.f_bavail * (double)vf.f_frsize / 1e9, vf.f_blocks * (double)vf.f_frsize / 1e9);
+			return b;
+		};
+		// Wi-Fi: the network, the address and the chip's MAC
 		wifiInfo = "Off";
 		ip.clear();
 		std::string state = readLine("/sys/class/net/wlan0/operstate");
@@ -989,17 +1107,78 @@ namespace banana
 			}
 			if (fd >= 0) ::close(fd);
 		}
-		std::ostringstream a;
-		a << "Banana " << (version.empty() ? "dev" : version) << (slot.empty() ? "" : " (slot " + slot + ")") << " on the " << (model.empty() ? "handheld" : model) << ". ";
-		if (battery >= 0) a << "Battery " << battery << "%. ";
-		if (space[0]) a << "Card: " << space << ". ";
-		// the kernel too (#70): its version as uname gives it
+		// the chip: the SoC from the device tree's compatible ("rockchip,rk3566"), the cores the kernel counts
+		std::string chip;
+		{
+			std::ifstream f("/proc/device-tree/compatible");
+			std::string c;
+			while (std::getline(f, c, '\0'))
+				if (c.compare(0, 11, "rockchip,rk") == 0)
+				{
+					std::string soc = c.substr(9);	// "rk3566" -> "RK3566"
+					for (char& ch : soc) ch = (char)toupper((unsigned char)ch);
+					chip = "Rockchip " + soc;
+					break;
+				}
+			long n = sysconf(_SC_NPROCESSORS_CONF);
+			if (n > 0) chip += (chip.empty() ? "" : ", ") + std::to_string(n) + " cores";
+		}
+		// the memory: in use (all but MemAvailable) of MemTotal
+		std::string mem;
+		{
+			std::ifstream f("/proc/meminfo");
+			std::string k;
+			long v, total = 0, avail = 0;
+			while (f >> k >> v) { if (k == "MemTotal:") total = v; else if (k == "MemAvailable:") avail = v; f.ignore(64, '\n'); }
+			char b[64];
+			if (total > 0) { snprintf(b, sizeof b, "%ld of %ld MB used", (total - avail) / 1024, total / 1024); mem = b; }
+		}
+		std::string uptime;
+		{
+			double up = 0;
+			std::ifstream("/proc/uptime") >> up;
+			long m = (long)(up / 60);
+			uptime = m >= 1440 ? std::to_string(m / 1440) + " d " + std::to_string(m / 60 % 24) + " h"
+				: m >= 60 ? std::to_string(m / 60) + " h " + std::to_string(m % 60) + " min" : std::to_string(m) + " min";
+		}
+		std::string mac = readLine("/sys/class/net/wlan0/address");
 		utsname un;
-		if (uname(&un) == 0) a << "Linux " << un.release << ".";
+		std::string kernel = uname(&un) == 0 ? un.release : "";
 		// RetroArch's version: it comes with BananaOS's updates (its Online Updater doesn't update RetroArch itself)
 		std::string ra = readLine("/usr/share/retroarch/version");
-		if (!ra.empty()) a << " RetroArch " << ra << ", updated with BananaOS.";
-		about = a.str();
+		std::string ssid = wstat.connected ? wstat.ssid : "";
+		std::string sd2 = access("/run/banana/sd2/slot", F_OK) == 0 ? space("/run/sd2") : "";
+		const std::map<std::string, std::string> v = {
+			{ "ab_model", model.empty() ? "Unknown" : model },
+			{ "ab_version", (version.empty() ? "dev" : version) + (slot.empty() ? "" : " (slot " + slot + ")") },
+			{ "ab_kernel", kernel.empty() ? "Unknown" : kernel },
+			{ "ab_retroarch", ra.empty() ? "Not installed" : ra },
+			{ "ab_chip", chip.empty() ? "Unknown" : chip },
+			{ "ab_memory", mem.empty() ? "Unknown" : mem },
+			{ "ab_storage", space("/data").empty() ? "Unknown" : space("/data") },
+			{ "ab_storage2", sd2.empty() ? "No card" : sd2 },
+			{ "ab_battery", battery < 0 ? "Unknown" : std::to_string(battery) + "%" + (charging ? ", charging" : "") },
+			{ "ab_wifi", state.empty() ? "Off" : !ssid.empty() ? ssid : state == "up" ? "Connected" : "Not connected" },
+			{ "ab_ip", ip.empty() ? "None" : ip },
+			{ "ab_mac", mac.empty() ? "Unknown" : mac },
+			{ "ab_bt", btOn() ? "On" : "Off" },
+			{ "ab_uptime", uptime },
+		};
+		for (Item& it : items)
+		{
+			auto f = v.find(it.key);
+			if (f != v.end() && !it.names.empty()) it.names[0] = f->second;
+		}
+	}
+
+	// the tiles: every group but the Developer list (opened from System's Developer row)
+
+	// the cursor on a row by its key, in its group's list
+	void Settings::toRow(const std::string& key)
+	{
+		for (int i = 0; i < (int)items.size(); i++) if (items[i].key == key) sel = i;
+		top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
+		armed = -1;
 	}
 
 	int Settings::groupOf(int item) const
@@ -1053,6 +1232,11 @@ namespace banana
 		if (groups.empty())
 			for (auto& it : items)
 				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
+		for (auto& it : items)
+			if ((it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) && it.at < (int)it.names.size())
+				recShown[it.key] = it.names[it.at];
+		devOn = getConfValue(data + "/settings.conf", "developer", "off") == "on";
+		aboutTaps = 0;
 		inGroups = true;
 		devOn = getConfValue(data + "/settings.conf", "developer", "off") == "on";
 		aboutTaps = 0;
@@ -1075,6 +1259,14 @@ namespace banana
 	void Settings::save(const Item& it)
 	{
 		const std::string& v = it.values[it.at];
+		// the recorder: what changed, as shown (old -> new); an account's or a password's value never
+		if (it.at < (int)it.names.size())
+		{
+			std::string was = recShown[it.key], now = it.names[it.at];
+			bool secret = it.key.find("pass") != std::string::npos || it.key.find("user") != std::string::npos || it.key.find("account") != std::string::npos;
+			recordEvent("setting", "%s: %s -> %s", it.label.c_str(), secret ? "(hidden)" : was.c_str(), secret ? "(hidden)" : now.c_str());
+			recShown[it.key] = now;
+		}
 		if (it.key == "ds_language")
 		{
 			if (access("/data/drastic/config/drastic.cfg", F_OK) != 0)
@@ -1221,6 +1413,7 @@ namespace banana
 			if (dir <= 0) return NONE;
 			if (it.key == "developer") { recordEvent("settings", "Developer options"); openSection("Developer options"); return MOVED; }
 			if (it.key == "scrape") { startScrape(); return MOVED; }
+			if (it.key == "about") { refreshInfo(); openSection("About"); aboutTaps = 0; return MOVED; }
 			if (it.key == "colors") { openColors(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
@@ -1257,6 +1450,26 @@ namespace banana
 				return CLOSED;
 			}
 			if (armed != sel) { armed = sel; return MOVED; }
+			if (it.key == "dev_hide")
+			{
+				armed = -1;
+				devOn = false;
+				setConfValue(data + "/settings.conf", "developer", "off");
+				toRow("about");	// (the Developer row gone: System's About, whose Version takes the seven A's)
+				toast("Developer options hidden", "A seven times on System > About > Version brings them back.", 0x6ad07a, 1, 4000);
+				return MOVED;
+			}
+			if (it.key == "night_test")
+			{
+				// the helper does it all (usr/libexec/banana/night-test); A twice again stops it
+				armed = -1;
+				bool running = !readLine("/run/banana/night-test-status").empty();
+				spawn("/usr/libexec/banana/night-test", running ? "stop" : "start");
+				recordEvent("settings", running ? "night test stopped" : "night test started");
+				if (running) toast("Night test stopped", "What it had so far is in banana/logs/night-test.txt.", 0x6ad07a, 1, 4000);
+				else toast("Night test started", "Close the lid and leave it on battery. The report: banana/logs/night-test.txt.", 0x6ad07a, 1, 5000);
+				return MOVED;
+			}
 			if (it.key == "switch")
 			{
 				// the other slot made the default, then a restart; the script says why not when it can't
@@ -1370,8 +1583,8 @@ namespace banana
 			// what the settings screen keeps outside settings.conf: bananad's sleep/LED rows (same defaults the rows
 			// show when the card has no line), the backlights and the mixer's level
 			static const struct { const char* key; const char* def; } BANANAD[] = {
-				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
-				{ "poweroff_after_sleep_minutes", "0" }, { "fast_resume", "yes" }, { "led_brightness", "128" } };
+				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "poweroff_minutes", "60" }, { "idle_in_games", "no" },
+				{ "lid_sleep", "yes" }, { "fast_resume", "yes" }, { "led_brightness", "128" }, { "led_sleep", "on" } };
 			for (const auto& b : BANANAD)
 				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
 			if (DIR* d = opendir("/sys/class/backlight"))
@@ -1444,6 +1657,7 @@ namespace banana
 		case Key::UP: case Key::DOWN:
 		{
 			// round within the group's own list
+			aboutTaps = 0;	// (the unlock's count is for presses in a row on About)
 			int n = e - b;
 			sel = b + (sel - b + (k == Key::UP ? -1 : 1) + n) % n;
 			armed = -1;
@@ -1575,6 +1789,7 @@ namespace banana
 		case Key::R: gsel = (gsel + 1) % n; return MOVED;
 		case Key::A:
 			inGroups = false;
+			recordEvent("settings", "%s", groups[gsel].c_str());
 			sel = top = groupStart(gsel);
 			armed = -1;
 			if (items[sel].kind == Item::INFO) refreshInfo();
@@ -1983,9 +2198,11 @@ namespace banana
 
 	void Settings::notice(const std::string& title, const std::string& body, int percent)
 	{
+		if (percent < 0) { banner(title, body, 3, 0xffb340); return; }	// (the hardware check's, an update's: a warning)
+		// the battery: its level in the square instead of a sign, red at 10% and under
 		SPal p = pal(light);
-		box("bubble", false, 40, 344, 560, 104);
-		// the status bar's battery, three times its size on the same pixel grid, its level red at 10% and under
+		Color red = light ? Color::hex(0xc8382d) : Color::hex(0xff5a4f);
+		banner(title, body, 0, percent <= 10 ? 0xff5a4f : 0xffb340);
 		auto it = cache.find("battery");
 		if (it == cache.end())
 		{
@@ -1998,12 +2215,14 @@ namespace banana
 		int k = std::max(1, (int)std::lround(3 * s));
 		float bx = std::round(X(66)), by = std::round(X(375));
 		if (it->second.tex)
-			be->draw(it->second.tex, bx, by, (float)it->second.tex->w * k, (float)it->second.tex->h * k, p.ink);
-		int lv = percent <= 0 ? 0 : std::max(1, (int)std::lround(16 * std::min(100, percent) / 100.0f));
-		Color lc = percent <= 10 ? (light ? Color::hex(0xc8382d) : Color::hex(0xff5a4f)) : p.accent;
-		if (lv > 0) be->fill(bx + 3 * k, by + 3 * k, (float)lv * k, (float)8 * k, lc);
-		text(title, true, 22, 172, 360, p.ink);
-		wrapped(body, 18, 172, 392, 404, 2, p.muted);
+		{
+			float w = (float)it->second.tex->w * k, h = (float)it->second.tex->h * k;
+			float bx = std::round(X(16 + 24) - w / 2), by = std::round(X(12 + 24) - h / 2);
+			be->draw(it->second.tex, bx, by, w, h, Color::hex(0x12181f));
+			int lv = percent <= 0 ? 0 : std::max(1, (int)std::lround(16 * std::min(100, percent) / 100.0f));
+			if (lv > 0) be->fill(bx + 3 * k, by + 3 * k, (float)lv * k, (float)8 * k, percent <= 10 ? red : Color::hex(0x12181f));
+		}
+		(void)p;
 	}
 
 	void Settings::banner(const std::string& title, const std::string& body, int sign, uint32_t accent)
@@ -2030,6 +2249,7 @@ namespace banana
 		if (two) wrapped(body, 18, 78, 37, 536, 2, lightText);
 		else if (!body.empty()) text(fit(body, false, 18, 540), false, 18, 78, 38, lightText);
 	}
+
 
 	void Settings::level(const std::string& label, int percent)
 	{
@@ -2126,7 +2346,7 @@ namespace banana
 	void Settings::renderGroups()
 	{
 		SPal p = pal(light);
-		int g0 = std::max(0, std::min(gsel, (int)groups.size() - 1));
+		int g0 = std::max(0, std::min(gsel, gridCount() - 1));
 		const Item& first = items[groupStart(g0)];
 
 		be->beginScreen(0);
@@ -2138,9 +2358,24 @@ namespace banana
 		char n[32];
 		snprintf(n, sizeof n, "%d settings", groupEnd(g0) - groupStart(g0));
 		text(n, true, 22, 170, 130, p.accent);
-		std::string all;
-		for (int i = groupStart(g0); i < groupEnd(g0); i++) all += (all.empty() ? "" : ", ") + lang::tr(items[i].label);
-		wrapped(all + ".", 20, 50, 196, 540, 7, p.muted);
+		// what the group is for, in a line, as Android's settings list says it (its rows' names, all of them, read as a
+		// wall of text: the user, 2026-10-28)
+		static const std::pair<const char*, const char*> ABOUT[] = {
+			{ "Display & sound", "The theme, brightness, volume and sounds, and which systems show." },
+			{ "Sleep & power", "When the handheld dims, sleeps and turns off, the lid and the LEDs." },
+			{ "Nintendo DS", "The DS emulator, and how DS games look, sound and run." },
+			{ "Other systems", "RetroArch's games: the game panel, achievements, shaders and sound." },
+			{ "Network", "Wi-Fi, Bluetooth, file sharing and your home server." },
+			{ "System", "Language, time zone, updates, box art, hotkeys and resets." },
+		};
+		std::string about;
+		for (auto& a : ABOUT) if (groups[g0] == a.first) about = a.second;
+		if (about.empty())	// (a group without a line: its rows' names)
+		{
+			for (int i = groupStart(g0); i < groupEnd(g0); i++) about += (about.empty() ? "" : ", ") + lang::tr(items[i].label);
+			about += ".";
+		}
+		wrapped(about, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
 		be->beginScreen(1);
@@ -2152,9 +2387,9 @@ namespace banana
 		text(sub, true, 17, 602 - sw, 31, p.muted);
 		advance();
 		aGroup = -1;	// (the list starts still when a group opens)
-		for (int g = 0; g < (int)groups.size() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
+		for (int g = 0; g < gridCount() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
 		box("pick", true, 18 + aCol * 204, 82 + aRow * 166, 196, 158);
-		for (int g = 0; g < (int)groups.size() && g < 6; g++)
+		for (int g = 0; g < gridCount() && g < 6; g++)
 		{
 			bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
 			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
@@ -2193,8 +2428,13 @@ namespace banana
 		if (cur.kind == Item::INFO && cur.key != "hk") help = about;	// (Hotkeys' rows have their own)
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
 		if (cur.key == "ssh")
-			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
-				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.";
+			help = "For working on Banana from a computer: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
+				", with your keys in banana/ssh/authorized_keys on the card.";
+		if (cur.key == "night_test")
+		{
+			std::string st = readLine("/run/banana/night-test-status");
+			if (!st.empty()) help = "Running: " + st + ". Press A twice to stop it. The report: banana/logs/night-test.txt.";
+		}
 		if (cur.key == "hs_server")
 		{
 			std::string n = homeServer();
@@ -2221,8 +2461,7 @@ namespace banana
 		if (cur.key == "colors")
 		{
 			ScreenColors c = ScreenColors::load(data + "/screen-colors.conf");
-			help = std::string("The two screens rarely show the same white. This corrects one of them towards the other: the same test pattern on both, "
-				"and red, green, blue, gamma, brightness and black for the one corrected (the handheld has one colour table, so one screen). Now: ") +
+			help = std::string("Makes the two screens' whites match: on a test pattern, one screen is adjusted to look like the other. Now: ") +
 				(c.neutral() ? "no correction." : c.screen == 0 ? "the top screen corrected." : "the bottom screen corrected.");
 		}
 		if (cur.key == "share_account")
@@ -2230,10 +2469,9 @@ namespace banana
 		if (cur.key == "share")
 		{
 			std::string at = ip.empty() ? "<address>" : ip;
-			help = "The card on the network: \\\\" + at + "\\banana in Windows' File Explorer, smb://" + at +
-				"/banana on a Mac (Finder, Go, Connect to Server). " +
-				(getConfValue(data + "/settings.conf", "share_login", "password") == "guest" ? std::string("Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.")
-					: "Name " + shareUser() + ", password " + sharePassword() + " (Sharing name and password, below).");
+			help = "The card on your network: \\\\" + at + "\\banana on Windows, smb://" + at + "/banana on a Mac. " +
+				(getConfValue(data + "/settings.conf", "share_login", "password") == "guest" ? std::string("No password needed: keep it off on networks you don't trust.")
+					: "Name " + shareUser() + ", password " + sharePassword() + ".");
 			if (ip.empty()) help += " (Not connected to Wi-Fi now.)";
 		}
 		return help;
@@ -2278,6 +2516,23 @@ namespace banana
 			n++;
 		};
 		for (int i = 0; i < (int)items.size(); i++) one(items[i].section + " > " + items[i].label, helpOf(i));
+		// a choice's hint under its row's sentence: each has the half below HINT_TOP, and the sentence the rest
+		auto half = [&](const std::string& where, const std::string& t, float top, float bottom)
+		{
+			float z; int lines;
+			bool ok = helpFit(t, top, bottom, z, lines);
+			char b[64];
+			snprintf(b, sizeof b, ": %s at %.0f px, %d lines", ok ? "fits" : "OVERFLOW", z, lines);
+			log("helpcheck " + where + b);
+			n++;
+		};
+		for (int i = 0; i < (int)items.size(); i++)
+			if (!items[i].hints.empty())
+			{
+				half(items[i].section + " > " + items[i].label + " (with a hint)", helpOf(i), HELP_TOP, HINT_TOP - 12);
+				for (size_t h = 0; h < items[i].hints.size(); h++)
+					half(items[i].section + " > " + items[i].label + " > " + (h < items[i].names.size() ? items[i].names[h] : "?"), items[i].hints[h], HINT_TOP, HELP_BOTTOM);
+			}
 		// a game page's rows (Delete's with a long file name, as a card can have)
 		std::string rom = pgRom;
 		pgRom = "Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds";
@@ -2327,7 +2582,8 @@ namespace banana
 		icon(cur.icon, 50, HEAD_ICON_Y, 3);
 		text(cur.section, true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		textFit(cur.label, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true);
-		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at] : "";
+		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at]
+			: cur.kind == Item::INFO && !cur.names.empty() ? cur.names[0] : "";	// (About's value, Hotkeys' action)
 		if (!value.empty()) textFit(value, true, 22, 170, HEAD_VALUE_Y, 420, p.accent, true);
 		std::string help = helpOf(sel);
 		if (cur.key == "scrape" && scraping())
@@ -2339,6 +2595,12 @@ namespace banana
 		{
 			wrapped("Syncing with " + (homeServer().empty() ? std::string("the server") : homeServer()) + ". It carries on if you leave this screen; the library shows the new games when it's done.", 20, HELP_X, HELP_TOP, HELP_W, 4, p.muted);
 			syncBar(50, 330, 540);
+		}
+		else if (cur.kind == Item::CHOICE && cur.at < (int)cur.hints.size() && !cur.hints[cur.at].empty())
+		{
+			// the row in a sentence, then what the chosen option does, brighter (it changes as the option does)
+			helpText(help, HELP_TOP, HINT_TOP - 12, p.muted);
+			helpText(cur.hints[cur.at], HINT_TOP, HELP_BOTTOM, p.ink);
 		}
 		else helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();
@@ -5603,6 +5865,7 @@ namespace banana
 	void Settings::toast(const std::string& l1, const std::string& l2, uint32_t accent, int icon, double ms)
 	{
 		toast1 = l1; toast2 = l2; toastAccent = accent; toastIcon = icon;
+		recordEvent("notice", "%s%s%s", l1.c_str(), l2.empty() ? "" : ": ", l2.c_str());
 		toastUntil = now + ms;
 	}
 
@@ -5680,6 +5943,9 @@ namespace banana
 	void Settings::openSetup(bool boot, const std::string& at)
 	{
 		for (auto& it : items) load(it);
+		for (auto& it : items)
+			if ((it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) && it.at < (int)it.names.size())
+				recShown[it.key] = it.names[it.at];
 		refreshInfo();
 		wizard = true;
 		wizardBoot = boot;
@@ -7190,6 +7456,7 @@ namespace banana
 		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
 		text(hint, false, 15, 320 - hw / 2, 438, p.muted);
 		be->endScreen();
+		evict();
 	}
 
 	// ---- the Pokémon companion (pokemon.h): the whole panel, the party, a member's summary, the battle, and the tab

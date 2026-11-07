@@ -1,0 +1,152 @@
+From: swouapiy <swouapiy@gmail.com>
+Subject: [PATCH] ASoC: codecs: aw88166: wait for the I2S clock before starting
+
+The amp is started from the playback widget's PRE_PMU, which DAPM runs
+before the CPU DAI's trigger. Rockchip's I2S only runs BCLK once
+triggered, so the start's PLL check found no clock: five immediate
+retries (each with a firmware reload) all failed, logging hundreds of
+"check pll lock fail" / "mode1 iis signal check error" lines, and the
+speakers stayed silent for that stream - the first sounds after boot or
+after a resume. ROCKNIX met the same with the aw88166 on the Odin 3 and
+started its I2S port at prepare instead.
+
+When the PLL check fails, the start work now comes back every 10 ms for
+up to 500 ms, by which time the trigger has started the clock; only then
+does it fall back to the old retries. A stream stopped meanwhile (POST_PMD)
+cancels the wait. The per-poll PLL messages are debug-level now.
+---
+ sound/soc/codecs/aw88166.c | 50 ++++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 42 insertions(+), 8 deletions(-)
+
+diff --git a/sound/soc/codecs/aw88166.c b/sound/soc/codecs/aw88166.c
+--- a/sound/soc/codecs/aw88166.c
++++ b/sound/soc/codecs/aw88166.c
+@@ -17,6 +17,14 @@
+ #include "aw88166.h"
+ #include "aw88395/aw88395_device.h"
+ 
++/*
++ * The playback widget's PRE_PMU comes before the CPU DAI's trigger, so on a
++ * controller that only runs BCLK once triggered (Rockchip's I2S) the PLL has
++ * nothing to lock to yet: wait for the clock, 10 ms at a time, up to 500 ms.
++ */
++#define AW88166_CLK_WAIT_MS		10
++#define AW88166_CLK_WAIT_MAX		50
++
+ /* poll for the ACF file for up to 60s while the rootfs comes up */
+ #define AW88166_FW_RETRY_MS		500
+ #define AW88166_FW_RETRY_MAX		120
+@@ -27,6 +35,8 @@
+ 	struct gpio_desc *reset_gpio;
+ 	struct delayed_work start_work;
+ 	struct delayed_work fw_work;
++	unsigned int clk_waits;	/* start_work passes spent waiting for the I2S clock */
++	bool playing;		/* between the playback widget's PRE_PMU and POST_PMD */
+ 	unsigned int fw_retries;
+ 	struct regmap *regmap;
+ 	struct aw_container *aw_cfg;
+@@ -97,7 +107,7 @@
+ 	if (ret)
+ 		return ret;
+ 	if ((reg_val & AW88166_BIT_PLL_CHECK) != AW88166_BIT_PLL_CHECK) {
+-		dev_err(aw_dev->dev, "check pll lock fail, reg_val:0x%04x", reg_val);
++		dev_dbg(aw_dev->dev, "check pll lock fail, reg_val:0x%04x", reg_val);
+ 		return -EINVAL;
+ 	}
+ 
+@@ -111,7 +121,7 @@
+ 	for (i = 0; i < AW88166_DEV_SYSST_CHECK_MAX; i++) {
+ 		ret = aw_dev_get_iis_status(aw_dev);
+ 		if (ret) {
+-			dev_err(aw_dev->dev, "mode1 iis signal check error");
++			dev_dbg(aw_dev->dev, "mode1 iis signal check error");
+ 			usleep_range(AW88166_2000_US, AW88166_2000_US + 10);
+ 		} else {
+ 			return 0;
+@@ -145,7 +155,7 @@
+ 	for (i = 0; i < AW88166_DEV_SYSST_CHECK_MAX; i++) {
+ 		ret = aw_dev_get_iis_status(aw_dev);
+ 		if (ret) {
+-			dev_err(aw_dev->dev, "mode2 iis signal check error");
++			dev_dbg(aw_dev->dev, "mode2 iis signal check error");
+ 			usleep_range(AW88166_2000_US, AW88166_2000_US + 10);
+ 		} else {
+ 			break;
+@@ -180,7 +190,7 @@
+ 		dev_dbg(aw_dev->dev, "mode1 check iis failed try switch to mode2 check");
+ 		ret = aw_dev_check_mode2_pll(aw_dev);
+ 		if (ret) {
+-			dev_err(aw_dev->dev, "mode2 check iis failed");
++			dev_dbg(aw_dev->dev, "mode2 check iis failed");
+ 			return ret;
+ 		}
+ 	}
+@@ -740,7 +750,8 @@
+ 
+ 	ret = aw_dev_check_syspll(aw_dev);
+ 	if (ret) {
+-		dev_err(aw_dev->dev, "pll check failed cannot start\n");
++		dev_dbg(aw_dev->dev, "pll check failed cannot start\n");	/* (no clock yet: startup_work waits) */
++		ret = -EAGAIN;
+ 		goto pll_check_fail;
+ 	}
+ 
+@@ -1178,9 +1189,27 @@
+ {
+ 	struct aw88166 *aw88166 =
+ 		container_of(work, struct aw88166, start_work.work);
++	int ret;
+ 
+ 	mutex_lock(&aw88166->lock);
+-	aw88166_start_pa(aw88166);
++	if (!aw88166->playing || aw88166->aw_pa->status == AW88166_DEV_PW_ON)
++		goto out;
++	/* the PLL needs BCLK, which may start only with the trigger after PRE_PMU */
++	ret = aw88166_dev_start(aw88166);
++	if (ret == -EAGAIN && ++aw88166->clk_waits < AW88166_CLK_WAIT_MAX) {
++		queue_delayed_work(system_dfl_wq, &aw88166->start_work,
++			msecs_to_jiffies(AW88166_CLK_WAIT_MS));
++		goto out;
++	}
++	if (ret) {
++		dev_err(aw88166->aw_pa->dev, "no start after %u ms waiting for the I2S clock (%d): retrying with the firmware reloaded",
++			aw88166->clk_waits * AW88166_CLK_WAIT_MS, ret);
++		aw88166_start_pa(aw88166);
++	} else if (aw88166->clk_waits) {
++		dev_dbg(aw88166->aw_pa->dev, "started after %u ms waiting for the I2S clock",
++			aw88166->clk_waits * AW88166_CLK_WAIT_MS);
++	}
++out:
+ 	mutex_unlock(&aw88166->lock);
+ }
+ 
+@@ -1200,12 +1229,14 @@
+ 		return;
+ 	}
+ 
+-	if (sync_start == AW88166_SYNC_START)
++	if (sync_start == AW88166_SYNC_START) {
+ 		aw88166_start_pa(aw88166);
+-	else
++	} else {
++		aw88166->clk_waits = 0;
+ 		queue_delayed_work(system_dfl_wq,
+ 			&aw88166->start_work,
+ 			AW88166_START_WORK_DELAY_MS);
++	}
+ }
+ 
+ static int aw_dev_check_sysint(struct aw_device *aw_dev)
+@@ -1653,9 +1684,12 @@
+ 	mutex_lock(&aw88166->lock);
+ 	switch (event) {
+ 	case SND_SOC_DAPM_PRE_PMU:
++		aw88166->playing = true;
+ 		aw88166_start(aw88166, AW88166_ASYNC_START);
+ 		break;
+ 	case SND_SOC_DAPM_POST_PMD:
++		aw88166->playing = false;	/* (a start still waiting for the clock gives up) */
++		cancel_delayed_work(&aw88166->start_work);
+ 		aw88166_stop(aw88166->aw_pa);
+ 		break;
+ 	default:

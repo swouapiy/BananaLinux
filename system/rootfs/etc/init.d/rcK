@@ -14,6 +14,14 @@ for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
     pidof banana-ui retroarch drastic >/dev/null || { [ -n "$G" ] && kill -0 "$G" 2>/dev/null; } || break
     sleep 0.1
 done
+# still there after 3 s (a game ignoring SIGTERM, hung on its save): killed, so nothing holds the card open at the
+# unmount below; a card left mounted read-write is what a pulled battery would leave
+if pidof banana-ui retroarch drastic >/dev/null || { [ -n "$G" ] && kill -0 "$G" 2>/dev/null; }; then
+    echo "rcK: still running after 3 s: killed" > /dev/kmsg 2>/dev/null
+    [ -n "$G" ] && kill -KILL -"$G" 2>/dev/null
+    killall -KILL banana-ui retroarch drastic 2>/dev/null
+    sleep 0.2
+fi
 # then bananad, while the card is still mounted: it writes the flight recorder's last lines out and goes (killed after
 # the unmount, the last half-minute of a recording was lost at every restart)
 killall bananad 2>/dev/null
@@ -23,25 +31,34 @@ for i in 1 2 3 4 5 6 7 8 9 10; do pidof bananad >/dev/null || break; sleep 0.1; 
 /usr/libexec/banana/wifi down 2>/dev/null
 /usr/libexec/banana/bluetooth down 2>/dev/null   # (its pairings saved on the card)
 hwclock -w 2>/dev/null
-# the panels' brightness as it is now, for bananad to restore at the next boot ("<top> <bottom>" in thousandths): only
-# the settings rows, F + volume and the DS emulators' menus wrote the file, so a level set any other way (or set a moment
-# before the shutdown, or a file never written at all) came back as the kernel's 50%. Idle-dimmed: the levels from
-# before (/run/banana/dim); a panel at 0 (the game panel's idle "off") keeps the level saved before. (A panel switched
-# off with bl_power, by a one-panel program or the menu's display going away, still has its level in brightness.)
+# the panels' brightness, as Android keeps it: the level the user chose, saved when they chose it (the settings rows,
+# F + volume, the DS emulators' menus), never the panels' level at the shutdown. That one was often lower than chosen:
+# the menu's idle dim of the bottom screen, the game panel's dim, a turn-off from sleep after an idle dim, and the next
+# boot came back at 10% with the user's 40% lost (three times in a day). Only a card with no saved level at all gets
+# the panels' level now, so the next boot has something better than the kernel's 50%.
 bl_pm() {
     local b=/sys/class/backlight/$1 m v
     m=$(cat $b/max_brightness 2>/dev/null); v=$(cat $b/brightness 2>/dev/null)
     # (under 5%: not a level anyone chose, e.g. a dim the menu never undid: the saved one stays, see bananad's BL_FLOOR_PM)
     [ "${m:-0}" -gt 0 ] && [ "${v:-0}" -gt 0 ] && [ $(( (v * 1000 + m / 2) / m )) -ge 50 ] && echo $(( (v * 1000 + m / 2) / m ))
 }
-if [ -f /run/banana/dim ] && read dt db < /run/banana/dim && [ "${dt:-0}" -ge 50 ] && [ "${db:-0}" -ge 50 ]; then
-    cp /run/banana/dim /data/banana/backlight 2>/dev/null
+if [ ! -s /data/banana/backlight ]; then
+    if [ -f /run/banana/dim ]; then
+        cp /run/banana/dim /data/banana/backlight 2>/dev/null
+    else
+        t=$(bl_pm backlight1); b=$(bl_pm backlight0)
+        [ -n "$t" ] || t=$b; [ -n "$b" ] || b=$t
+        [ -n "$t" ] && echo "$t $b" > /data/banana/backlight
+    fi
+fi
+# turned off with the charger in: started again into charging (rcS, bananad --charge) as a phone does; a restart
+# leaves its own mark, so the RK817's memory of a charger that started it isn't taken for a new one
+CHARGE=
+if [ -f /run/banana/poweroff ]; then
+    for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && CHARGE=1; done
+    [ -n "$CHARGE" ] && touch /data/banana/.charge-next
 else
-    read old_t old_b 2>/dev/null < /data/banana/backlight
-    t=$(bl_pm backlight1); b=$(bl_pm backlight0)
-    t=${t:-$old_t}; b=${b:-${old_b:-$old_t}}
-    [ -n "$t" ] || t=$b; [ -n "$b" ] || b=$t
-    [ -n "$t" ] && [ "$t $b" != "$old_t $old_b" ] && echo "$t $b" > /data/banana/backlight
+    touch /data/banana/.restart
 fi
 /usr/libexec/banana/boot-log off   # the boot's log, complete, whenever the handheld is turned off; the battery noted
 sync
@@ -49,3 +66,5 @@ umount /data 2>/dev/null || mount -o remount,ro /data
 sync
 # the LEDs off: switched off, the handheld shows nothing (bananad stopped above, so it doesn't put them back)
 for l in /sys/class/leds/*; do echo none > "$l/trigger"; echo 0 > "$l/brightness"; done 2>/dev/null
+# (the boot mode flag says so to U-Boot, which then leaves the power LED off: the PMIC still says power button)
+[ -n "$CHARGE" ] && { devmem 0xfdc20200 32 0x5242C30B 2>/dev/null; reboot -f; }

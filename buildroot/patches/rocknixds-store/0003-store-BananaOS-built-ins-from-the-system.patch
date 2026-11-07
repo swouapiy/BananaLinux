@@ -1,0 +1,50 @@
+From 3d725654fff533e659b02c37167443ffc1dfbd8a Mon Sep 17 00:00:00 2001
+From: swouapiy <swouapiy@users.noreply.github.com>
+Date: Wed, 28 Oct 2026 21:22:00 -0500
+Subject: [PATCH] store: BananaOS's built-in apps listed whatever GitHub's
+ catalog says
+
+The Store reads its catalog from GitHub when it can, and that one can be
+older than the system: an app that comes with this system (Bshare) was
+then missing from the Store, and couldn't be removed or put back. The
+built-in entries of the catalog that came with the system are now added
+to the network's when it has none of the same id (the network's entry
+wins when it has one).
+---
+ store/device/rocknixds-store | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/store/device/rocknixds-store b/store/device/rocknixds-store
+index d46975f..2b95de1 100755
+--- a/store/device/rocknixds-store
++++ b/store/device/rocknixds-store
+@@ -287,10 +287,26 @@ def fetch_catalog():
+             c = None
+         if isinstance(c, dict) and isinstance(c.get("apps"), list):
+             CATALOG_FROM = c["_from"] = u
++            if BANANA:
++                with_builtins(c)
+             return c
+     return None
+ 
+ 
++def with_builtins(c):
++    """BananaOS: the built-in apps of the catalog that came with the system that the network's has not (yet): they
++    are on this system whatever GitHub's catalog says, so they can be removed and put back"""
++    here = os.path.dirname(os.path.abspath(__file__))
++    for p in (os.path.join(here, "catalog.json"), os.path.join(here, "..", "catalog.json")):
++        mine = load_json(p, None)
++        if isinstance(mine, dict) and isinstance(mine.get("apps"), list):
++            break
++    else:
++        return
++    have = set(str(a.get("id")) for a in c["apps"] if isinstance(a, dict))
++    c["apps"] += [a for a in mine["apps"] if isinstance(a, dict) and builtin(a) and str(a.get("id")) not in have]
++
++
+ def apps():
+     out_ = []
+     for a in catalog().get("apps", []):
+-- 
+2.40.0
+
