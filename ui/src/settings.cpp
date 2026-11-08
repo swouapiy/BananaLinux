@@ -822,7 +822,7 @@ namespace banana
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Reset emulator settings", "Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "About", "", "", "about", {}, {}, Item::INFO);
+		add(S, "gear", "About", "The model, the versions, the storage, the battery and the network.", "", "about", {}, {}, Item::INFO);
 		if (!readCredits().empty())
 			add(S, "gear", "Credits", "The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.", "", "credits", {}, {}, Item::PAGE);
 		add(S, "gear", "Hotkeys", "The buttons that do something everywhere, and in the menu.", "", "hotkeys", {}, {}, Item::PAGE);
@@ -2479,7 +2479,6 @@ namespace banana
 	{
 		const Item& cur = items[i];
 		std::string help = cur.help;
-		if (cur.kind == Item::INFO && cur.key != "hk") help = about;	// (Hotkeys' rows have their own)
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
 		if (cur.key == "ssh")
 			help = "For working on Banana from a computer: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
