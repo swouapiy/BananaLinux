@@ -254,6 +254,9 @@ namespace
 		{ "ngp", "SNK - Neo Geo Pocket" }, { "ngpc", "SNK - Neo Geo Pocket Color" }, { "wonderswan", "Bandai - WonderSwan" },
 		{ "wonderswancolor", "Bandai - WonderSwan Color" }, { "atarilynx", "Atari - Lynx" }, { "virtualboy", "Nintendo - Virtual Boy" },
 		{ "pokemini", "Nintendo - Pokemon Mini" }, { "gameandwatch", "Handheld Electronic Game" },
+		{ "pcengine", "NEC - PC Engine - TurboGrafx 16" }, { "pcenginecd", "NEC - PC Engine CD - TurboGrafx-CD" }, { "atari2600", "Atari - 2600" },
+		{ "atari7800", "Atari - 7800" }, { "colecovision", "Coleco - ColecoVision" }, { "intellivision", "Mattel - Intellivision" },
+		{ "vectrex", "GCE - Vectrex" }, { "odyssey2", "Magnavox - Odyssey2" },
 		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" } };
 	std::vector<System> systems(const std::string& conf)
 	{

@@ -111,6 +111,49 @@ config BR2_PACKAGE_LIBRETRO_GW
 	help
 	  Game & Watch (and other LCD handhelds), from .mgw files.
 
+config BR2_PACKAGE_LIBRETRO_BEETLE_PCE_FAST
+	bool "libretro-beetle-pce-fast"
+	default y
+	help
+	  PC Engine and PC Engine CD (Mednafen's; the CD's BIOS,
+	  syscard3.pce, in bios/).
+
+config BR2_PACKAGE_LIBRETRO_STELLA
+	bool "libretro-stella"
+	default y
+	help
+	  Atari 2600.
+
+config BR2_PACKAGE_LIBRETRO_PROSYSTEM
+	bool "libretro-prosystem"
+	default y
+	help
+	  Atari 7800.
+
+config BR2_PACKAGE_LIBRETRO_GEARCOLECO
+	bool "libretro-gearcoleco"
+	default y
+	help
+	  ColecoVision (its BIOS, colecovision.rom, in bios/).
+
+config BR2_PACKAGE_LIBRETRO_FREEINTV
+	bool "libretro-freeintv"
+	default y
+	help
+	  Intellivision (its BIOS, exec.bin and grom.bin, in bios/).
+
+config BR2_PACKAGE_LIBRETRO_VECX
+	bool "libretro-vecx"
+	default y
+	help
+	  Vectrex (its BIOS built in).
+
+config BR2_PACKAGE_LIBRETRO_O2EM
+	bool "libretro-o2em"
+	default y
+	help
+	  Odyssey 2 / Videopac (its BIOS, o2rom.bin, in bios/).
+
 config BR2_PACKAGE_RETROARCH_GLSL_SHADERS
 	bool "retroarch-glsl-shaders"
 	default y
