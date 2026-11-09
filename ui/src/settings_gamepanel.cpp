@@ -829,7 +829,7 @@ namespace banana
 			if (rows.size() > (nearList.empty() ? 2u : 1u)) rows.resize(nearList.empty() ? 2 : 1);
 			for (auto& r : rows) raw->wantBadge(raw, r.badge);
 		}
-		be->beginScreen(gScreen);
+		beginScreen(gScreen);
 		box("screen", false, 0, 0, 640, 480);
 		if (gKeysOpen) { gameKeysFrame(p); be->endScreen(); return; }	// (the panel is the keyboard while it is open)
 		bool pk = companion && companion->active();
@@ -1440,7 +1440,7 @@ namespace banana
 		for (int i = 0; i < gcomp::NUM_PAGES; i++)
 		{
 			gcView = i; gcScreen = 0; gcList = gcRow = -1;
-			be->beginScreen(gScreen);
+			beginScreen(gScreen);
 			gcRender(p);
 			gcTabs(p);
 			be->endScreen();
