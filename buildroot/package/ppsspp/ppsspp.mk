@@ -14,7 +14,7 @@ PPSSPP_SOURCE = ppsspp-$(PPSSPP_VERSION).tar.xz
 PPSSPP_SITE = https://github.com/hrydgard/ppsspp/releases/download/v$(PPSSPP_VERSION)
 PPSSPP_LICENSE = GPL-2.0+
 PPSSPP_LICENSE_FILES = LICENSE.TXT
-PPSSPP_DEPENDENCIES = sdl2 libgles libegl zlib host-pkgconf
+PPSSPP_DEPENDENCIES = sdl2 sdl2_ttf libgles libegl zlib host-pkgconf
 PPSSPP_SUPPORTS_IN_SOURCE_BUILD = NO
 
 define PPSSPP_BUILD_FFMPEG
@@ -24,6 +24,7 @@ endef
 PPSSPP_PRE_CONFIGURE_HOOKS += PPSSPP_BUILD_FFMPEG
 
 # ROCKNIX's GLES build (no Vulkan: Banana's Mesa is Panfrost's GL), its bundled FFmpeg and libraries
+# SDL2_ttf by pkg-config (PPSSPP's fallback): the cmake file SDL2_ttf's autotools build installs has no SDL2_ttf::SDL2_ttf target
 PPSSPP_CONF_OPTS = \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DUSING_FBDEV=ON \
@@ -40,7 +41,8 @@ PPSSPP_CONF_OPTS = \
 	-DHEADLESS=OFF \
 	-DUNITTEST=OFF \
 	-DSIMULATOR=OFF \
-	-DBUILD_SHARED_LIBS=OFF
+	-DBUILD_SHARED_LIBS=OFF \
+	-DCMAKE_DISABLE_FIND_PACKAGE_SDL2_ttf=ON
 
 PPSSPP_MAKE_OPTS = PPSSPPSDL
 
