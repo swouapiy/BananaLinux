@@ -9,8 +9,9 @@ LIBRETRO_SWANSTATION_SITE = $(call github,libretro,swanstation,$(LIBRETRO_SWANST
 LIBRETRO_SWANSTATION_LICENSE = GPL-3.0
 LIBRETRO_SWANSTATION_LICENSE_FILES = LICENSE
 
+# CPU_ARCH: its makefile otherwise takes the build machine's (x86 on CI, so the x86 recompiler)
 define LIBRETRO_SWANSTATION_BUILD_CMDS
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) platform=unix -f Makefile.libretro CC="$(TARGET_CC)" CXX="$(TARGET_CXX)"
+	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) platform=unix -f Makefile.libretro CPU_ARCH=aarch64 CC="$(TARGET_CC)" CXX="$(TARGET_CXX)"
 endef
 
 define LIBRETRO_SWANSTATION_INSTALL_TARGET_CMDS
