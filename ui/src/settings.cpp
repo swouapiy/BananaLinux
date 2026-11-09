@@ -425,6 +425,12 @@ namespace banana
 		{ "snes", "Super Nintendo", { { "snes9x", "Snes9x" }, { "bananasnes", "BananaSNES" }, { "snes9x2010", "Snes9x 2010" }, { "snes9x2005_plus", "Snes9x 2005 Plus" },
 			{ "snes9x2005", "Snes9x 2005" }, { "snes9x2002", "Snes9x 2002" }, { "bsnes", "bsnes" }, { "bsnes_mercury_performance", "bsnes-mercury" }, { "mesen-s", "Mesen-S" } } },
 		{ "megadrive", "Mega Drive", { { "picodrive", "PicoDrive" }, { "genesis_plus_gx", "Genesis Plus GX" }, { "clownmdemu", "clownmdemu" }, { "blastem", "BlastEm" } } },
+		{ "fds", "Famicom Disk System", { { "fceumm", "FCEUmm" }, { "nestopia", "Nestopia UE" }, { "mesen", "Mesen" } } },
+		{ "mastersystem", "Master System", { { "picodrive", "PicoDrive" }, { "genesis_plus_gx", "Genesis Plus GX" }, { "gearsystem", "Gearsystem" }, { "smsplus", "SMS Plus GX" } } },
+		{ "gamegear", "Game Gear", { { "picodrive", "PicoDrive" }, { "genesis_plus_gx", "Genesis Plus GX" }, { "gearsystem", "Gearsystem" }, { "smsplus", "SMS Plus GX" } } },
+		{ "sg-1000", "SG-1000", { { "picodrive", "PicoDrive" }, { "genesis_plus_gx", "Genesis Plus GX" }, { "gearsystem", "Gearsystem" } } },
+		{ "megacd", "Mega CD", { { "picodrive", "PicoDrive" }, { "genesis_plus_gx", "Genesis Plus GX" } } },
+		{ "sega32x", "32X", { { "picodrive", "PicoDrive" } } },
 		{ "psx", "PlayStation", { { "pcsx_rearmed", "PCSX ReARMed" }, { "swanstation", "SwanStation" }, { "mednafen_psx", "Beetle PSX" } } },
 		{ "n64", "Nintendo 64", { { "mupen64plus_next", "Mupen64Plus-Next" }, { "parallel_n64", "ParaLLEl N64" } } },
 	};

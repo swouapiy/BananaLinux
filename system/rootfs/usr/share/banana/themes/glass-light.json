@@ -11,6 +11,8 @@
   "icons": {
     "nds": "glass/icons/nds.png", "gba": "glass/icons/gba.png", "gbc": "glass/icons/gbc.png", "gb": "glass/icons/gb.png",
     "nes": "glass/icons/nes.png", "snes": "glass/icons/snes.png", "megadrive": "glass/icons/megadrive.png",
+    "mastersystem": "glass/icons/mastersystem.png", "gamegear": "glass/icons/gamegear.png", "sg-1000": "glass/icons/sg-1000.png",
+    "megacd": "glass/icons/megacd.png", "sega32x": "glass/icons/sega32x.png", "fds": "glass/icons/fds.png",
     "psx": "glass/icons/psx.png", "n64": "glass/icons/n64.png", "ports": "glass/icons/ports.png",
     "pico-8": "glass/icons/pico-8.png", "recently-played": "glass/icons/recently-played.png",
     "favorites": "glass/icons/favorites.png", "downloads": "glass/icons/downloads.png",
