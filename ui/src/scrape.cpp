@@ -251,6 +251,9 @@ namespace
 		{ "snes", "Nintendo - Super Nintendo Entertainment System" }, { "megadrive", "Sega - Mega Drive - Genesis" },
 		{ "fds", "Nintendo - Family Computer Disk System" }, { "mastersystem", "Sega - Master System - Mark III" },
 		{ "gamegear", "Sega - Game Gear" }, { "sg-1000", "Sega - SG-1000" }, { "megacd", "Sega - Mega-CD - Sega CD" }, { "sega32x", "Sega - 32X" },
+		{ "ngp", "SNK - Neo Geo Pocket" }, { "ngpc", "SNK - Neo Geo Pocket Color" }, { "wonderswan", "Bandai - WonderSwan" },
+		{ "wonderswancolor", "Bandai - WonderSwan Color" }, { "atarilynx", "Atari - Lynx" }, { "virtualboy", "Nintendo - Virtual Boy" },
+		{ "pokemini", "Nintendo - Pokemon Mini" }, { "gameandwatch", "Handheld Electronic Game" },
 		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" } };
 	std::vector<System> systems(const std::string& conf)
 	{

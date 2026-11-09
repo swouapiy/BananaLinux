@@ -75,6 +75,42 @@ config BR2_PACKAGE_LIBRETRO_FAKE08
 	help
 	  PICO-8 carts (.p8 and .p8.png), when the official PICO-8 isn't on the card.
 
+config BR2_PACKAGE_LIBRETRO_RACE
+	bool "libretro-race"
+	default y
+	help
+	  Neo Geo Pocket and Neo Geo Pocket Color.
+
+config BR2_PACKAGE_LIBRETRO_BEETLE_WSWAN
+	bool "libretro-beetle-wswan"
+	default y
+	help
+	  WonderSwan and WonderSwan Color (Mednafen's).
+
+config BR2_PACKAGE_LIBRETRO_HANDY
+	bool "libretro-handy"
+	default y
+	help
+	  Atari Lynx (its BIOS, lynxboot.img, in bios/).
+
+config BR2_PACKAGE_LIBRETRO_BEETLE_VB
+	bool "libretro-beetle-vb"
+	default y
+	help
+	  Virtual Boy (Mednafen's).
+
+config BR2_PACKAGE_LIBRETRO_POKEMINI
+	bool "libretro-pokemini"
+	default y
+	help
+	  Pokémon mini.
+
+config BR2_PACKAGE_LIBRETRO_GW
+	bool "libretro-gw"
+	default y
+	help
+	  Game & Watch (and other LCD handhelds), from .mgw files.
+
 config BR2_PACKAGE_RETROARCH_GLSL_SHADERS
 	bool "retroarch-glsl-shaders"
 	default y

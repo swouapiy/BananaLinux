@@ -3,7 +3,7 @@ BANANA
 ======
 Games go in roms/<system>: roms/nds for Nintendo DS (.nds or .zip), roms/gba, roms/snes, ...
 BIOS files go in bios/: Mega CD needs bios_CD_U.bin, bios_CD_E.bin or bios_CD_J.bin (the games' region), the
-Famicom Disk System disksys.rom.
+Famicom Disk System disksys.rom, the Lynx lynxboot.img.
 Box art (optional): roms/<system>/media/box/<game file name>.png  (also media/cart, media/label),
 or an EmulationStation gamelist.xml with its images, as scrapers write them.
 
