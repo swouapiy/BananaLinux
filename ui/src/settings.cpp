@@ -540,17 +540,17 @@ namespace banana
 			{ "Auto", "Dark", "Light" }, { "auto", "dark", "light" });
 		hint({ "Dark or light, whichever reads better on the accent colour.", "Always dark text.", "Always light text." });
 		// each panel its own backlight (N2); F + volume steps both
-		add(D, "picture", "Top brightness", "How bright the top screen is. F + volume changes both screens anywhere, in games too.", "", "top",
+		add(D, "picture", "Top brightness", "How bright the top screen is. F + volume changes both screens, in games too.", "", "top",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
-		add(D, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens anywhere, in games too.", "", "bottom",
+		add(D, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens, in games too.", "", "bottom",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
-		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
+		add(D, "music", "Volume", "The speakers or headphones. The volume keys change it anywhere.", "", "",
 			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
 		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge sound when a game starts.", menu, "sounds", { "On", "Off" }, { "on", "off" });
 		items.back().hints = { "The menu plays its sounds.", "The menu is silent. Games keep their sound." };
 		add(D, "picture", "Shown systems", "Which systems are on the home row. A opens the list.", "", "shelves", {}, {}, Item::PAGE);
-		add(D, "picture", "Menu look", "The top screen's motion, battery and clock, the boot animation, and the DS cartridges.", "", "menu_look", {}, {}, Item::PAGE);
+		add(D, "picture", "Menu look", "Motion, the battery and clock, the boot animation and the DS cartridges.", "", "menu_look", {}, {}, Item::PAGE);
 		// the Menu look page (Display & sound > Menu look)
 		{
 			const char* ML = "Menu look";
@@ -562,7 +562,7 @@ namespace banana
 			items.back().hints = { "Like 14:30.", "Like 2:30 PM." };
 			add(ML, "picture", "Boot animation", "The bananas and the cartridge as the handheld starts.", menu, "splash", { "On", "Off" }, { "on", "off" });
 			items.back().hints = { "Plays as it starts, and backwards as it shuts down.", "Goes straight to the menu, and straight to black." };
-			add(ML, "picture", "DS cartridges", "What the DS cartridges on the bottom screen show. The top screen keeps the box art.", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
+			add(ML, "picture", "DS cartridges", "What the DS cartridges on the bottom screen show.", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
 			items.back().hints = { "The covers Box art fetched. A game without one shows its own icon.", "Each game's own icon, as the DSi menu shows it." };
 		}
 		const char* P = "Sleep & power";
@@ -575,7 +575,7 @@ namespace banana
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
 		hint({ "It never falls asleep by itself.", "Sleeps after 5 minutes without use.", "Sleeps after 10 minutes without use.",
 			"Sleeps after 15 minutes without use.", "Sleeps after 30 minutes without use." });
-		add(P, "moon", "Turn off when idle", "Turns the handheld off after it has slept for a while. Your game saves first.", power, "poweroff_minutes",
+		add(P, "moon", "Turn off when idle", "Turns off after sleeping a while. Your game is saved first.", power, "poweroff_minutes",
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour", "3 hours", "6 hours" }, { "0", "5", "10", "15", "30", "60", "180", "360" });
 		hint({ "It stays asleep until you wake it.", "Turns off after 5 minutes asleep.", "Turns off after 10 minutes asleep.",
 			"Turns off after 15 minutes asleep.", "Turns off after 30 minutes asleep.", "Turns off after 1 hour asleep.",
@@ -587,7 +587,7 @@ namespace banana
 		hint({ "It sleeps. Open the lid to carry on where you were.", "The screens go dark, but the game keeps running." });
 		add(P, "moon", "Waking up", "How the handheld wakes from sleep.", power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
 		hint({ "Wakes up quickly.", "Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong." });
-		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
+		add(P, "moon", "LEDs", "Green when on, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
 		hint({ "Full brightness.", "Softer lights.", "No lights." });
 		add(P, "moon", "LED while asleep", "The power light while the handheld sleeps.", power, "led_sleep", { "On", "Off" }, { "on", "off" });
@@ -596,19 +596,19 @@ namespace banana
 		// then a page for each emulator's own settings, in that emulator's files, both whichever is chosen (to set one up
 		// before switching to it). Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
 		const char* N = "Nintendo DS";
-		add(N, "nds", "Emulator", "Which emulator plays DS games. X on a game in the library picks one for that game alone.",
+		add(N, "nds", "Emulator", "Which emulator plays DS games. X on a game picks one for that game only.",
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
 		items.back().hints = { "DraStic: the fastest. Its own settings are on its page below.", "Banana's own, built on melonDS: the most accurate. Its own settings are on its page below." };
 		add(N, "nds", "Quick resume", "What quitting a game does.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
 		hint({ "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place, even through a shutdown. Next time the game carries on from there." });
 		// the DS's own language (its firmware's), in both emulators at once: a game that has several picks it (#22)
-		add(N, "nds", "DS language", "The language the DS itself is set to. A game with several languages starts in this one.",
+		add(N, "nds", "DS language", "The DS's language. Games with several languages start in it.",
 			"", "ds_language", { "English", "Japanese", "French", "German", "Italian", "Spanish" }, { "1", "0", "2", "3", "4", "5" });
 		// L2, R2, L3 and R3's jobs, the same in both emulators (the DS buttons page below; nds-buttons)
 		add(N, "nds", "Buttons", "What L2, R2, L3 and R3 do in DS games, the same in both emulators.", "", "ds_buttons", {}, {}, Item::PAGE);
 		// the DS's own name (its firmware's user name), in both emulators at once: what a game calls you (#30)
-		add(N, "nds", "DS name", "The name the DS itself is set to: what games call you. 10 characters at most.",
+		add(N, "nds", "DS name", "What DS games call you. Up to 10 characters.",
 			"", "ds_name", {}, {}, Item::PAGE);
 		add(N, "nds", "SuperDrastic", "SuperDrastic's own settings: picture, speed, sound and its hotkeys.", "", "nds_superdrastic", {}, {}, Item::PAGE);
 		add(N, "nds", "BananaDS", "BananaDS's own settings: picture, speed, sound and its hotkeys.", "", "nds_bananads", {}, {}, Item::PAGE);
@@ -625,7 +625,7 @@ namespace banana
 			add(BD, "nds", "3D resolution", "How sharp DS games' 3D is drawn.",
 				bds, "render.scale", { "2x", "1x", "3x (experimental)", "4x (experimental)" }, { "2", "1", "3", "4" });
 			items.back().hints = { "Twice the DS's size: sharper 3D.", "The DS's own size: the lightest.", "Three times the DS's size. Experimental: a busy 3D scene can slow down.", "Four times, the Plus screens' own size: the sharpest. Experimental: a busy 3D scene can slow down." };
-			add(BD, "nds", "Edge marking", "The outlines some games draw around 3D models (Zelda, Kirby, many Pokémon battles).",
+			add(BD, "nds", "Edge marking", "Outlines around 3D models, as in Zelda, Kirby and Pokémon battles.",
 				bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
 			items.back().hints = { "Outlines drawn, as on a DS.", "Outlines left out." };
 			add(BD, "nds", "Fog", "The distance fog some games draw in 3D.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
@@ -652,14 +652,14 @@ namespace banana
 			items.back().hints = { "Words and blows get through, the room's noise doesn't.", "Even quiet sounds get through.", "Only loud sounds get through.", "Everything the microphone hears, the speaker's sound too." };
 			// the DS Pokémon companion (ui/src/nds, docs/superpowers/specs/2026-11-02-nds-pokemon-companion-design.md): the
 			// owner's name for it, "(alpha)" until the owner drops it. BananaDS only: SuperDrastic has no memory export
-			add(BD, "nds", "NDS Pokémon companion (alpha)", "A companion for the DS Pokémon games, on the touch screen. An early version. BananaDS only.",
+			add(BD, "nds", "NDS Pokémon companion (alpha)", "A helper for DS Pokémon games on the touch screen. Early version, BananaDS only.",
 				menu, "nds_companion", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "No companion.", "A small icon in the touch screen's corner opens your battle, party, what to catch here, a guide and the Pokédex. The game keeps running." };
 			add(BD, "nds", "Challenge mode", "For a Nuzlocke-style run. Needs the NDS Pokémon companion on.",
 				menu, "nds_challenge", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "The companion shows everything as usual.", "The companion keeps your first encounter on each route and the Pokémon you lost." };
 			add(BD, "nds", "Hotkeys", "The buttons that do something in BananaDS's games.", "", "hotkeys_bds", {}, {}, Item::PAGE);
-			add(BD, "nds", "Reset BananaDS", "BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.",
+			add(BD, "nds", "Reset BananaDS", "Restores BananaDS's settings. Saves, states and game clocks stay. Press A twice.",
 				"", "nds-reset-bananads", { "" }, { "" }, Item::ACTION);
 		}
 		// the SuperDrastic page (Nintendo DS > SuperDrastic): superdrastic.conf and DraStic's drastic.cfg
@@ -688,7 +688,7 @@ namespace banana
 			add(SD, "nds", "Hotkeys", "The buttons that do something in SuperDrastic's games.", "", "hotkeys_sd", {}, {}, Item::PAGE);
 			add(SD, "nds", "Reset buttons", "Puts DraStic's buttons back as printed, F opening its menu. Press A twice.",
 				"", "nds-reset-buttons", { "" }, { "" }, Item::ACTION);
-			add(SD, "nds", "Reset DraStic", "Puts all of DraStic's settings back to Banana's. Saves, states and cheats stay. Press A twice.",
+			add(SD, "nds", "Reset DraStic", "Restores DraStic's settings. Saves, states and cheats stay. Press A twice.",
 				"", "nds-reset-drastic", { "" }, { "" }, Item::ACTION);
 		}
 		// Other systems (RetroArch): what every game shares, then pages: Second screen (the game panel and its companions),
@@ -706,7 +706,7 @@ namespace banana
 			menu, "ra_frontend", { "Auto", "BananaFront", "RetroArch" }, { "auto", "bananafront", "retroarch" });
 		items.back().hints = { "BananaFront for the systems tested on it, RetroArch for the rest.", "BananaOS's own: lighter on the battery and quicker to start, with RetroArch's saves and settings.", "Always RetroArch, with its own menu and Core Downloader." };
 		add(O, "gamepad", "Second screen", "What the other screen shows while a game plays.", "", "ra_second", {}, {}, Item::PAGE);
-		add(O, "picture", "Picture & sound", "How RetroArch's games look and sound: a shader, a screen border, VSync and the audio latency.", "", "ra_picture", {}, {}, Item::PAGE);
+		add(O, "picture", "Picture & sound", "Shader, screen border, VSync and audio latency for RetroArch games.", "", "ra_picture", {}, {}, Item::PAGE);
 		{
 			const char* SS = "Second screen";
 			add(SS, "gamepad", "Second screen", "What the other screen shows while a game plays.",
@@ -718,10 +718,10 @@ namespace banana
 			add(SS, "picture", "Game panel idle time", "How long the game panel waits before it dims or turns off.",
 				menu, "bottom_idle_seconds", { "After 10 s", "After 30 s", "After 1 minute" }, { "10", "30", "60" });
 			items.back().hints = { "After 10 seconds without use.", "After 30 seconds without use.", "After a minute without use." };
-			add(SS, "gamepad", "Pokémon companion", "Your party and battles on the second screen, in the English GBA Pokémon games. Inspired by PokeDaisy.",
+			add(SS, "gamepad", "Pokémon companion", "Your party and battles on the second screen in English GBA Pokémon games. Inspired by PokeDaisy.",
 				menu, "pokemon_companion", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "No companion.", "Your party, and in a battle the foe and how each move does against it. Needs Second screen on." };
-			add(SS, "gamepad", "Game companion", "Pages about other GBA games on the second screen, as they play. Inspired by PokeDaisy.",
+			add(SS, "gamepad", "Game companion", "Info about other GBA games on the second screen. Inspired by PokeDaisy.",
 				menu, "game_companion", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "No companion.", "Status, the fight, the map, the bag and your progress. Needs Second screen on." };
 		}
@@ -761,14 +761,14 @@ namespace banana
 		}
 		// L2, R2, L3 and R3 alone in RetroArch's games (the page below; run-retroarch, bananad)
 		add(O, "gamepad", "Buttons", "Each system's buttons: what L2, R2, L3 and R3 do, and A/B and X/Y swapped.", "", "ra_buttons", {}, {}, Item::PAGE);
-		add(O, "gamepad", "Reset RetroArch", "Puts RetroArch's settings back to Banana's. Saves, states and your account stay. Press A twice.",
+		add(O, "gamepad", "Reset RetroArch", "Restores RetroArch's settings. Saves, states and your account stay. Press A twice.",
 			"", "ra_reset", { "" }, { "" }, Item::ACTION);
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "The wireless network.", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		items.back().hints = { "Wi-Fi on. A on Networks joins one.", "Wi-Fi off. Saves battery." };
-		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
+		add(W, "phone", "Network", "Networks nearby. A on one joins it.", "", "network", {}, {}, Item::PAGE);
 		add(W, "phone", "Bluetooth", "Controllers, headphones and speakers.", "", "net_bt", {}, {}, Item::PAGE);
-		add(W, "phone", "File sharing", "The card on your network: file sharing on or off, its login and name and password, and SSH.", "", "net_share", {}, {}, Item::PAGE);
+		add(W, "phone", "File sharing", "Share the card on your network: on or off, login, password and SSH.", "", "net_share", {}, {}, Item::PAGE);
 		// the Bluetooth page (Network > Bluetooth)
 		{
 			const char* BT = "Bluetooth";
@@ -821,23 +821,23 @@ namespace banana
 				menu, "timezone", names, tzs);
 		}
 		add(S, "gear", "Updates", "New versions of Banana: checking, installing, and going back.", "", "sys_updates", {}, {}, Item::PAGE);
-		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games: fetching them, and where they come from.", "", "sys_boxart", {}, {}, Item::PAGE);
+		add(S, "picture", "Box art", "Covers, title screens, genres and years: fetch them and pick their source.", "", "sys_boxart", {}, {}, Item::PAGE);
 		// the Updates page (System > Updates)
 		{
 			const char* UP = "Updates";
-			add(UP, "gear", "Update", "A new version, from GitHub or a package on the card. It runs from the next restart.", "", "update", {}, {}, Item::PAGE);
+			add(UP, "gear", "Update", "A new version from GitHub or the card. It starts on the next restart.", "", "update", {}, {}, Item::PAGE);
 			add(UP, "gear", "Test versions", "Whether the update check counts test versions.",
 				menu, "update_prerelease", { "Included", "Left out" }, { "on", "off" });
 			items.back().hints = { "Test versions count. Every release so far is one.", "Only stable versions." };
 			add(UP, "gear", "Update check", "When Banana looks for a new version. Nothing downloads without you.",
 				menu, "update_daily", { "When asked", "Daily" }, { "off", "on" });
 			items.back().hints = { "Only when you choose Check for updates.", "Also once a day, when Wi-Fi connects." };
-			add(UP, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
+			add(UP, "gear", "Previous version", "Restarts into the version from before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		}
 		// the Box art page (System > Box art)
 		{
 			const char* BA = "Box art";
-			add(BA, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro. Wi-Fi needed.",
+			add(BA, "picture", "Box art", "Covers, title screens, genres and years from libretro. Needs Wi-Fi.",
 				"", "scrape", {}, {}, Item::PAGE);
 			add(BA, "picture", "Box art from", "Where covers come from.",
 				menu, "boxart_source", { "libretro", "libretro + Twilight", "Twilight first" }, { "libretro", "both", "twilight" });
@@ -847,17 +847,17 @@ namespace banana
 		add(S, "gear", "Second SD card", "Games on the card in the second slot.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
 		items.back().hints = { "Its games show with the others while it's in. exFAT or FAT32.", "Its games stay hidden." };
 		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time.", "", "setup", {}, {}, Item::PAGE);
-		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back. Games and saves stay. Press A twice.",
+		add(S, "gear", "Reset system settings", "Restores menu, display, sound, power and network settings. Games and saves stay. Press A twice.",
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "Reset emulator settings", "Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.",
+		add(S, "gear", "Reset emulator settings", "Restores every emulator setting. Games and saves stay. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "About", "The model, the versions, the storage, the battery and the network.", "", "about", {}, {}, Item::INFO);
 		if (!readCredits().empty())
-			add(S, "gear", "Credits", "The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.", "", "credits", {}, {}, Item::PAGE);
+			add(S, "gear", "Credits", "The people behind this version of BananaOS.", "", "credits", {}, {}, Item::PAGE);
 		add(S, "gear", "Hotkeys", "The buttons that do something everywhere, and in the menu.", "", "hotkeys", {}, {}, Item::PAGE);
 		// (PR #94, swouapiy) last in System, and there only once unlocked: A seven times on About (settings.conf's
 		// developer); groupEnd leaves it out until then
-		add(S, "gear", "Developer options", "Tools for finding what went wrong: a recording of everything the handheld does, on the card.",
+		add(S, "gear", "Developer options", "Tools for tracking down problems, such as a recording of what the handheld does.",
 			"", "developer", {}, {}, Item::PAGE);
 		// the Developer options list: opened from that row, not a tile
 		add("Developer options", "gear", "Flight recorder", "Records what the handheld does, in banana/logs/sessions on the card.", power, "recorder",
@@ -914,10 +914,10 @@ namespace banana
 			const std::vector<std::string> values = { "swap", "ff", "blow", "save", "load", "menu", "a", "b", "x", "y", "l", "r", "start", "select", "none" };
 			const char* help = "In a DS game, in both emulators. Swap screens: as F + SELECT. Fast-forward: on, and off again. Blow on the mic: the game hears a blow while it is held, the microphone on or off. Save and load state: as F + R and F + L. F + a button and HOME keep their own (the Hotkeys page).";
 			buttonRows(DB, "nds", help, menu, "nds_btn_", "", names, values);
-			add(DB, "nds", "Swap A/B and X/Y", "Swaps the face buttons in both DS emulators, for hands used to the other layout.",
+			add(DB, "nds", "Swap A/B and X/Y", "Swaps the face buttons in both DS emulators.",
 				menu, "nds_swap_ab", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "The buttons as printed.", "A presses B, B presses A, X presses Y, Y presses X." };
-			add(DB, "nds", "Reset buttons", "Puts L2, R2, L3 and R3 back to Banana's, A, B, X and Y as printed. Press A twice.",
+			add(DB, "nds", "Reset buttons", "L2, R2, L3 and R3 back to Banana's, A, B, X and Y as printed. Press A twice.",
 				"", "nds-reset-ds-buttons", { "" }, { "" }, Item::ACTION);
 		}
 		// the other systems' buttons (Other systems > Buttons): a page for each system, its L2, R2, L3 and R3's jobs and
@@ -940,13 +940,13 @@ namespace banana
 			}
 		}
 		const char* PW = "Power";
-		add(PW, "moon", "Sleep", "Puts the handheld to sleep, as a press of the power button does. Your game pauses.", "", "sleep", { "" }, { "" }, Item::ACTION);
+		add(PW, "moon", "Sleep", "Sleeps like the power button does. Your game pauses.", "", "sleep", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
 		// the Home server page (Network > Home server)
 		const char* HS = "Home server";
 		add(HS, "phone", "Server", "", "", "hs_server", {}, {}, Item::PAGE);
-		add(HS, "phone", "Sync now", "Copies the server's games to the card and syncs saves both ways. Your own files stay.",
+		add(HS, "phone", "Sync now", "Gets the server's games and syncs saves both ways. Your own files stay.",
 			"", "hs_sync", {}, {}, Item::PAGE);
 		add(HS, "phone", "Games", "What comes from the server.",
 			menu, "homesync_roms", { "Download", "Saves only" }, { "on", "off" });
@@ -963,7 +963,7 @@ namespace banana
 		add(HS, "phone", "Auto sync", "When syncing happens by itself.",
 			menu, "homesync_auto", { "Off", "Leaving a game", "And on Wi-Fi" }, { "off", "quit", "both" });
 		items.back().hints = { "Only when you choose Sync now.", "After you leave a game.", "After a game, and when Wi-Fi connects." };
-		add(HS, "phone", "Systems", "Which systems sync on this handheld. A skipped system's games stay as they are on the card.", "", "hs_systems", {}, {}, Item::PAGE);
+		add(HS, "phone", "Systems", "Which systems sync here. Skipped systems stay as they are.", "", "hs_systems", {}, {}, Item::PAGE);
 		add(HS, "phone", "Games to sync", "Which of the server's games come to the card.",
 			menu, "homesync_games", { "All", "Chosen" }, { "all", "chosen" });
 		items.back().hints = { "Every game of the systems above.", "Only the games ticked in Choose games." };
@@ -1005,7 +1005,7 @@ namespace banana
 			for (auto& r : rows) add(AB, "gear", r.label, r.help, "", r.key, { "" }, { "" }, Item::INFO);
 		}
 		// the Developer options list: opened from that row, not a tile (DEV: no tile, as Power and Hotkeys)
-		add(DEV, "gear", "Flight recorder", "Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi.", power, "recorder",
+		add(DEV, "gear", "Flight recorder", "Records buttons, touches, the lid, screens, sleep, battery and Wi-Fi.", power, "recorder",
 			{ "Off", "On" }, { "off", "on" });
 		items.back().hints = { "Not recording.",
 			"Recording to banana/logs/sessions, even after a restart. Hold Select for 2 seconds to mark a moment (the light blinks twice)." };
@@ -1016,9 +1016,9 @@ namespace banana
 			{ "Off", "On" }, { "off", "on" });
 		items.back().hints = { "Not logged.",
 			"Each step in banana/logs/shutdown.txt. A power-off that hangs restarts, saves where it stopped, and turns off again." };
-		add(DEV, "moon", "Night test", "Six hours on battery, then off. Report in banana/logs/night-test.txt. Press A twice.",
+		add(DEV, "moon", "Night test", "Six hours on battery, then off. Report: banana/logs/night-test.txt. Press A twice.",
 			"", "night_test", { "" }, { "" }, Item::ACTION);
-		add(DEV, "gear", "Hide developer options", "Takes this row away again. Seven A's on About's Version bring it back. Press A twice.",
+		add(DEV, "gear", "Hide developer options", "Hides this row. A seven times on About > Version brings it back. Press A twice.",
 			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 		addShelfRows();
 		// the sections in the order they first come, those with a tile first (the grid is the first groups) and each
