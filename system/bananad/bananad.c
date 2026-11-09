@@ -1884,7 +1884,13 @@ static int charge_mode(void)
 		int pct;
 		if (charger_online() && !start_ok(&pct, &uv)) why = "the battery too low to start, the charger in";
 	}
-	if (!why || !charger_online()) return 1;
+	if (!why) return 1;
+	/* started by the cable, but it is out again already (plugged in and out at once): off again, not the menu, as a
+	 * phone off stays off. A second look a second later (the cable's contacts as it goes in) */
+	if (!charger_online()) {
+		sleep(1);
+		if (!charger_online()) { charge_log("%s, but the charger out again already: turned off again", why); return 3; }
+	}
 	char bat[256] = "";
 	int pct = -1, charging = 0;
 	battery_state(bat, sizeof bat, &pct, &charging);

@@ -13,10 +13,12 @@ charge() { r=0; BANANAD_TEST_LID=/run/test/lid "$W/bananad" --charge || r=$?; }
 finish() { for i in $(seq 150); do kill -0 $CB 2>/dev/null || break; sleep 0.1; done; kill $CB 2>/dev/null || true; r=0; wait $CB || r=$?; }
 
 echo 0 > /run/test/lid      # (the lid open: a scenario before may have left it shut, and shut is charging 5's)
-echo "charging 1. not a charger's start (no mark, no PMIC to ask), or no charger: on with the boot at once"
+echo "charging 1. not a charger's start (no mark, no PMIC to ask): on with the boot at once; the charger's start with"
+echo "   the cable out again already (in and out at once): off again, not the menu"
 charge; [ $r = 1 ] && ok "no charger's start: exit 1" || bad "exit $r"
 : > /data/banana/.charge-next; charge
-[ $r = 1 ] && ok "turned off with no charger in: exit 1" || bad "exit $r"
+[ $r = 3 ] && ok "turned off with the charger in, out again: exit 3 (stays off)" || bad "exit $r"
+grep -q 'the charger out again already: turned off again' /data/banana/logs/charging.log && ok "logged" || bad "not logged"
 [ "$(cat /sys/devices/system/cpu/cpu1/online)" = 1 ] && ok "nothing changed (the CPUs)" || bad "cpu1 offline"
 
 echo "charging 2. a restart's mark wins over the charger: a restart isn't a charger's start"
