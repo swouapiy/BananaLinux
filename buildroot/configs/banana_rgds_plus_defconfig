@@ -110,6 +110,8 @@ BR2_PACKAGE_WPA_SUPPLICANT=y
 BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
 BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
 BR2_PACKAGE_WPA_SUPPLICANT_AUTOSCAN=y
+# iw: "iw reg reload" for the Wi-Fi's regulatory.db (cfg80211 asks for it before the root is mounted)
+BR2_PACKAGE_IW=y
 BR2_PACKAGE_KSMBD_TOOLS=y
 # Bluetooth (Settings > Network > Bluetooth, usr/libexec/banana/bluetooth): BlueZ's bluetoothd with its input plugins
 # for controllers (classic HID, and HoG for Bluetooth LE pads), bluetoothctl to drive it, and bluez-alsa for

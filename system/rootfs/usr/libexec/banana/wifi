@@ -34,6 +34,9 @@ up() {
     fi
     # with no known network in reach, scans back off from every 3 s to every 5 min (the radio mostly asleep)
     { echo "ctrl_interface=$CTRL"; echo "update_config=0"; echo "autoscan=exponential:3:300"; [ -f $CONF ] && cat $CONF; } > /run/banana/wpa.conf
+    # the channels and power allowed (regulatory.db): cfg80211 asked for it at 0.6 s, before the root was mounted,
+    # and doesn't ask again on its own. Read once a boot; the access point's country picks the rules from it then
+    [ -e /run/banana/regdb ] || { iw reg reload 2>/dev/null; : > /run/banana/regdb; }
     ip link set wlan0 up
     wpa_supplicant -B -i wlan0 -c /run/banana/wpa.conf -P /run/banana/wpa.pid 9>&- || return 1
     $W -a /usr/libexec/banana/wifi -B -P /run/banana/wpa_cli.pid 9>&-
