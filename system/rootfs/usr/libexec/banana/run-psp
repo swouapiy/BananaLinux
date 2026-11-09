@@ -1,0 +1,26 @@
+#!/bin/sh
+# PSP: PPSSPP, its own program (as ROCKNIX runs it on the RK3566), on the top panel (SDL's KMSDRM display 0:
+# SDL_KMSDRM_FIRST, Banana's SDL patch); the bottom one stays dark. Its memory stick is saves/ppsspp/PSP: SAVEDATA the
+# games' saves, PPSSPP_STATE the states, SYSTEM its settings (ppsspp.ini and controls.ini: Banana's the first time,
+# what is changed in its menu kept). The buttons as in RetroArch: F + Start quits, F + X its menu, F + L / F + R
+# load / save the state, R2 fast-forwards.
+#   run-psp <game>
+S=/data/saves/ppsspp/PSP/SYSTEM
+mkdir -p $S
+for f in ppsspp.ini controls.ini; do [ -f $S/$f ] || cp /usr/share/banana/ppsspp/$f $S/$f; done
+export HOME=/data/home XDG_CONFIG_HOME=/data/saves XDG_RUNTIME_DIR=/run
+export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} SDL_AUDIODRIVER=alsa
+# the pad: PPSSPP's own database line for it (assets/gamecontrollerdb.txt), with F (button 10) as the guide button
+# the hotkeys are made with
+export SDL_GAMECONTROLLERCONFIG="190000004b4800000111000000010000,RetroGame Joypad,a:b1,b:b0,back:b8,guide:b10,dpdown:b14,dpleft:b15,dpright:b16,dpup:b13,leftshoulder:b4,leftstick:b11,lefttrigger:b6,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b2,y:b3,platform:Linux,"
+mkdir -p $HOME
+. /usr/libexec/banana/one-panel
+one_panel_dark top
+# (its pause menu's "Exit to menu" quits, as F + Start does: PPSSPP's own game list isn't Banana's way back)
+/usr/share/ppsspp/PPSSPPSDL --fullscreen --pause-menu-exit "$1" &
+P=$!
+trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
+wait $P; R=$?
+while kill -0 $P 2>/dev/null; do wait $P; R=$?; done
+one_panel_restore
+exit $R

@@ -257,7 +257,7 @@ namespace
 		{ "pcengine", "NEC - PC Engine - TurboGrafx 16" }, { "pcenginecd", "NEC - PC Engine CD - TurboGrafx-CD" }, { "atari2600", "Atari - 2600" },
 		{ "atari7800", "Atari - 7800" }, { "colecovision", "Coleco - ColecoVision" }, { "intellivision", "Mattel - Intellivision" },
 		{ "vectrex", "GCE - Vectrex" }, { "odyssey2", "Magnavox - Odyssey2" },
-		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" },
+		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" }, { "psp", "Sony - PlayStation Portable" },
 		{ "arcade", "FBNeo - Arcade Games" }, { "neogeo", "FBNeo - Arcade Games" }, { "cps1", "FBNeo - Arcade Games" },
 		{ "cps2", "FBNeo - Arcade Games" }, { "cps3", "FBNeo - Arcade Games" } };
 	// the arcade systems: their games' files are the sets' short names (sf2.zip), the collection's pictures are named

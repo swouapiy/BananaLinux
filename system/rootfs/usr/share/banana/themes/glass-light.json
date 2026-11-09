@@ -17,7 +17,7 @@
     "atarilynx": "glass/icons/atarilynx.png", "virtualboy": "glass/icons/virtualboy.png", "pokemini": "glass/icons/pokemini.png", "gameandwatch": "glass/icons/gameandwatch.png",
     "pcengine": "glass/icons/pcengine.png", "pcenginecd": "glass/icons/pcenginecd.png", "atari2600": "glass/icons/atari2600.png", "atari7800": "glass/icons/atari7800.png",
     "colecovision": "glass/icons/colecovision.png", "intellivision": "glass/icons/intellivision.png", "vectrex": "glass/icons/vectrex.png", "odyssey2": "glass/icons/odyssey2.png",
-    "arcade": "glass/icons/arcade.png", "neogeo": "glass/icons/neogeo.png", "cps1": "glass/icons/cps1.png", "cps2": "glass/icons/cps2.png", "cps3": "glass/icons/cps3.png",
+    "arcade": "glass/icons/arcade.png", "neogeo": "glass/icons/neogeo.png", "cps1": "glass/icons/cps1.png", "cps2": "glass/icons/cps2.png", "cps3": "glass/icons/cps3.png", "psp": "glass/icons/psp.png",
     "psx": "glass/icons/psx.png", "n64": "glass/icons/n64.png", "ports": "glass/icons/ports.png",
     "pico-8": "glass/icons/pico-8.png", "recently-played": "glass/icons/recently-played.png",
     "favorites": "glass/icons/favorites.png", "downloads": "glass/icons/downloads.png",

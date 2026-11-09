@@ -46,7 +46,9 @@ made before Downloads came needs its [downloads] section (from banana/systems.co
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > Network > File sharing > SSH, then ssh root@<address>. Keys only, no passwords.
 
-RetroArch (the systems other than the DS): F + a button in a game, F + X its menu, F + Start quits.
+RetroArch (the systems other than the DS and the PSP): F + a button in a game, F + X its menu, F + Start quits.
+PSP (PPSSPP, roms/psp): the same, F + L / F + R load / save the state, R2 fast-forwards; its saves, states and
+settings are in saves/ppsspp/PSP.
 A button bound away in RetroArch's
 menu (an A that stopped working): Settings > Other systems > Reset RetroArch puts its settings back to Banana's,
 the old ones moved to retroarch/backup-<date>; saves, states and the RetroAchievements account stay.
