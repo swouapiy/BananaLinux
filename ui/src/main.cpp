@@ -995,6 +995,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.setLibraryPaths(o.systems, o.roms);
 	settings.log = [](const std::string& m) { logf("%s", m.c_str()); };
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
+	settings.allGames = [&]() { return lib.allGames(); };
 	settings.artCount = [&] { return artCount(lib); };
 	LowBattery low;
 	HealthNotice health;
@@ -1094,6 +1095,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
 			if (health.hide(now)) logf("press %s: health notice hidden", b.c_str());
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
+			if (!settings.isOpen() && it->second == Key::X && lib.parentalOn()) { logf("press x: parental controls, no game page"); continue; }
 			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
 			{
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
@@ -1111,7 +1113,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			if (settings.isOpen() || it->second == Key::START)
 			{
-				if (!settings.isOpen()) { settings.open(); recordEvent("settings", "open"); logf("press %s: settings open", b.c_str()); continue; }
+				if (!settings.isOpen())
+				{
+					if (lib.parentalOn()) settings.openLocked(); else settings.open();
+					recordEvent("settings", "open");
+					logf("press %s: settings open%s", b.c_str(), lib.parentalOn() ? " (locked: the PIN first)" : "");
+					continue;
+				}
 				int r = (int)settings.press(it->second);
 				if (r == Settings::TITLES)
 				{
@@ -1145,8 +1153,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "row")
 		{
-			// row <section> <key>: Settings open on that row of that list ("row System about")
-			std::string sec, key; cs >> sec >> key;
+			// row <section> <key>: Settings open on that row of that list ("row System about"; the section may have
+			// spaces: the key is the last word)
+			std::string rest, sec, key;
+			std::getline(cs >> std::ws, rest);
+			size_t sp = rest.find_last_of(' ');
+			if (sp != std::string::npos) { sec = rest.substr(0, sp); key = rest.substr(sp + 1); } else sec = rest;
 			if (!settings.isOpen()) settings.open();
 			settings.openSection(sec);
 			settings.toRow(key);
@@ -2328,6 +2340,7 @@ int main(int argc, char** argv)
 	settingsView.wakeHost = [&] { uint64_t one = 1; if (write(worker.wakeFd, &one, 8) < 0) {} };	// (a Files job finished)
 	unlink("/run/banana/files.pid");	// (a job of a menu that went away mid-way holds no sleep)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
+	settingsView.allGames = [&]() { return lib.allGames(); };
 	settingsView.artCount = [&] { return artCount(lib); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	if (setupNow)
@@ -2562,8 +2575,9 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::PRESS && ev.key == Key::X)
 		{
 			// X on a game in the library: its own page (Settings' game page): a DS game's emulator and shader, and any
-			// game's name and sort title
+			// game's name and sort title. (Not with Parental controls on: it deletes and renames)
 			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (lib.parentalOn()) { rep.key = Key::NONE; return; }
 			int g = ui->gameIndex();
 			if (ui->view() == rnds::UI::LIBRARY && g >= 0 && g < lib.gameCount())
 			{
@@ -2598,7 +2612,8 @@ int main(int argc, char** argv)
 			if (ui->view() == rnds::UI::LAUNCH) return;
 			ui->touchCancel();
 			settingsView.setVariant(settings["theme"]);
-			settingsView.open();
+			// (Parental controls on: the PIN's keypad first)
+			if (lib.parentalOn()) settingsView.openLocked(); else settingsView.open();
 			recordEvent("settings", "open");
 			rep.key = Key::NONE;
 			sound.play("select");

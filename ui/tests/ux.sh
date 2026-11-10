@@ -262,3 +262,21 @@ ux_crop2 "$OUT/$size-ux-mq-g1-bot.png" 190 24 20 154 "$OUT/$size-ux-mq-tile1.png
 # English: nothing too long on the home screen, so no marquee wakes the menu
 ux_run mq-en "home 0; wait 2400; shot ux-mq-en"
 grep -q "shot ux-mq-en (frame [0-9.]* ms, wake -1)" "$OUT/$size-mq-en.log" || { echo "FAIL $size: the English home screen wakes for something: $(grep 'shot ux-mq-en' "$OUT/$size-mq-en.log")"; fail=1; }
+
+# System > Parental controls (parental.h): only the allowed games on the row, X's game page off, Settings behind the
+# PIN (1234 here: a wrong one first, then the right one on the keypad), and Allowed games' Select all saved
+PCFX=$UXFX/data
+cp "$PCFX/settings.conf" "$PCFX/settings.conf.pc"
+echo "parental = on" >> "$PCFX/settings.conf"
+printf 'salt = ab\npin = %s\n' "$(printf 'ab1234' | sha256sum | cut -d' ' -f1)" > "$PCFX/parental.conf"
+printf 'nds/Peel Quest.nds\ngba/Orchard Tactics.gba\n' > "$PCFX/parental-games.txt"
+ux_run pc "home 0; wait 2400; shot ux-pc-home; press left; press right; press a; wait 2400; shot ux-pc-lib; press x; press b; \
+press start; shot ux-pc-pin; press a; press a; press a; press a; press down; press down; press down; press right; press right; press a; shot ux-pc-wrong; \
+press up; press up; press up; press left; press left; press a; press right; press a; press right; press a; press down; press left; press left; press a; \
+press down; press down; press right; press right; press a; shot ux-pc-unlocked; press start; \
+row Parental controls parental_games; press a; shot ux-pc-games; press down; press down; press a; shot ux-pc-system; press b; press up; press up; press a; press b; wait 2400; shot ux-pc-after"
+ux_check pc "press left: used, view 0 sys 1"                    # (two systems: the DS's and the GBA's allowed games)
+ux_check pc "press x: parental controls, no game page"
+ux_check pc "press start: settings open (locked: the PIN first)"
+[ "$(wc -l < "$PCFX/parental-games.txt" | tr -d ' ')" -ge 8 ] || { echo "FAIL $size: Select all didn't allow every game: $(cat "$PCFX/parental-games.txt")"; fail=1; }
+mv "$PCFX/settings.conf.pc" "$PCFX/settings.conf"; rm -f "$PCFX/parental.conf" "$PCFX/parental-games.txt"

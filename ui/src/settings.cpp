@@ -853,6 +853,16 @@ namespace banana
 		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot (bananad's sd2 script): the RG DS Plus
 		add(S, "gear", "Second SD card", "Games on the card in the second slot.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
 		items.back().hints = { "Its games show with the others while it's in. exFAT or FAT32.", "Its games stay hidden." };
+		add(S, "gear", "Parental controls", "Only the games you allow, and Settings locked by a PIN.", "", "sys_parental", {}, {}, Item::PAGE);
+		// the Parental controls page (System > Parental controls; settings_parental.cpp)
+		{
+			const char* PC = "Parental controls";
+			add(PC, "gear", "Parental controls", "Shows only the allowed games, and asks for the PIN before Settings open.",
+				menu, "parental", { "Off", "On" }, { "off", "on" });
+			items.back().hints = { "Every game shows, and Settings open freely.", "Only the allowed games. Volume and brightness still work." };
+			add(PC, "gear", "PIN", "The PIN that unlocks Settings while the controls are on. A changes it.", "", "parental_pin", {}, {}, Item::PAGE);
+			add(PC, "gear", "Allowed games", "The games shown while the controls are on. A opens the list.", "", "parental_games", {}, {}, Item::PAGE);
+		}
 		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time.", "", "setup", {}, {}, Item::PAGE);
 		add(S, "gear", "Reset system settings", "Restores menu, display, sound, power and network settings. Games and saves stay. Press A twice.",
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
@@ -1039,7 +1049,7 @@ namespace banana
 			{ "Display & sound", { "Volume", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
 			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
 			{ "Sleep & power", { "Dim when idle", "Sleep when idle", "Turn off when idle", "Idle timers", "Closing the lid", "Waking up", "LEDs", "LED while asleep" } },
-			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
+			{ "System", { "Updates", "Language", "Time zone", "Box art", "Parental controls", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
 			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency" } },
@@ -1464,6 +1474,7 @@ namespace banana
 				{ "net_share", "File sharing", "share" },
 				{ "sys_updates", "Updates" },
 				{ "sys_boxart", "Box art" },
+				{ "sys_parental", "Parental controls", "parental" },
 				{ "menu_look", "Menu look" },
 				{ "ds_buttons", "DS buttons" },
 				{ "ra_buttons", "Other systems buttons" },
@@ -1520,6 +1531,8 @@ namespace banana
 			if (it.key == "hs_sync") { if (syncing()) stopSync(); else startSync(); return MOVED; }
 			if (it.key == "hs_pick") { openPickGames(); return MOVED; }
 			if (it.key == "credits") { openCredits(); return MOVED; }
+			if (it.key == "parental_pin") { pinThenOn = false; openPin(PIN_NEW); return MOVED; }
+			if (it.key == "parental_games") { openKidGames(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(false, ""); else openNetworks();
 			return MOVED;
 		}
@@ -1652,8 +1665,16 @@ namespace banana
 			armed = -1;
 			return MOVED;
 		}
+		if (it.key == "parental" && it.values[at] == "on" && !parental::hasPin(data))
+		{
+			// on, but no PIN yet: one chosen first (typed twice), then it turns on (settings_parental.cpp)
+			pinThenOn = true;
+			openPin(PIN_NEW);
+			return MOVED;
+		}
 		it.at = at;
 		save(it);
+		if (it.key == "parental") return SHELVES;	// (the home row read again: only the allowed games, or all of them)
 		if (it.key == "language") return LANGUAGE;	// (saved above; the menu starts again in it)
 		if (it.key.compare(0, 6, "shelf.") == 0) return SHELVES;	// (the home row read again)
 		if (it.key == "theme")
@@ -1743,6 +1764,8 @@ namespace banana
 		if (page == THEMES) return pressThemes(k);
 		if (page == CREDITS) return pressCredits(k);
 		if (page == PICKGAMES) return pressPickGames(k);
+		if (page == PIN) return pressPin(k);
+		if (page == KIDGAMES) return pressKidGames(k);
 		if (page == FILES) return pressFiles(k);
 		if (langAsk >= 0) return pressLangAsk(k);
 		if (page == BSHARE) return pressBshare(k);
@@ -1918,6 +1941,8 @@ namespace banana
 		if (page == THEMES) return touchThemes(cx, cy);
 		if (page == CREDITS) { if (downY >= 418 && downY <= 466 && downX < 320) return pressCredits(Key::B); return NONE; }
 		if (page == PICKGAMES) { if (downY >= 418 && downY <= 466 && downX < 320) return pressPickGames(Key::B); return NONE; }
+		if (page == PIN) return touchPin(cx, cy);
+		if (page == KIDGAMES) return touchKidGames(cx, cy);
 		if (page == FILES) return touchFiles(cx, cy);
 		if (langAsk >= 0 && page == LIST)
 		{
@@ -2850,6 +2875,8 @@ namespace banana
 		if (page == THEMES) { renderThemes(); return; }
 		if (page == CREDITS) { renderCredits(); return; }
 		if (page == PICKGAMES) { renderPickGames(); return; }
+		if (page == PIN) { renderPin(); return; }
+		if (page == KIDGAMES) { renderKidGames(); return; }
 		if (page == FILES) { renderFiles(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (page == BSHARE) { renderBshare(); return; }

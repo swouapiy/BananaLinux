@@ -73,6 +73,7 @@ namespace banana
 			{ "bt_audio", "latency", ENUM, BT_AUDIO, 0, 0 },
 			{ "quick_resume", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "sd2_roms", "on", ENUM, ON_OFF, 0, 0 },
+			{ "parental", "off", ENUM, ON_OFF, 0, 0 },
 			{ "ra_frontend", "auto", ENUM, FRONTEND, 0, 0, true },
 			{ "bananafront_cpugov", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "bananafront_lowlat", "on", ENUM, ON_OFF, 0, 0, true },
