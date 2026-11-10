@@ -66,6 +66,12 @@ run charged
 rm -f "$R/run/banana/charging"; : > "$R/run/banana/boot-ok"; settle 2
 [ ! -e "$R/boot/trial" ] && [ "$(default)" = b ] && ok "the menu up after the charging: kept" || bad "trial $(cat "$R/boot/trial" 2>/dev/null), default $(default)"
 
+echo "6b. the card's check (card-check) on a trial's first start: the clock waits, then runs again"
+card b b "b a"; : > "$R/run/banana/checking"; W=2 run early; settle 4
+[ "$(default)" = b ] && [ -z "$(restarts)" ] && ok "4 s checking past a 2 s wait: no rollback" || bad "default $(default), restarts '$(restarts)'"
+rm -f "$R/run/banana/checking"; settle 3
+[ "$(default)" = a ] && [ "$(restarts)" = clean ] && ok "checked, then no menu in 2 s: back to slot a" || bad "default $(default), restarts '$(restarts)'"
+
 echo "7. the breadcrumbs: the milestones on the card until the menu is up, the boot before kept"
 card a a; echo "the boot before" > "$R/data/banana/logs/boot-progress.txt"
 printf 'rcS: started                   1.90 s\nrcS: data partition ready      2.90 s\n' > "$R/run/banana/boot-times"

@@ -47,6 +47,8 @@ if [ -z "$mounted" ] || [ "${mounted%p[0-9]*}" != "$card" ]; then
     part=/dev/${card}p1
     for i in 1 2 3 4 5 6 7 8 9 10; do [ -b $part ] && break; sleep 0.2; done
     [ -b $part ] || part=/dev/$card
+    # not closed when it was last in (taken out while on, the battery out): checked and repaired first (card-check)
+    /usr/libexec/banana/card-check $part sd2
     mount -t exfat -o rw,noatime,fmask=0000,dmask=0000 $part $M 2>/dev/null ||
         mount -t vfat -o rw,noatime,fmask=0000,dmask=0000,utf8 $part $M 2>/dev/null ||
         { rm -f $S/roms; logger -t sd2 "the card in the second slot ($part) can't be read: exFAT or FAT32 only"; exit 1; }

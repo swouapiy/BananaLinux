@@ -59,6 +59,10 @@ mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 # a slot just updated to (or switched to) is on trial until its menu is up; its second start without one, or no menu
 # in 2 minutes, goes back to the slot before (/usr/libexec/banana/boot-guard)
 /usr/libexec/banana/boot-guard early
+# a card not closed at the last power-off (the battery ran out, a reset): checked and repaired first (card-check; one
+# read when it was closed)
+/usr/libexec/banana/card-check ${DISK}p4 card
+mark "rcS: card checked"
 # exFAT, so the card can be read and filled on any computer
 data() { mount -t exfat -o noatime,uid=0,gid=0,fmask=0000,dmask=0000,iocharset=utf8,errors=remount-ro ${DISK}p4 /data 2>/dev/null; }
 data || {
@@ -72,12 +76,14 @@ data || {
     echo "${DISK}p4 could not be mounted" > /run/banana/data-failed
 }
 /usr/libexec/banana/data-layout
+# the check's log, kept in /run until the card was mounted
+[ -f /run/banana/card-check.log ] && { cat /run/banana/card-check.log >> /data/banana/logs/card-check.txt; rm -f /run/banana/card-check.log; }
 mark "rcS: data partition ready"
 # Developer options > Shutdown log: the last power-off hung and the watchdog reset it. Where it stopped is saved to
 # banana/logs (the helper), and the handheld goes off again, as it was meant to be (straight off: nothing has started)
 if /usr/libexec/banana/shutdown-log boot; then
     mark "rcS: the last power-off hung: off again"
-    sync; umount /data 2>/dev/null; poweroff -f
+    sync; umount /data 2>/dev/null || mount -o remount,ro /data; poweroff -f
 fi
 # the boot's milestones on the card every 2 s until the menu is up: a boot that stops leaves where it stopped
 # (banana/logs/boot-progress.txt)
@@ -88,7 +94,9 @@ fi
 bananad --charge
 case $? in
 0) mark "rcS: charged, started" ;;
-3) /usr/libexec/banana/boot-guard charged; umount /data; sync; poweroff -f ;;
+3) /usr/libexec/banana/boot-guard charged
+   # (as rcK: busy, read-only at least, which closes it too: a card left open is checked at the next start)
+   umount /data 2>/dev/null || mount -o remount,ro /data; sync; poweroff -f ;;
 esac
 # both panels powered up now, beside the rest of the boot: the menu waited for that at its start (the RG DS Plus's
 # panels ~1.2 s, the RG DS's ~0.3 s); its own start then finds them lit. Only the display, nothing on the card. (After
@@ -110,7 +118,7 @@ mark "rcS: hardware checked"
 
 # not needed for the menu's first frame
 (
-    hwclock -s 2>/dev/null
+    hwclock -s 2>/dev/null; clock_floor
     # the GPU (SuperDrastic's shaders, RetroArch's GLES) and the Wi-Fi: modules, and with no udev nothing loads a
     # module by itself (bananad loads USB devices' drivers as they come)
     modprobe -a panfrost rtw88_8821cs 2>/dev/null

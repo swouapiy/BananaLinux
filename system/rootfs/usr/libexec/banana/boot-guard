@@ -78,8 +78,9 @@ early)
     (
         i=0
         while [ $i -lt "$WAIT" ]; do
-            # charging while off (bananad --charge, /run/banana/charging): the menu isn't due yet, the clock waits
-            [ -e "$RUN/charging" ] && { sleep 1; continue; }
+            # charging while off (bananad --charge, /run/banana/charging), or the card's check after a power-off that
+            # didn't close it (card-check, /run/banana/checking): the menu isn't due yet, the clock waits
+            [ -e "$RUN/charging" ] || [ -e "$RUN/checking" ] && { sleep 1; continue; }
             if [ -e "$RUN/boot-ok" ]; then
                 # (only this trial's: a switch of slots made since names another, and stays)
                 read -r now rest < "$TRIAL" 2>/dev/null

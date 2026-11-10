@@ -1,0 +1,38 @@
+#!/bin/sh
+# A card not closed at the last power-off (the battery ran out, a reset, a hang) checked and repaired before it is
+# mounted. exFAT marks a volume dirty while it is mounted and clears the mark at the unmount; the kernel mounts a dirty
+# one as it is (only a warning in dmesg), so whatever the cut-off left half-written (a folder, a save) stayed that
+# way. ROCKNIX checks its storage at every boot; here only a card with the mark set is (a clean one costs one read).
+#   card-check <partition> [<name>]    rcS for the data partition (before its mount), sd2 for the second card's
+# 0: clean or repaired, 1: errors left (or the check didn't finish), 2: not exFAT or not read (nothing done).
+# Its log: banana/logs/card-check.txt (in /run until the data partition is mounted: rcS moves it there). A repair, or
+# errors left: /run/banana/card-notice ("repaired|errors <name>"), the menu's notice, said once.
+# CARDCHECK_ROOT puts another tree in front of /run and /data (the test).
+R=$CARDCHECK_ROOT
+P=$1; N=${2:-card}
+[ -r "$P" ] || exit 2
+[ "$(dd if="$P" bs=1 skip=3 count=8 2>/dev/null)" = "EXFAT   " ] || exit 2
+# VolumeFlags (offset 106): bit 1, VolumeDirty. (Outside the boot region's checksum, so the kernel and fsck set it freely)
+f=$(od -An -tu1 -j106 -N1 "$P" 2>/dev/null | tr -d ' \n')
+[ -n "$f" ] || exit 2
+[ $((f & 2)) -eq 0 ] && exit 0
+L=$R/data/banana/logs/card-check.txt
+[ -d "$R/data/banana/logs" ] || L=$R/run/banana/card-check.log
+log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $N ($P): $*" >> "$L"; }
+log "not closed at the last power-off: checking"
+# (boot-guard's trial clock waits while it runs: a large card's check isn't a system that doesn't start)
+: > "$R/run/banana/checking"
+t0=$(date +%s)
+# -y: every repair it offers made. Under timeout: a check that hangs mustn't hold the boot (or the second card) forever
+timeout 600 fsck.exfat -y "$P" > "$R/run/banana/card-check.out" 2>&1
+rc=$?
+rm -f "$R/run/banana/checking"
+sed 's/^/    /' "$R/run/banana/card-check.out" | tail -n 30 >> "$L"
+rm -f "$R/run/banana/card-check.out"
+took="$(( $(date +%s) - t0 )) s"
+case $rc in
+0) log "clean ($took)"; exit 0 ;;
+1|2) log "repaired ($took)"; echo "repaired $N" > "$R/run/banana/card-notice"; exit 0 ;;
+124) log "the check didn't finish in 10 min"; echo "errors $N" > "$R/run/banana/card-notice"; exit 1 ;;
+*) log "errors left (fsck.exfat $rc, $took)"; echo "errors $N" > "$R/run/banana/card-notice"; exit 1 ;;
+esac

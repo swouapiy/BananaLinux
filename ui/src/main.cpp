@@ -513,6 +513,23 @@ struct HealthNotice
 		body = "Banana went back to the version before it by itself. banana/logs/updates.log has the details.";
 		until = now + 15000;
 	}
+	// card-check repaired a card not closed at the last power-off, or found errors it couldn't: said once
+	// ("repaired|errors card|sd2", /run/banana/card-notice)
+	void showCard(const std::string& what, double now)
+	{
+		bool sd2 = what.find("sd2") != std::string::npos;
+		if (what.compare(0, 8, "repaired") == 0)
+		{
+			title = sd2 ? "The second card was repaired" : "The card was repaired";
+			body = "It wasn't closed at the last power-off, and Banana fixed it. banana/logs/card-check.txt has the details.";
+		}
+		else
+		{
+			title = sd2 ? "The second card has errors" : "The card has errors";
+			body = "Banana couldn't repair them all. Check the card on a computer; banana/logs/card-check.txt has the details.";
+		}
+		until = now + 15000;
+	}
 	// true when a new notice came
 	bool check(double now)
 	{
@@ -521,6 +538,16 @@ struct HealthNotice
 			unlink("/run/banana/rolled-back");
 			showRollback(now);
 			return true;
+		}
+		{
+			std::ifstream c("/run/banana/card-notice");
+			std::string what;
+			if (c && std::getline(c, what))
+			{
+				unlink("/run/banana/card-notice");
+				showCard(what, now);
+				return true;
+			}
 		}
 		struct stat st;
 		if (stat("/run/banana/health-notice", &st) != 0) return false;
@@ -1038,6 +1065,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		{
 			// rollbacknotice: boot-guard's notice after it went back to the version before (/run/banana/rolled-back)
 			health.showRollback(now);
+			logf("notice: %s", health.title.c_str());
+		}
+		else if (op == "cardnotice")
+		{
+			// cardnotice <repaired|errors> <card|sd2>: card-check's notice, as /run/banana/card-notice would bring it
+			std::string what;
+			std::getline(cs >> std::ws, what);
+			health.showCard(what, now);
 			logf("notice: %s", health.title.c_str());
 		}
 		else if (op == "healthnotice")

@@ -1824,6 +1824,12 @@ settings		Recording	正在记录
 menu		Banana started without {several}. A restart may help; banana/logs/health.txt has the details.	Banana 启动时缺少 {several}。重启可能有帮助；详情见 banana/logs/health.txt。
 menu		The update didn't start	更新未能启动
 menu		Banana went back to the version before it by itself. banana/logs/updates.log has the details.	Banana 已自动回到之前的版本。详情见 banana/logs/updates.log。
+menu		The card was repaired	存储卡已修复
+menu		The second card was repaired	第二张存储卡已修复
+menu		It wasn't closed at the last power-off, and Banana fixed it. banana/logs/card-check.txt has the details.	上次关机时存储卡未正常关闭，Banana 已将其修复。详情见 banana/logs/card-check.txt。
+menu		The card has errors	存储卡有错误
+menu		The second card has errors	第二张存储卡有错误
+menu		Banana couldn't repair them all. Check the card on a computer; banana/logs/card-check.txt has the details.	Banana 未能全部修复。请在电脑上检查存储卡；详情见 banana/logs/card-check.txt。
 settings		The handheld and its software: the model, the versions, the storage, the battery and the network.	掌机及其软件：型号、版本、存储、电池和网络。
 settings		Device	设备
 settings		Version	版本
