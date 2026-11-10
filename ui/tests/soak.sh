@@ -26,7 +26,7 @@ R="$R press start; press a; press down; press down; press b; press b; battery 50
 # --repeat runs the pass over (a million rounds' script would be GBs)
 PASS=250
 {
-    printf 'home 0; wait 2400; bench 20;'
+    printf 'home nds; wait 2400; bench 20;'
     i=1
     while [ $i -le $PASS ]; do printf '%s' "$R"; i=$((i + 1)); done
     echo " rss"

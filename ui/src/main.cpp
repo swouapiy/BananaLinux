@@ -1046,19 +1046,41 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		std::string op;
 		cs >> op;
 		ui.update(now);
-		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		// home <place>: the row on that tile (its place, or its system's id)
+		if (op == "home")
+		{
+			std::string sys; int s = 0; cs >> sys;
+			if (!sys.empty() && isdigit((unsigned char)sys[0])) s = atoi(sys.c_str());
+			else for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == sys) s = i;
+			ui.setHome(s);
+		}
 		else if (op == "level") { std::string l; int p = 0; cs >> l >> p; levelLabel = l == "off" ? "" : l; levelPercent = p; }
 		else if (op == "homeid")
 		{
-			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games)
+			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games); an app's
+			// (files, bshare): the Apps tile's list, on that app, so A starts it
 			std::string id; cs >> id;
 			int at = -1;
 			for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == id) at = i;
-			if (at < 0) { logf("homeid %s: not on the shelf", id.c_str()); return 2; }
-			ui.setHome(at);
-			logf("homeid %s: tile %d", id.c_str(), at);
+			if (at >= 0) { ui.setHome(at); logf("homeid %s: tile %d", id.c_str(), at); }
+			else
+			{
+				for (int i = 0; i < lib.systemCount() && at < 0; i++)
+					if (lib.shelf(i).apps)
+						for (size_t k = 0; k < lib.shelf(i).appDefs.size(); k++)
+							if (lib.shelf(i).appDefs[k].id == id) { at = i; lib.openLibrary(i); ui.setLibrary(i, (int)k); logf("homeid %s: app %zu on the Apps tile %d", id.c_str(), k, i); break; }
+				if (at < 0) { logf("homeid %s: not on the shelf", id.c_str()); return 2; }
+			}
 		}
-		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
+		// lib <system> <game>: a system's list (its place on the row, or its id: nds, gba, recently-played, storeapps)
+		else if (op == "lib")
+		{
+			std::string sys; int s = 0, g = 0; cs >> sys >> g;
+			if (!sys.empty() && isdigit((unsigned char)sys[0])) s = atoi(sys.c_str());
+			else { s = -1; for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == sys) s = i; }
+			if (s < 0 || s >= lib.systemCount()) { logf("lib %s: not on the shelf", sys.c_str()); return 2; }
+			lib.openLibrary(s); ui.setLibrary(s, g);
+		}
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
 		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
@@ -1122,6 +1144,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (health.hide(now)) logf("press %s: health notice hidden", b.c_str());
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
 			if (!settings.isOpen() && it->second == Key::X && lib.parentalOn()) { logf("press x: parental controls, no game page"); continue; }
+			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && lib.shelf(lib.currentShelf()).apps) { logf("press x: an app, no game page"); continue; }
 			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
 			{
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
@@ -1129,6 +1152,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				auto t = lib.gameTitles(key);
 				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
 				logf("press x: game page for %s", path.c_str());
+				continue;
+			}
+			// A on an app in the Apps tile's list: straight in (no game's ready screen): its page, or it starts
+			if (!settings.isOpen() && it->second == Key::A && ui.view() == rnds::UI::LIBRARY && lib.shelf(lib.currentShelf()).apps && ui.gameIndex() >= 0)
+			{
+				int g = ui.gameIndex();
+				if (openPage(settings, internalPage(lib.systemOf(g)))) logf("press %s: %s open", b.c_str(), lib.systemOf(g).run.c_str());
+				else { lib.launch(g); logf("press %s: app %s started", b.c_str(), lib.systemOf(g).id.c_str()); }
 				continue;
 			}
 			if (!settings.isOpen() && (it->second == Key::A || it->second == Key::X) && ui.view() == rnds::UI::HOME && ui.systemIndex() >= 0 &&
@@ -2605,6 +2636,7 @@ int main(int argc, char** argv)
 			// game's name and sort title. (Not with Parental controls on: it deletes and renames)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (lib.parentalOn()) { rep.key = Key::NONE; return; }
+			if (lib.currentShelf() < lib.systemCount() && lib.shelf(lib.currentShelf()).apps) { rep.key = Key::NONE; return; }	// (an app: no game page)
 			int g = ui->gameIndex();
 			if (ui->view() == rnds::UI::LIBRARY && g >= 0 && g < lib.gameCount())
 			{
@@ -2651,6 +2683,22 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touchMove(ev.screen, ev.x, ev.y); return; }
 		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); return; }
 		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
+		if (ev.type == InputEvent::PRESS && ev.key == Key::A)
+		{
+			// A on an app in the Apps tile's list: straight in, no game's ready screen (the main loop opens its page, or
+			// starts it)
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			int g = ui->gameIndex();
+			if (ui->view() == rnds::UI::LIBRARY && lib.currentShelf() < lib.systemCount() && lib.shelf(lib.currentShelf()).apps && g >= 0 && g < lib.gameCount())
+			{
+				ui->touchCancel();
+				lib.launch(g);
+				rep.key = Key::NONE;
+				sound.play("select");
+				dirty = true;
+				return;
+			}
+		}
 		if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::X))
 		{
 			// A or X on an internal page's tile (Files): its page

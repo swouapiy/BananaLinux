@@ -62,7 +62,7 @@
     "go": "=motion && view == 'launch' ? easeInOut(launch.progress) : 0"           // a game starting
   },
 
-  "behavior": { "launchMs": 650, "scrollMs": 420, "scrollEase": "bounce", "settleMs": 520 },
+  "behavior": { "launchMs": 650, "scrollMs": 420, "scrollEase": "bounce", "settleMs": 520, "wrap": true },
 
   "components": {
     // a screen's picture, its panels' frost baked in
@@ -96,12 +96,12 @@
         { "use": "hint", "opacity": 0, "visible": "=view == 'home'", "with": { "key": "A", "label": "Open", "tap": "" } },
         { "type": "group", "layout": "row", "gap": 11, "align": "center",
           "children": [
-            { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "Y", "label": "Favorite", "tap": "y" } },
-            { "use": "hint", "visible": "=view != 'home' && !empty", "with": { "key": "X", "label": "Options", "tap": "x" } },
+            { "use": "hint", "visible": "=(view == 'home' || !empty) && !sys.apps", "with": { "key": "Y", "label": "Favorite", "tap": "y" } },
+            { "use": "hint", "visible": "=view != 'home' && !empty && !sys.apps", "with": { "key": "X", "label": "Options", "tap": "x" } },
             { "use": "hint", "visible": "=view == 'home'", "with": { "key": "START", "label": "Settings", "tap": "" } },
             { "use": "hint", "with": { "key": "SELECT", "label": "Search", "tap": "" } }
           ] },
-        { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "A", "label": "=view == 'home' ? 'Open' : 'Play'", "tap": "a" } },
+        { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "A", "label": "=view == 'home' || sys.apps ? 'Open' : 'Play'", "tap": "a" } },
         { "use": "hint", "opacity": 0, "visible": "=view != 'home' && empty", "with": { "key": "B", "label": "Back", "tap": "" } }
       ]
     },
@@ -132,7 +132,7 @@
     },
     // the neighbours at the top of the bottom screen: L and the one before, the one after and R (clear of the middle)
     "sides": {
-      "type": "list", "source": "systems", "direction": "free", "x": 0, "y": 0, "w": 640, "h": 40, "range": 1,
+      "type": "list", "source": "systems", "direction": "free", "x": 0, "y": 0, "w": 640, "h": 40, "range": 1, "loop": true,
       "item": {
         "type": "group", "visible": "=rel == -1 || rel == 1", "w": 640, "h": 40,
         "children": [
@@ -192,7 +192,7 @@
                           "size": 14, "color": "=ink" } ] },
         { "use": "sides", "x": 15, "y": 11, "w": 610 },
         // the shelf: a glass tray as iOS's dock, the selection raised and lit in its colour
-        { "type": "list", "source": "systems", "direction": "free", "x": 0, "y": "=156 + rise", "w": 640, "h": 138, "range": 3,
+        { "type": "list", "source": "systems", "direction": "free", "x": 0, "y": "=156 + rise", "w": 640, "h": 138, "range": 3, "loop": true,
           "item": {
             "type": "group", "w": 640, "h": 138, "visible": "=abs(pos) < 2.7", "opacity": "=clamp(2.7 - abs(pos), 0, 1)",
             "children": [
