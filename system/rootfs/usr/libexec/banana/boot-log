@@ -15,18 +15,49 @@ bat() {
     v=$(cat $P/voltage_avg 2>/dev/null); [ "$1" = boot ] && v=$(cat $P/voltage_boot 2>/dev/null || echo $v)
     echo "$(date +%s) $(cat $P/capacity 2>/dev/null) ${v:-0} $c $(cat $P/charge_now 2>/dev/null || echo 0)"
 }
+# the charge a voltage says, by the battery's own table (the device tree's ocv-capacity-table-0: big-endian pairs of
+# microvolts and percent, the highest first), interpolated; "" without the table
+OCV=${BOOTLOG_OCV:-/proc/device-tree/battery/ocv-capacity-table-0}
+ocv_pct() {
+    [ -r "$OCV" ] && od -An -v -tu1 "$OCV" | tr -s ' \n' '\n\n' | awk -v uv="$1" 'BEGIN { k = 0; n = 0 } NF {
+        b[n++] = $1 } END {
+        for (i = 0; i + 7 < n; i += 8) {
+            v[k] = ((b[i] * 256 + b[i+1]) * 256 + b[i+2]) * 256 + b[i+3]
+            p[k] = ((b[i+4] * 256 + b[i+5]) * 256 + b[i+6]) * 256 + b[i+7]; k++ }
+        if (!k) exit
+        if (uv >= v[0]) { print p[0]; exit }
+        for (j = 1; j < k; j++) if (uv >= v[j]) {
+            printf "%d\n", p[j] + (p[j-1] - p[j]) * (uv - v[j]) / (v[j-1] - v[j]) + 0.5; exit }
+        print p[k-1] }'
+}
+# The fuel gauge at power-on (logs/battery-gauge.txt, the last 40 boots): what the rk817 driver found (its coulomb
+# counter, the charge it saved, the voltage it measured as the handheld came on, the PMIC's off counter) and what it
+# took, beside the charge that voltage says. A counter that fell while off with the voltage unchanged is the gauge
+# drifting, not the battery draining
+gauge() {
+    k=$(${BOOTLOG_DMESG:-dmesg} 2>/dev/null | grep 'rk817-charger' | grep -v 'Looking up\|max charge\|PM: \|resume after')
+    b=$(echo "$k" | sed -n 's/.*boot: counter \(-*[0-9]*\) uAh, saved soc \([0-9]*\), fcc \([0-9]*\) mAh, battery \([0-9]*\) uV\(, off_cnt \([0-9]*\)\)*.*/\1 \2 \3 \4 \6/p' | head -n 1)
+    [ -n "$b" ] || return
+    set -- $b
+    o=$(ocv_pct $4)
+    took=$(echo "$k" | grep -v 'boot: counter' | sed 's/^\[[ 0-9.]*\] rk817-charger[^:]*: //' | head -n 3 | tr '\n' ';' | sed 's/;$//; s/;/; /g')
+    { tail -n 39 $L/battery-gauge.txt 2>/dev/null
+      echo "$(date '+%F %T'): counter $(($1 / 1000)) mAh ($(($1 / 10 / ${3:-1} / 1000))% of $3), saved $(($2 / 1000)).$(($2 % 1000 / 100))%, $(($4 / 1000)) mV at power-on${o:+ = $o% by the voltage}, off_cnt ${5:-?}; shown $(cat /sys/class/power_supply/battery/capacity 2>/dev/null)%${took:+; the kernel: $took}"
+    } > $L/battery-gauge.txt.new 2>/dev/null && mv -f $L/battery-gauge.txt.new $L/battery-gauge.txt
+}
 # (the power-on line first, once a boot, also when it turns off again before rcS's run: a start for charging)
 if [ ! -f /run/banana/battery-noted ] && [ -f $L/battery-off.txt ]; then
     read -r t0 p0 v0 c0 q0 < $L/battery-off.txt
     set -- $(bat boot)
-    m=$(( ($1 - t0) / 60 )); g=$(( ($5 - ${q0:-0}) / 1000 ))
+    m=$(( ($1 - t0) / 60 )); g=$(( ($5 - ${q0:-0}) / 1000 )); o=; [ "${3:-0}" -gt 0 ] && o=$(ocv_pct $3)
     # what it drew while off, on battery all along, as sleep.log's "battery while asleep" (from 10 min on)
     a=; [ "$c0" = 0 ] && [ "$4" = 0 ] && [ $m -ge 10 ] && [ $g -le 0 ] && a=", $(( -g * 60 / m )) mA on average"
     { tail -n 19 $L/battery-while-off.txt 2>/dev/null
-      echo "$(date '+%F %T'): off $m min, battery ${p0}% $((v0 / 1000)) mV -> ${2}% $(($3 / 1000)) mV at power-on, gauge $g mAh$a (charger at shutdown: $([ "$c0" = 1 ] && echo in || echo out), now: $([ "$4" = 1 ] && echo in || echo out))"
+      echo "$(date '+%F %T'): off $m min, battery ${p0}% $((v0 / 1000)) mV -> ${2}% $(($3 / 1000)) mV at power-on${o:+ (the voltage says $o%)}, gauge $g mAh$a (charger at shutdown: $([ "$c0" = 1 ] && echo in || echo out), now: $([ "$4" = 1 ] && echo in || echo out))"
     } > $L/battery-while-off.txt.new 2>/dev/null && mv -f $L/battery-while-off.txt.new $L/battery-while-off.txt
     rm -f $L/battery-off.txt
 fi
+[ -f /run/banana/battery-noted ] || gauge
 touch /run/banana/battery-noted 2>/dev/null
 [ "$1" = off ] && { bat > $L/battery-off.txt 2>/dev/null; sync; }
 B=/run/banana/dmesg-boot.txt
