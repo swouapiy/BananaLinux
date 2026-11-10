@@ -31,6 +31,17 @@ step)
 arm)
     on || exit 0
     : > $P
+    # what's still powered as Linux lets go: the PMIC (0-0020), the CPU's own regulator (0-0040), the speaker amps
+    # (2-0034/35), the regulators, pins and backlights; the next boot's battery-while-off says if this one drained
+    K=${DEBUGFS:-/sys/kernel/debug}
+    grep -q " $K " /proc/mounts 2>/dev/null || mount -t debugfs debugfs $K 2>/dev/null
+    {
+        for r in 0-0020 0-0040 2-0034 2-0035; do for d in $K/regmap/$r*; do echo "== regmap $d"; cat $d/registers; done; done
+        echo "== regulators"; cat $K/regulator/regulator_summary
+        echo "== gpio"; cat $K/gpio
+        for b in /sys/class/backlight/*; do echo "== $b: power $(cat $b/bl_power) brightness $(cat $b/brightness)"; done
+    } > $L/shutdown-state-$(date '+%Y%m%d-%H%M%S').txt 2>&1
+    ls -t $L/shutdown-state-*.txt 2>/dev/null | tail -n +21 | xargs rm -f 2>/dev/null   # the last 20
     sync
     # everything the kernel says from here into the record, not only errors (the boot's quiet, loglevel=3), and each
     # device's "shutdown" line before its driver's: the last one in the record is where it stopped
