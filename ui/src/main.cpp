@@ -714,6 +714,7 @@ struct FetchNotice
 	double until = 0;
 	std::set<std::string> seen;
 	bool looked = false;
+	bool added = false;	// the last check's jobs brought files (downloaded or unpacked): new games, maybe
 	bool showing(double now) const { return until > now; }
 	bool hide(double now) { bool was = showing(now); until = 0; return was; }
 	// true when a job finished since the last look
@@ -739,6 +740,7 @@ struct FetchNotice
 			jobs++;
 			if (j.server.empty()) unpacks++;
 		}
+		added = st.downloaded + st.unpacked > 0;
 		if (!jobs) return false;
 		std::string what;
 		auto part = [&](int n, const char* word) { if (n > 0) what += (what.empty() ? "" : ", ") + std::to_string(n) + " " + word; };
@@ -1092,7 +1094,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// after this command tells its outcome
 		else if (op == "filesdone") { for (int i = 0; i < 3000 && settings.filesWorking(); i++) usleep(10000); }
 		// fetchdone: banana-fetch's runner said a job finished (fetch.finished), as the device's loop hears of it
-		else if (op == "fetchdone") { if (fetchNotice.check(o.data, now)) { logf("notice: %s: %s", fetchNotice.title.c_str(), fetchNotice.body.c_str()); settings.offerSd2Roms(); } }
+		else if (op == "fetchdone")
+		{
+			if (fetchNotice.check(o.data, now))
+			{
+				logf("notice: %s: %s", fetchNotice.title.c_str(), fetchNotice.body.c_str());
+				settings.offerSd2Roms();
+				if (fetchNotice.added && settings.artForNewGames()) logf("box art: fetching for the new games");
+			}
+		}
 		else if (op == "resumeboot") resumeAfterPoweroff(lib, o.data, nullptr);	// as at boot after Power off after sleeping
 		else if (op == "rss")
 		{
@@ -3353,6 +3363,13 @@ int main(int argc, char** argv)
 			if (settingsView.update(now)) dirty = true;	// a Wi-Fi scan came back, a network joined
 			if (settingsView.takeLibraryChanged()) roms.due = now;	// box art fetched: the library again, at home
 		}
+		else
+		{
+			// box art fetched by itself for new games (artForNewGames): the library again when it's done
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			settingsView.followArt(now);
+			if (settingsView.takeLibraryChanged()) roms.due = now;
+		}
 		// for testing over SSH: a game's path written to /run/banana/launch starts it, as A on it in the library would
 		if (access("/run/banana/launch", F_OK) == 0)
 		{
@@ -3459,7 +3476,13 @@ int main(int argc, char** argv)
 		{
 			fetchDone = false;
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			if (fetchNotice.check(o.data, now)) { logf("notice: %s", fetchNotice.title.c_str()); settingsView.offerSd2Roms(); dirty = true; }
+			if (fetchNotice.check(o.data, now))
+			{
+				logf("notice: %s", fetchNotice.title.c_str());
+				settingsView.offerSd2Roms();
+				if (fetchNotice.added) settingsView.artForNewGames();
+				dirty = true;
+			}
 		}
 		// the hardware check's notice: new or changed (the late check writes it after the menu is up; /run/banana's
 		// watch wakes the loop when it's moved into place)
