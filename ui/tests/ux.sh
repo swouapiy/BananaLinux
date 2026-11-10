@@ -279,4 +279,12 @@ ux_check pc "press left: used, view 0 sys 1"                    # (two systems: 
 ux_check pc "press x: parental controls, no game page"
 ux_check pc "press start: settings open (locked: the PIN first)"
 [ "$(wc -l < "$PCFX/parental-games.txt" | tr -d ' ')" -ge 8 ] || { echo "FAIL $size: Select all didn't allow every game: $(cat "$PCFX/parental-games.txt")"; fail=1; }
-mv "$PCFX/settings.conf.pc" "$PCFX/settings.conf"; rm -f "$PCFX/parental.conf" "$PCFX/parental-games.txt"
+# the daily play time used up (30 min, bananad's count for today): no game starts
+echo "parental_minutes = 30" >> "$PCFX/settings.conf"
+echo "$(date +%F) 1800" > "$PCFX/playtime.txt"
+ux_run pc-up "lib 0 0; press a; wait 3000; shot ux-pc-up"
+ux_check pc-up "launch refused: today's play time is up"
+echo "$(date +%F) 600" > "$PCFX/playtime.txt"
+ux_run pc-left "lib 0 0; press a; wait 3000; shot ux-pc-left"
+grep -q "launch refused" "$OUT/$size-pc-left.log" && { echo "FAIL $size: a launch refused with 20 minutes left"; fail=1; }
+mv "$PCFX/settings.conf.pc" "$PCFX/settings.conf"; rm -f "$PCFX/parental.conf" "$PCFX/parental-games.txt" "$PCFX/playtime.txt"

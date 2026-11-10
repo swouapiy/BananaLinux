@@ -580,12 +580,22 @@ struct EventNotice
 	double until = 0, lookedAt = -1e9, wifiDownAt = -1e9;
 	int recording = -1, wifi = -1, bt = -1;	// (-1: not looked at yet)
 	std::string bsReq, bsRecv = "?", bsSend = "?";	// Bshare's request, receive and send, as last read ("?": not yet)
+	std::string ptSeen = "?";	// Parental controls' play time notice (bananad's), as last read ("?": not yet)
 	bool btHeld = false;	// the headphones gone for a sleep: their coming back isn't news
 	bool showing(double now) const { return until > now; }
 	bool hide(double now) { bool was = showing(now); until = 0; return was; }
 	void show(const std::string& t, const std::string& b, int sg, uint32_t acc, double now)
 	{
 		title = t; body = b; sign = sg; accent = acc; until = now + 4000;
+	}
+	// Parental controls' daily play time: what bananad says ("left <minutes>", "up"), and a game asked for once it's up
+	void showPlaytime(const std::string& what, int minutes, double now)
+	{
+		if (what == "left")
+			show(minutes == 1 ? "1 minute of play left" : std::to_string(minutes) + " minutes of play left",
+				"Then the game is saved and closed until tomorrow.", 2, 0xffb340, now);
+		else show("Play time is up for today", "The game is saved. More tomorrow.", 2, 0xffb340, now);
+		until = now + 6000;
 	}
 	static std::string address()
 	{
@@ -636,6 +646,22 @@ struct EventNotice
 			if (bt >= 0 && !head && !held) { show("Bluetooth headphones disconnected", "The sound is back on the speakers.", 2, 0xffb340, now); came = true; }
 			btHeld = !head && held;
 			bt = head;
+		}
+		// Parental controls: bananad's word on the daily play time (/run/banana/playtime-notice: "left <minutes> <when>",
+		// "up <when>"; the time makes each one new)
+		{
+			std::ifstream f("/run/banana/playtime-notice");
+			std::string pt;
+			std::getline(f, pt);
+			if (pt != ptSeen)
+			{
+				std::istringstream in(pt);
+				std::string what;
+				int minutes = 0;
+				in >> what >> minutes;
+				if (ptSeen != "?" && (what == "left" || what == "up")) { showPlaytime(what, minutes, now); came = true; }
+				ptSeen = pt;
+			}
 		}
 		// Bshare: a device asking to send, a transfer done (its helper's files, settings_bshare.cpp)
 		const char* run = getenv("BSHARE_RUN");
@@ -1592,6 +1618,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			lib.clearLaunch();
 			// (an internal page's entry first: in a test there is no .app file for it, so no game at g)
 			if (openPage(settings, internalPage(lib.systemOf(g)))) { ui.setHome(lib.currentShelf()); logf("launch %d: %s open", g, lib.systemOf(g).run.c_str()); }
+			else if (parental::playLeft(o.data) == 0) logf("launch refused: today's play time is up");
 			else logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
 		}
 		ui.update(now);
@@ -2832,6 +2859,16 @@ int main(int argc, char** argv)
 
 	auto runGame = [&](int game)
 	{
+		// Parental controls: today's play time used up (bananad counts it): no game until tomorrow
+		if (parental::playLeft(o.data) == 0)
+		{
+			events.showPlaytime("up", 0, nowMs());
+			sound.play("notify");
+			dirty = true;
+			logf("launch refused: today's play time is up");
+			recordEvent("game", "refused: today's play time is up");
+			return;
+		}
 		const SystemDef& sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
 		gameRomPath = rom;

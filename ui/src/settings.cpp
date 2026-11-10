@@ -862,6 +862,8 @@ namespace banana
 			items.back().hints = { "Every game shows, and Settings open freely.", "Only the allowed games. Volume and brightness still work." };
 			add(PC, "gear", "PIN", "The PIN that unlocks Settings while the controls are on. A changes it.", "", "parental_pin", {}, {}, Item::PAGE);
 			add(PC, "gear", "Allowed games", "The games shown while the controls are on. A opens the list.", "", "parental_games", {}, {}, Item::PAGE);
+			add(PC, "gear", "Daily play time", "How long games can be played each day. Warnings come 10 minutes and 1 minute before the end; then the game is saved and closed until tomorrow.",
+				menu, "parental_minutes", { "No limit", "30 min", "45 min", "1 h", "1 h 30", "2 h", "3 h" }, { "0", "30", "45", "60", "90", "120", "180" });
 		}
 		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time.", "", "setup", {}, {}, Item::PAGE);
 		add(S, "gear", "Reset system settings", "Restores menu, display, sound, power and network settings. Games and saves stay. Press A twice.",
@@ -1438,6 +1440,7 @@ namespace banana
 		}
 		if (it.file == data + "/bananad.conf") poke("bananad");
 		if (it.key == "timezone") { setenv("TZ", v.c_str(), 1); tzset(); poke("bananad"); }	// bananad's logs too
+		if (it.key == "parental" || it.key == "parental_minutes") poke("bananad");	// (it counts the play time)
 		if (it.key == "wifi") spawn("/usr/libexec/banana/wifi", v == "on" ? "up" : "down");
 		if (it.key == "bluetooth")
 		{

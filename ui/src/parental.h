@@ -18,6 +18,9 @@ namespace banana
 		bool setPin(const std::string& dataDir, const std::string& pin);	// a new salt each time
 		std::set<std::string> games(const std::string& dataDir);
 		bool saveGames(const std::string& dataDir, const std::set<std::string>& keys);
+		// the daily play time (parental_minutes, bananad counts it in playtime.txt): the seconds left today, or -1 with
+		// no limit (the controls off, no PIN, or no minutes set)
+		long playLeft(const std::string& dataDir);
 		std::string sha256Hex(const std::string& data);	// (the test checks it against known values)
 		// a game for the Allowed games page: its system's name, its key ("<system>/<rel>") and its title
 		struct GameRef { std::string system, key, title; };

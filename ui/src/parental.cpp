@@ -3,6 +3,8 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <fcntl.h>
 #include <fstream>
 #include <unistd.h>
@@ -116,6 +118,24 @@ namespace banana
 			return writeAtomic(dataDir + "/parental.conf",
 				"# Parental controls' PIN (System > Parental controls), never kept as it is typed\n"
 				"salt = " + std::string(salt) + "\npin = " + sha256Hex(salt + pin) + "\n");
+		}
+
+		long playLeft(const std::string& dataDir)
+		{
+			int limit = atoi(value(dataDir + "/settings.conf", "parental_minutes").c_str());
+			if (limit <= 0 || !on(dataDir)) return -1;
+			std::ifstream f(dataDir + "/playtime.txt");
+			std::string day;
+			double used = 0;
+			f >> day >> used;
+			char today[16];
+			time_t now = time(nullptr);
+			struct tm tm;
+			localtime_r(&now, &tm);
+			strftime(today, sizeof today, "%Y-%m-%d", &tm);
+			if (day != today) used = 0;
+			long left = (long)(limit * 60 - used);
+			return left > 0 ? left : 0;
 		}
 
 		std::set<std::string> games(const std::string& dataDir)
