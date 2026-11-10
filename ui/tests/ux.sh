@@ -315,3 +315,14 @@ a=$(gl_corner "$OUT/$size-ux-glass-first-top.png"); gl_bad=0
 for i in $(seq 200); do [ "$(gl_corner "$OUT/$size-ux-glass-$i-top.png")" = "$a" ] || gl_bad=$((gl_bad + 1)); done
 [ -n "$a" ] && [ $gl_bad = 0 ] || { echo "FAIL $size: Glass's wallpaper gone in $gl_bad of 200 frames scrolling"; fail=1; }
 rm -f "$OUT/$size"-ux-glass-[0-9]*
+
+# a PICO-8 cart (.p8.png) is its own picture: with no box art, the cart itself is the game's art (a red one here, on
+# the top screen as its box)
+P8FX=$OUT/ux-p8-fixture-$size
+rm -rf "$P8FX"; "$HERE/tests/fixture.sh" "$P8FX" >/dev/null
+mkdir -p "$P8FX/roms/pico-8"; convert -size 160x205 xc:'#e01020' "$P8FX/roms/pico-8/Red Cart.p8.png"
+UXFX_SAVE=$UXFX; UXFX=$P8FX
+ux_run p8 "lib pico-8 0; wait 2400; shot ux-p8"
+UXFX=$UXFX_SAVE
+p8_red=$(convert "$OUT/$size-ux-p8-top.png" -fx '(r > 0.8 && g < 0.2 && b < 0.25) ? 1 : 0' -format '%[fx:mean > 0.02]' info: 2>/dev/null)
+[ "$p8_red" = 1 ] || { echo "FAIL $size: a PICO-8 cart's own picture isn't its art"; fail=1; }
