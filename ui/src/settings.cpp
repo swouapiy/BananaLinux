@@ -858,7 +858,7 @@ namespace banana
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Reset emulator settings", "Restores every emulator setting. Games and saves stay. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "About", "The model, the versions, the storage, the battery and the network.", "", "about", {}, {}, Item::INFO);
+		add(S, "gear", "About", "The model, the versions, the storage, the battery and the network.", "", "about", {}, {}, Item::PAGE);
 		if (!readCredits().empty())
 			add(S, "gear", "Credits", "The people behind this version of BananaOS.", "", "credits", {}, {}, Item::PAGE);
 		add(S, "gear", "Hotkeys", "The buttons that do something everywhere, and in the menu.", "", "hotkeys", {}, {}, Item::PAGE);
@@ -1488,9 +1488,10 @@ namespace banana
 	Settings::Result Settings::change(int dir)
 	{
 		Item& it = items[sel];
-		if (it.key == "about" && dir > 0 && !devOn)
+		if (it.key == "ab_version" && dir > 0 && !devOn)
 		{
-			// (PR #94) A seven times on About: the Developer options row (as a phone's build number); a count from the fourth
+			// (PR #94) A seven times on About's Version: the Developer options row (as a phone's build number); a count from
+			// the fourth. (It was on the About row itself, before About was a page: there it kept A from opening it)
 			if (++aboutTaps >= 7)
 			{
 				aboutTaps = 0;
@@ -1757,7 +1758,7 @@ namespace banana
 			armed = -1;
 			if (sel < top) top = sel;
 			if (sel >= top + ROWS) top = sel - ROWS + 1;
-			if (items[sel].kind == Item::INFO) refreshInfo();
+			if (items[sel].kind == Item::INFO || items[sel].key == "about") refreshInfo();
 			return MOVED;
 		}
 		case Key::L: case Key::R:
@@ -1770,7 +1771,7 @@ namespace banana
 			armed = -1;
 			if (sel < top) top = sel;
 			if (sel >= top + ROWS) top = sel - ROWS + 1;
-			if (items[sel].kind == Item::INFO) refreshInfo();
+			if (items[sel].kind == Item::INFO || items[sel].key == "about") refreshInfo();
 			return MOVED;
 		}
 		case Key::LEFT: return change(-1);
@@ -1886,7 +1887,7 @@ namespace banana
 			recordEvent("settings", "%s", groups[gsel].c_str());
 			sel = top = groupStart(gsel);
 			armed = -1;
-			if (items[sel].kind == Item::INFO) refreshInfo();
+			if (items[sel].kind == Item::INFO || items[sel].key == "about") refreshInfo();
 			return MOVED;
 		case Key::Y: openPower(); return MOVED;	// Sleep, Restart, Shut down
 		case Key::B: case Key::START: mOpen = false; return CLOSED;
@@ -2884,6 +2885,21 @@ namespace banana
 			// the row in a sentence, then what the chosen option does, brighter (it changes as the option does)
 			helpText(help, HELP_TOP, HINT_TOP - 12, p.muted);
 			helpText(cur.hints[cur.at], HINT_TOP, HELP_BOTTOM, p.ink);
+		}
+		else if (cur.key == "about")
+		{
+			// About's facts at a glance, a line each, the label then its value (A opens the page: a row each, with what
+			// each one is)
+			std::vector<const Item*> facts;
+			for (const Item& it : items) if (it.section == "About" && it.kind == Item::INFO && !it.names.empty()) facts.push_back(&it);
+			float lh = facts.empty() ? 0 : std::min(24.0f, (HELP_BOTTOM - HELP_TOP) / (float)facts.size());
+			float y = HELP_TOP;
+			for (const Item* f : facts)
+			{
+				text(f->label, false, 15, HELP_X, y, p.muted);
+				textFit(f->names[0], true, 15, HELP_X + 190, y, HELP_W - 190, p.ink, false);
+				y += lh;
+			}
 		}
 		else helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();

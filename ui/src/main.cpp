@@ -1108,6 +1108,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			recordView(ui, lib);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
+		else if (op == "row")
+		{
+			// row <section> <key>: Settings open on that row of that list ("row System about")
+			std::string sec, key; cs >> sec >> key;
+			if (!settings.isOpen()) settings.open();
+			settings.openSection(sec);
+			settings.toRow(key);
+			logf("row %s %s", sec.c_str(), key.c_str());
+		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
 		else if (op == "setupneeded") logf("setupneeded: %d", Settings::setupNeeded(o.data) ? 1 : 0);
