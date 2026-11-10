@@ -1,0 +1,203 @@
+# BananaOS: the Settings lines from PR #211 (better descriptions) that zh-cn.tsv does not have yet.
+# Columns as zh-cn.tsv: part, context, English, translation (empty: to fill in). Made with tools/lang-extract.py on main (b02d6ff1 and later).
+settings	Settings: options and their help texts	How the menu looks. Your own themes go in banana/themes on the card.	
+settings	Settings: options and their help texts	The colour of the text on the selection.	
+settings	Settings: options and their help texts	Dark or light, whichever reads better on the accent colour.	
+settings	Settings: options and their help texts	Always dark text.	
+settings	Settings: options and their help texts	Always light text.	
+settings	Settings: options and their help texts	How bright the top screen is. F + volume changes both screens anywhere, in games too.	
+settings	Settings: options and their help texts	How bright the bottom screen is. F + volume changes both screens anywhere, in games too.	
+settings	Settings: options and their help texts	The menu's clicks, and the cartridge sound when a game starts.	
+settings	Settings: options and their help texts	The menu plays its sounds.	
+settings	Settings: options and their help texts	The menu is silent. Games keep their sound.	
+settings	Settings: options and their help texts	Which systems are on the home row. A opens the list.	
+settings	Settings: options and their help texts	The top screen's motion, battery and clock, the boot animation, and the DS cartridges.	
+settings	Settings: options and their help texts	The top screen's gentle movement and shine.	
+settings	Settings: options and their help texts	The top screen moves and shines.	
+settings	Settings: options and their help texts	The top screen holds still, and saves a little battery.	
+settings	Settings: options and their help texts	How the battery shows on the top screen.	
+settings	Settings: options and their help texts	Just the battery icon.	
+settings	Settings: options and their help texts	The icon, and how full it is in percent.	
+settings	Settings: options and their help texts	How the time shows on the top screen.	
+settings	Settings: options and their help texts	Like 14:30.	
+settings	Settings: options and their help texts	Like 2:30 PM.	
+settings	Settings: options and their help texts	The bananas and the cartridge as the handheld starts.	
+settings	Settings: options and their help texts	Plays as it starts, and backwards as it shuts down.	
+settings	Settings: options and their help texts	Goes straight to the menu, and straight to black.	
+settings	Settings: options and their help texts	What the DS cartridges on the bottom screen show. The top screen keeps the box art.	
+settings	Settings: options and their help texts	The covers Box art fetched. A game without one shows its own icon.	
+settings	Settings: options and their help texts	Each game's own icon, as the DSi menu shows it.	
+settings	Settings: options and their help texts	Puts the handheld to sleep when you leave it alone. Your game pauses.	
+settings	Settings: options and their help texts	Lowers the screens when you leave the handheld alone.	
+settings	Settings: options and their help texts	What happens when you close the lid.	
+settings	Settings: options and their help texts	It sleeps. Open the lid to carry on where you were.	
+settings	Settings: options and their help texts	The screens go dark, but the game keeps running.	
+settings	Settings: options and their help texts	How the handheld wakes from sleep.	
+settings	Settings: options and their help texts	Wakes up quickly.	
+settings	Settings: options and their help texts	Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong.	
+settings	Settings: options and their help texts	The lights on the handheld: green, red when the battery is low, amber while charging.	
+settings	Settings: options and their help texts	Full brightness.	
+settings	Settings: options and their help texts	Softer lights.	
+settings	Settings: options and their help texts	No lights.	
+settings	Settings: options and their help texts	Which emulator plays DS games. X on a game in the library picks one for that game alone.	
+settings	Settings: options and their help texts	DraStic: the fastest. Its own settings are on its page below.	
+settings	Settings: options and their help texts	Banana's own, built on melonDS: the most accurate. Its own settings are on its page below.	
+settings	Settings: options and their help texts	What quitting a game does.	
+settings	Settings: options and their help texts	Quitting ends the game. Next time it starts from its title screen.	
+settings	Settings: options and their help texts	Quitting keeps your place, even through a shutdown. Next time the game carries on from there.	
+settings	Settings: options and their help texts	The language the DS itself is set to. A game with several languages starts in this one.	
+settings	Settings: options and their help texts	What L2, R2, L3 and R3 do in DS games, the same in both emulators.	
+settings	Settings: options and their help texts	The name the DS itself is set to: what games call you. 10 characters at most.	
+settings	Settings: options and their help texts	SuperDrastic's own settings: picture, speed, sound and its hotkeys.	
+settings	Settings: options and their help texts	BananaDS's own settings: picture, speed, sound and its hotkeys.	
+settings	Settings: options and their help texts	How sharp DS games' 3D is drawn.	
+settings	Settings: options and their help texts	Twice the DS's size: sharper 3D.	
+settings	Settings: options and their help texts	The DS's own size: the lightest.	
+settings	Settings: options and their help texts	Three times the DS's size. Experimental: a busy 3D scene can slow down.	
+settings	Settings: options and their help texts	Four times, the Plus screens' own size: the sharpest. Experimental: a busy 3D scene can slow down.	
+settings	Settings: options and their help texts	The outlines some games draw around 3D models (Zelda, Kirby, many Pokémon battles).	
+settings	Settings: options and their help texts	Outlines drawn, as on a DS.	
+settings	Settings: options and their help texts	Outlines left out.	
+settings	Settings: options and their help texts	The distance fog some games draw in 3D.	
+settings	Settings: options and their help texts	Fog drawn, as on a DS.	
+settings	Settings: options and their help texts	Fog left out.	
+settings	Settings: options and their help texts	How DS frames line up with the screens.	
+settings	Settings: options and their help texts	A new frame every screen refresh: the smoothest. Games run 0.3% fast, the sound matched.	
+settings	Settings: options and their help texts	The DS's own speed. A frame shows twice about every 6 seconds.	
+settings	Settings: options and their help texts	How soon a press shows on the screens. Experimental.	
+settings	Settings: options and their help texts	Frames queued as usual: the steadiest.	
+settings	Settings: options and their help texts	No frame queue: a press shows about two refreshes sooner.	
+settings	Settings: options and their help texts	How fast the processor runs in DS games.	
+settings	Settings: options and their help texts	Finds the lowest speed each game runs at full speed, and remembers it.	
+settings	Settings: options and their help texts	Always the top speed. Uses more battery.	
+settings	Settings: options and their help texts	How closely the DS's two processors keep in step.	
+settings	Settings: options and their help texts	As melonDS does it. Works with every game.	
+settings	Settings: options and their help texts	About 10% faster, but it can break a game: Golden Sun: Dark Dawn loses its 3D world.	
+settings	Settings: options and their help texts	Whether games hear the real microphone.	
+settings	Settings: options and their help texts	Games hear the microphone: blow or speak when a game asks.	
+settings	Settings: options and their help texts	Games hear nothing. The in-game menu's Blow still works.	
+settings	Settings: options and their help texts	How loud a sound must be to reach the game.	
+settings	Settings: options and their help texts	Words and blows get through, the room's noise doesn't.	
+settings	Settings: options and their help texts	Even quiet sounds get through.	
+settings	Settings: options and their help texts	Only loud sounds get through.	
+settings	Settings: options and their help texts	Everything the microphone hears, the speaker's sound too.	
+settings	Settings: options and their help texts	A companion for the DS Pokémon games, on the touch screen. An early version. BananaDS only.	
+settings	Settings: options and their help texts	No companion.	
+settings	Settings: options and their help texts	A small icon in the touch screen's corner opens your battle, party, what to catch here, a guide and the Pokédex. The game keeps running.	
+settings	Settings: options and their help texts	For a Nuzlocke-style run. Needs the NDS Pokémon companion on.	
+settings	Settings: options and their help texts	The companion shows everything as usual.	
+settings	Settings: options and their help texts	The companion keeps your first encounter on each route and the Pokémon you lost.	
+settings	Settings: options and their help texts	The buttons that do something in BananaDS's games.	
+settings	Settings: options and their help texts	Twice the DS's size: sharper 3D, at full speed.	
+settings	Settings: options and their help texts	How the DS's 3D is drawn alongside the game.	
+settings	Settings: options and their help texts	Drawn beside the game: the faster way.	
+settings	Settings: options and their help texts	Drawn in step with the game. For a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games).	
+settings	Settings: options and their help texts	Whether games hear the real microphone, and how loud a sound must be.	
+settings	Settings: options and their help texts	No frame queue: a press shows about a refresh and a half sooner. Heavy scenes can stutter a little.	
+settings	Settings: options and their help texts	The buttons that do something in SuperDrastic's games.	
+settings	Settings: options and their help texts	Puts DraStic's buttons back as printed, F opening its menu. Press A twice.	
+settings	Settings: options and their help texts	Puts all of DraStic's settings back to Banana's. Saves, states and cheats stay. Press A twice.	
+settings	Settings: options and their help texts	Which screen other systems' games play on.	
+settings	Settings: options and their help texts	Games play on the top screen.	
+settings	Settings: options and their help texts	Games play on the bottom screen.	
+settings	Settings: options and their help texts	How strict achievements are.	
+settings	Settings: options and their help texts	Save states, rewind and cheats still work.	
+settings	Settings: options and their help texts	Those are locked, and unlocks count as hardcore on retroachievements.org.	
+settings	Settings: options and their help texts	Quitting keeps your place. Next time the game carries on from there (not in Hardcore).	
+settings	Settings: options and their help texts	What runs the systems other than the DS, N64 and PlayStation.	
+settings	Settings: options and their help texts	BananaFront for the systems tested on it, RetroArch for the rest.	
+settings	Settings: options and their help texts	BananaOS's own: lighter on the battery and quicker to start, with RetroArch's saves and settings.	
+settings	Settings: options and their help texts	Always RetroArch, with its own menu and Core Downloader.	
+settings	Settings: options and their help texts	What the other screen shows while a game plays.	
+settings	Settings: options and their help texts	What the other screen shows while a game plays. A Commodore 64 or ZX Spectrum game also gets a touch keyboard there: put the game on the top screen.	
+settings	Settings: options and their help texts	Achievements and tiles to save, load, open the menu, fast-forward and quit (by touch on the bottom screen).	
+settings	Settings: options and their help texts	The other screen stays dark.	
+settings	Settings: options and their help texts	What the game panel does when you leave it alone.	
+settings	Settings: options and their help texts	It dims. A touch or a button lights it again.	
+settings	Settings: options and their help texts	It turns off. A touch or a button lights it again.	
+settings	Settings: options and their help texts	It stays on.	
+settings	Settings: options and their help texts	How long the game panel waits before it dims or turns off.	
+settings	Settings: options and their help texts	Pages about other GBA games on the second screen, as they play. Inspired by PokeDaisy.	
+settings	Settings: options and their help texts	Status, the fight, the map, the bag and your progress. Needs Second screen on.	
+settings	Settings: options and their help texts	A look for RetroArch's games.	
+settings	Settings: options and their help texts	The picture as it is.	
+settings	Settings: options and their help texts	A handheld's LCD grid.	
+settings	Settings: options and their help texts	A CRT's scanlines.	
+settings	Settings: options and their help texts	Sharp pixels at any size.	
+settings	Settings: options and their help texts	What fills the space around a game's picture.	
+settings	Settings: options and their help texts	Black around the picture.	
+settings	Settings: options and their help texts	A quiet border in the menu's colours, the picture at a sharp size.	
+settings	Settings: options and their help texts	How soon the sound follows the game.	
+settings	Settings: options and their help texts	The quickest. A busy game can crackle.	
+settings	Settings: options and their help texts	The usual balance.	
+settings	Settings: options and their help texts	The safest: no crackle, a little more delay.	
+settings	Settings: options and their help texts	Whether frames wait for the screen's refresh.	
+settings	Settings: options and their help texts	Nothing tears.	
+settings	Settings: options and their help texts	Games run as fast as they can. The screen can show a half-drawn frame.	
+settings	Settings: options and their help texts	Which emulator each system uses, where there is more than one.	
+settings	Settings: options and their help texts	Each system's buttons: what L2, R2, L3 and R3 do, and A/B and X/Y swapped.	
+settings	Settings: options and their help texts	Puts RetroArch's settings back to Banana's. Saves, states and your account stay. Press A twice.	
+settings	Settings: options and their help texts	The wireless network.	
+settings	Settings: options and their help texts	Wi-Fi on. A on Networks joins one.	
+settings	Settings: options and their help texts	Wi-Fi off. Saves battery.	
+settings	Settings: options and their help texts	Controllers, headphones and speakers.	
+settings	Settings: options and their help texts	Off: the radio unpowered, saving battery.	
+settings	Settings: options and their help texts	On. Bluetooth devices, below, pairs them.	
+settings	Settings: options and their help texts	The devices paired and around. A pairs, connects or disconnects one.	
+settings	Settings: options and their help texts	How sound plays on Bluetooth headphones.	
+settings	Settings: options and their help texts	The sound as close to the picture as Bluetooth gets: for games.	
+settings	Settings: options and their help texts	The best sound the headphones have, a little later and a little more battery.	
+settings	Settings: options and their help texts	The card as a shared folder on your network, over Wi-Fi.	
+settings	Settings: options and their help texts	Not shared.	
+settings	Settings: options and their help texts	A computer opens it as \\\\<address>\\banana.	
+settings	Settings: options and their help texts	Who can open the shared card.	
+settings	Settings: options and their help texts	The name and password below. Windows needs one.	
+settings	Settings: options and their help texts	Anyone on the network. Only on a network you trust.	
+settings	Settings: options and their help texts	A shell on the handheld from a computer, over Wi-Fi.	
+settings	Settings: options and their help texts	Off.	
+settings	Settings: options and their help texts	On: ssh root@<address>.	
+settings	Settings: options and their help texts	Your games, box art and saves from a server at home: Romhost or RomM.	
+settings	Settings: options and their help texts	Your time zone, for the clock and your games. Summer time is included.	
+settings	Settings: options and their help texts	Covers, title screens, genres and years for your games, from libretro. Wi-Fi needed.	
+settings	Settings: options and their help texts	Where covers come from.	
+settings	Settings: options and their help texts	libretro's collections.	
+settings	Settings: options and their help texts	libretro, then TwilightBoxart for the covers it lacks.	
+settings	Settings: options and their help texts	TwilightBoxart first, where it has them.	
+settings	Settings: options and their help texts	Games on the card in the second slot.	
+settings	Settings: options and their help texts	Its games show with the others while it's in. exFAT or FAT32.	
+settings	Settings: options and their help texts	Its games stay hidden.	
+settings	Settings: options and their help texts	The first boot's setup again, a step at a time.	
+settings	Settings: options and their help texts	Puts the menu, display, sound, power and network settings back. Games and saves stay. Press A twice.	
+settings	Settings: options and their help texts	Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.	
+settings	Settings: options and their help texts	The buttons that do something everywhere, and in the menu.	
+settings	Settings: options and their help texts	Records what the handheld does, in banana/logs/sessions on the card.	
+settings	Settings: options and their help texts	Not recording.	
+settings	Settings: options and their help texts	Recording. Hold Select for 2 seconds to mark a moment.	
+settings	Settings: options and their help texts	Swaps the face buttons in both DS emulators, for hands used to the other layout.	
+settings	Settings: options and their help texts	The buttons as printed.	
+settings	Settings: options and their help texts	A presses B, B presses A, X presses Y, Y presses X.	
+settings	Settings: options and their help texts	Puts L2, R2, L3 and R3 back to Banana's, A, B, X and Y as printed. Press A twice.	
+settings	Settings: options and their help texts	Puts the handheld to sleep, as a press of the power button does. Your game pauses. Press A twice.	
+settings	Settings: options and their help texts	Copies the server's games to the card and syncs saves both ways. Your own files stay.	
+settings	Settings: options and their help texts	What comes from the server.	
+settings	Settings: options and their help texts	Games and their saves.	
+settings	Settings: options and their help texts	Only the saves.	
+settings	Settings: options and their help texts	Where downloaded games go.	
+settings	Settings: options and their help texts	This card's roms folder.	
+settings	Settings: options and their help texts	The second card's roms folder, while it's in.	
+settings	Settings: options and their help texts	Whether save states sync too.	
+settings	Settings: options and their help texts	Only the games' own saves.	
+settings	Settings: options and their help texts	Save states too (RomM). Quick-resume states never sync.	
+settings	Settings: options and their help texts	When syncing happens by itself.	
+settings	Settings: options and their help texts	Only when you choose Sync now.	
+settings	Settings: options and their help texts	After you leave a game.	
+settings	Settings: options and their help texts	After a game, and when Wi-Fi connects.	
+settings	Settings: options and their help texts	Which of the server's games come to the card.	
+settings	Settings: options and their help texts	Every game of the systems above.	
+settings	Settings: options and their help texts	Only the games ticked in Choose games.	
+settings	Settings: options and their help texts	The server's games, a system at a time. A ticks one, X ticks them all.	
+settings	Settings: options and their help texts	Whether an https server's certificate is checked.	
+settings	Settings: options and their help texts	Checked, as a browser does.	
+settings	Settings: options and their help texts	Not checked: for a server with its own certificate. Only on a network you trust.	
+settings	Settings: options and their help texts	Unpairs the handheld. Games and saves stay on the card. Press A twice.	
+settings	Settings	: %s at %.0f px, %d lines	

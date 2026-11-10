@@ -1,0 +1,1111 @@
+# BananaOS: every line on screen that zh-cn.tsv does not have yet, on main (b02d6ff1 and later), older ones too.
+# Columns as zh-cn.tsv: part, context, English, translation (empty: to fill in). Made with tools/lang-extract.py.
+menu	Menu (Carts theme)	{value} game	
+menu	Menu (Carts theme)	{value} games	
+menu	Menu: library, dates and times	Files	
+menu	Menu: library, dates and times	Banana	
+menu	Menu: library, dates and times	Copy {extension}files to roms/{folder}	
+menu	Menu	{from} wants to send {n}{n}	
+menu	Menu	{value} file	
+menu	Menu	{value} files	
+menu	Menu	Received {c}{c} from {c}	
+menu	Menu	In {c}.	
+menu	Menu	Sent {c}{c} to {c}	
+menu	Menu	{c} said no	
+menu	Menu	left packed	
+menu	Menu	Unpacked	
+menu	Menu	{jobs} jobs done	
+menu	Menu	: not all of it	
+menu	Menu	Nothing new	
+menu	Menu	{what}. In Files.	
+menu	Menu	library: %s	
+menu	Menu	starting: %s (%s)	
+menu	Menu	no file	
+menu	Menu	no icon	
+menu	Menu	the icon's fields	
+menu	Menu	the icon's tap area is too small	
+menu	Menu	no picture after opening	
+menu	Menu	the picture is mostly black	
+menu	Menu	no dot under the finger	
+menu	Menu	the drag changed the page's title too	
+menu	Menu	Back to game didn't ask to close	
+menu	Menu	; settings cache %zu entries, %.1f MB of a %.1f MB budget	
+menu	Menu	start: %s (%s)	
+menu	Menu	, back on {setupAt}	
+menu	Menu	restart (Settings)	
+menu	Menu	shut down (Settings)	
+menu	Menu	LOAD_STATE_SLOT %d\n	
+menu	Menu	QUIT\n	
+menu	Menu	start: %s (%s, %s)	
+menu	Menu	ended after %ld s (status %d)	
+settings	Settings: updates	Downloading {percent}%	
+settings	Settings	BananaGBA	
+settings	Settings	BananaNES	
+settings	Settings	BananaSNES	
+settings	Settings	Commodore 64	
+settings	Settings	VICE x64sc	
+settings	Settings	VICE x64	
+settings	Settings	ZX Spectrum	
+settings	Settings	Fuse	
+settings	Settings	{label} buttons	
+settings	Settings: options and their help texts	{value} (The RG DS Plus has no R3.)	
+settings	Settings: options and their help texts	How the menu looks. Your own themes go in banana/themes on the card.	
+settings	Settings: options and their help texts	The colour of the text on the selection.	
+settings	Settings: options and their help texts	Dark or light, whichever reads better on the accent colour.	
+settings	Settings: options and their help texts	Always dark text.	
+settings	Settings: options and their help texts	Always light text.	
+settings	Settings: options and their help texts	How bright the top screen is. F + volume changes both screens anywhere, in games too.	
+settings	Settings: options and their help texts	How bright the bottom screen is. F + volume changes both screens anywhere, in games too.	
+settings	Settings: options and their help texts	The menu's clicks, and the cartridge sound when a game starts.	
+settings	Settings: options and their help texts	The menu plays its sounds.	
+settings	Settings: options and their help texts	The menu is silent. Games keep their sound.	
+settings	Settings: options and their help texts	Speaker EQ	
+settings	Settings: options and their help texts	Which systems are on the home row. A opens the list.	
+settings	Settings: options and their help texts	Menu look	
+settings	Settings: options and their help texts	The top screen's motion, battery and clock, the boot animation, and the DS cartridges.	
+settings	Settings: options and their help texts	The top screen's gentle movement and shine.	
+settings	Settings: options and their help texts	The top screen moves and shines.	
+settings	Settings: options and their help texts	The top screen holds still, and saves a little battery.	
+settings	Settings: options and their help texts	How the battery shows on the top screen.	
+settings	Settings: options and their help texts	Just the battery icon.	
+settings	Settings: options and their help texts	The icon, and how full it is in percent.	
+settings	Settings: options and their help texts	How the time shows on the top screen.	
+settings	Settings: options and their help texts	Like 14:30.	
+settings	Settings: options and their help texts	Like 2:30 PM.	
+settings	Settings: options and their help texts	The bananas and the cartridge as the handheld starts.	
+settings	Settings: options and their help texts	Plays as it starts, and backwards as it shuts down.	
+settings	Settings: options and their help texts	Goes straight to the menu, and straight to black.	
+settings	Settings: options and their help texts	DS cartridges	
+settings	Settings: options and their help texts	What the DS cartridges on the bottom screen show. The top screen keeps the box art.	
+settings	Settings: options and their help texts	Game icon	
+settings	Settings: options and their help texts	The covers Box art fetched. A game without one shows its own icon.	
+settings	Settings: options and their help texts	Each game's own icon, as the DSi menu shows it.	
+settings	Settings: options and their help texts	Puts the handheld to sleep when you leave it alone. Your game pauses.	
+settings	Settings: options and their help texts	Lowers the screens when you leave the handheld alone.	
+settings	Settings: options and their help texts	What happens when you close the lid.	
+settings	Settings: options and their help texts	It sleeps. Open the lid to carry on where you were.	
+settings	Settings: options and their help texts	The screens go dark, but the game keeps running.	
+settings	Settings: options and their help texts	How the handheld wakes from sleep.	
+settings	Settings: options and their help texts	Wakes up quickly.	
+settings	Settings: options and their help texts	Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong.	
+settings	Settings: options and their help texts	The lights on the handheld: green, red when the battery is low, amber while charging.	
+settings	Settings: options and their help texts	Full brightness.	
+settings	Settings: options and their help texts	Softer lights.	
+settings	Settings: options and their help texts	No lights.	
+settings	Settings: options and their help texts	Which emulator plays DS games. X on a game in the library picks one for that game alone.	
+settings	Settings: options and their help texts	DraStic: the fastest. Its own settings are on its page below.	
+settings	Settings: options and their help texts	Banana's own, built on melonDS: the most accurate. Its own settings are on its page below.	
+settings	Settings: options and their help texts	What quitting a game does.	
+settings	Settings: options and their help texts	Quitting ends the game. Next time it starts from its title screen.	
+settings	Settings: options and their help texts	Quitting keeps your place, even through a shutdown. Next time the game carries on from there.	
+settings	Settings: options and their help texts	The language the DS itself is set to. A game with several languages starts in this one.	
+settings	Settings: options and their help texts	Buttons	
+settings	Settings: options and their help texts	What L2, R2, L3 and R3 do in DS games, the same in both emulators.	
+settings	Settings: options and their help texts	The name the DS itself is set to: what games call you. 10 characters at most.	
+settings	Settings: options and their help texts	SuperDrastic's own settings: picture, speed, sound and its hotkeys.	
+settings	Settings: options and their help texts	BananaDS's own settings: picture, speed, sound and its hotkeys.	
+settings	Settings: options and their help texts	How sharp DS games' 3D is drawn.	
+settings	Settings: options and their help texts	Twice the DS's size: sharper 3D.	
+settings	Settings: options and their help texts	The DS's own size: the lightest.	
+settings	Settings: options and their help texts	Three times the DS's size. Experimental: a busy 3D scene can slow down.	
+settings	Settings: options and their help texts	Four times, the Plus screens' own size: the sharpest. Experimental: a busy 3D scene can slow down.	
+settings	Settings: options and their help texts	The outlines some games draw around 3D models (Zelda, Kirby, many Pokémon battles).	
+settings	Settings: options and their help texts	Outlines drawn, as on a DS.	
+settings	Settings: options and their help texts	Outlines left out.	
+settings	Settings: options and their help texts	The distance fog some games draw in 3D.	
+settings	Settings: options and their help texts	Fog drawn, as on a DS.	
+settings	Settings: options and their help texts	Fog left out.	
+settings	Settings: options and their help texts	How DS frames line up with the screens.	
+settings	Settings: options and their help texts	A new frame every screen refresh: the smoothest. Games run 0.3% fast, the sound matched.	
+settings	Settings: options and their help texts	The DS's own speed. A frame shows twice about every 6 seconds.	
+settings	Settings: options and their help texts	How soon a press shows on the screens. Experimental.	
+settings	Settings: options and their help texts	Frames queued as usual: the steadiest.	
+settings	Settings: options and their help texts	No frame queue: a press shows about two refreshes sooner.	
+settings	Settings: options and their help texts	How fast the processor runs in DS games.	
+settings	Settings: options and their help texts	Finds the lowest speed each game runs at full speed, and remembers it.	
+settings	Settings: options and their help texts	Always the top speed. Uses more battery.	
+settings	Settings: options and their help texts	How closely the DS's two processors keep in step.	
+settings	Settings: options and their help texts	As melonDS does it. Works with every game.	
+settings	Settings: options and their help texts	About 10% faster, but it can break a game: Golden Sun: Dark Dawn loses its 3D world.	
+settings	Settings: options and their help texts	DS CPU speed	
+settings	Settings: options and their help texts	How fast the DS's own CPU runs. DSi games keep their own.	
+settings	Settings: options and their help texts	67 MHz (DS)	
+settings	Settings: options and their help texts	133 MHz (DSi)	
+settings	Settings: options and their help texts	266 MHz	
+settings	Settings: options and their help texts	533 MHz	
+settings	Settings: options and their help texts	1066 MHz	
+settings	Settings: options and their help texts	2133 MHz	
+settings	Settings: options and their help texts	A DS's real speed.	
+settings	Settings: options and their help texts	A DSi's speed.	
+settings	Settings: options and their help texts	Faster than a DS: a game may behave differently.	
+settings	Settings: options and their help texts	Stops a game's own slowdown in busy places (Origin HeartGold's towns). A game may behave differently.	
+settings	Settings: options and their help texts	The fastest. A game may behave differently.	
+settings	Settings: options and their help texts	Whether games hear the real microphone.	
+settings	Settings: options and their help texts	Games hear the microphone: blow or speak when a game asks.	
+settings	Settings: options and their help texts	Games hear nothing. The in-game menu's Blow still works.	
+settings	Settings: options and their help texts	How loud a sound must be to reach the game.	
+settings	Settings: options and their help texts	Words and blows get through, the room's noise doesn't.	
+settings	Settings: options and their help texts	Even quiet sounds get through.	
+settings	Settings: options and their help texts	Only loud sounds get through.	
+settings	Settings: options and their help texts	Everything the microphone hears, the speaker's sound too.	
+settings	Settings: options and their help texts	NDS Pokémon companion (alpha)	
+settings	Settings: options and their help texts	A companion for the DS Pokémon games, on the touch screen. An early version. BananaDS only.	
+settings	Settings: options and their help texts	No companion.	
+settings	Settings: options and their help texts	A small icon in the touch screen's corner opens your battle, party, what to catch here, a guide and the Pokédex. The game keeps running.	
+settings	Settings: options and their help texts	Challenge mode	
+settings	Settings: options and their help texts	For a Nuzlocke-style run. Needs the NDS Pokémon companion on.	
+settings	Settings: options and their help texts	The companion shows everything as usual.	
+settings	Settings: options and their help texts	The companion keeps your first encounter on each route and the Pokémon you lost.	
+settings	Settings: options and their help texts	The buttons that do something in BananaDS's games.	
+settings	Settings: options and their help texts	Twice the DS's size: sharper 3D, at full speed.	
+settings	Settings: options and their help texts	How the DS's 3D is drawn alongside the game.	
+settings	Settings: options and their help texts	Drawn beside the game: the faster way.	
+settings	Settings: options and their help texts	Drawn in step with the game. For a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games).	
+settings	Settings: options and their help texts	Whether games hear the real microphone, and how loud a sound must be.	
+settings	Settings: options and their help texts	No frame queue: a press shows about a refresh and a half sooner. Heavy scenes can stutter a little.	
+settings	Settings: options and their help texts	The buttons that do something in SuperDrastic's games.	
+settings	Settings: options and their help texts	Puts DraStic's buttons back as printed, F opening its menu. Press A twice.	
+settings	Settings: options and their help texts	Puts all of DraStic's settings back to Banana's. Saves, states and cheats stay. Press A twice.	
+settings	Settings: options and their help texts	Which screen other systems' games play on.	
+settings	Settings: options and their help texts	Games play on the top screen.	
+settings	Settings: options and their help texts	Games play on the bottom screen.	
+settings	Settings: options and their help texts	How strict achievements are.	
+settings	Settings: options and their help texts	Save states, rewind and cheats still work.	
+settings	Settings: options and their help texts	Those are locked, and unlocks count as hardcore on retroachievements.org.	
+settings	Settings: options and their help texts	Quitting keeps your place. Next time the game carries on from there (not in Hardcore).	
+settings	Settings: options and their help texts	Frontend	
+settings	Settings: options and their help texts	What runs the systems other than the DS, N64 and PlayStation.	
+settings	Settings: options and their help texts	BananaFront	
+settings	Settings: options and their help texts	RetroArch	
+settings	Settings: options and their help texts	BananaFront for the systems tested on it, RetroArch for the rest.	
+settings	Settings: options and their help texts	BananaOS's own: lighter on the battery and quicker to start, with RetroArch's saves and settings.	
+settings	Settings: options and their help texts	Always RetroArch, with its own menu and Core Downloader.	
+settings	Settings: options and their help texts	What the other screen shows while a game plays.	
+settings	Settings: options and their help texts	Picture & sound	
+settings	Settings: options and their help texts	How RetroArch's games look and sound: a shader, a screen border, VSync and the audio latency.	
+settings	Settings: options and their help texts	What the other screen shows while a game plays. A Commodore 64 or ZX Spectrum game also gets a touch keyboard there: put the game on the top screen.	
+settings	Settings: options and their help texts	Achievements and tiles to save, load, open the menu, fast-forward and quit (by touch on the bottom screen).	
+settings	Settings: options and their help texts	The other screen stays dark.	
+settings	Settings: options and their help texts	What the game panel does when you leave it alone.	
+settings	Settings: options and their help texts	It dims. A touch or a button lights it again.	
+settings	Settings: options and their help texts	It turns off. A touch or a button lights it again.	
+settings	Settings: options and their help texts	It stays on.	
+settings	Settings: options and their help texts	How long the game panel waits before it dims or turns off.	
+settings	Settings: options and their help texts	The GBA Pokémon games' pages on the second screen, as on the DS. Inspired by PokeDaisy by Lidor Itzhari.	
+settings	Settings: options and their help texts	Battle, party, a guide, the map and more, in Ruby, Sapphire, Emerald, FireRed, LeafGreen and the ROM hacks Unbound, Gaia, Glazed, Heart & Soul, Lazarus, Seaglass and SoulGold. Needs Second screen on.	
+settings	Settings: options and their help texts	For a Nuzlocke-style run: the companion keeps your first encounter in each area and the Pokémon you lost, as the DS one does (Here and Log pages). Needs the Pokémon companion on.	
+settings	Settings: options and their help texts	It keeps your first encounter in each area and the Pokémon you lost (Here and Log pages). Needs the Pokémon companion on.	
+settings	Settings: options and their help texts	Pages about other GBA games on the second screen, as they play. Inspired by PokeDaisy.	
+settings	Settings: options and their help texts	Status, the fight, the map, the bag and your progress. Needs Second screen on.	
+settings	Settings: options and their help texts	A look for RetroArch's games.	
+settings	Settings: options and their help texts	The picture as it is.	
+settings	Settings: options and their help texts	A handheld's LCD grid.	
+settings	Settings: options and their help texts	A CRT's scanlines.	
+settings	Settings: options and their help texts	Sharp pixels at any size.	
+settings	Settings: options and their help texts	What fills the space around a game's picture.	
+settings	Settings: options and their help texts	Black around the picture.	
+settings	Settings: options and their help texts	A quiet border in the menu's colours, the picture at a sharp size.	
+settings	Settings: options and their help texts	How soon the sound follows the game.	
+settings	Settings: options and their help texts	The quickest. A busy game can crackle.	
+settings	Settings: options and their help texts	The usual balance.	
+settings	Settings: options and their help texts	The safest: no crackle, a little more delay.	
+settings	Settings: options and their help texts	Whether frames wait for the screen's refresh.	
+settings	Settings: options and their help texts	Nothing tears.	
+settings	Settings: options and their help texts	Games run as fast as they can. The screen can show a half-drawn frame.	
+settings	Settings: options and their help texts	Emulators	
+settings	Settings: options and their help texts	Which emulator each system uses, where there is more than one.	
+settings	Settings: options and their help texts	Each system's buttons: what L2, R2, L3 and R3 do, and A/B and X/Y swapped.	
+settings	Settings: options and their help texts	Puts RetroArch's settings back to Banana's. Saves, states and your account stay. Press A twice.	
+settings	Settings: options and their help texts	The wireless network.	
+settings	Settings: options and their help texts	Wi-Fi on. A on Networks joins one.	
+settings	Settings: options and their help texts	Wi-Fi off. Saves battery.	
+settings	Settings: options and their help texts	Bluetooth	
+settings	Settings: options and their help texts	Controllers, headphones and speakers.	
+settings	Settings: options and their help texts	The card on your network: file sharing on or off, its login and name and password, and SSH.	
+settings	Settings: options and their help texts	Off: the radio unpowered, saving battery.	
+settings	Settings: options and their help texts	On. Bluetooth devices, below, pairs them.	
+settings	Settings: options and their help texts	The devices paired and around. A pairs, connects or disconnects one.	
+settings	Settings: options and their help texts	How sound plays on Bluetooth headphones.	
+settings	Settings: options and their help texts	The sound as close to the picture as Bluetooth gets: for games.	
+settings	Settings: options and their help texts	The best sound the headphones have, a little later and a little more battery.	
+settings	Settings: options and their help texts	The card as a shared folder on your network, over Wi-Fi.	
+settings	Settings: options and their help texts	Not shared.	
+settings	Settings: options and their help texts	A computer opens it as \\\\<address>\\banana.	
+settings	Settings: options and their help texts	Who can open the shared card.	
+settings	Settings: options and their help texts	The name and password below. Windows needs one.	
+settings	Settings: options and their help texts	Anyone on the network. Only on a network you trust.	
+settings	Settings: options and their help texts	A shell on the handheld from a computer, over Wi-Fi.	
+settings	Settings: options and their help texts	Off.	
+settings	Settings: options and their help texts	On: ssh root@<address>.	
+settings	Settings: options and their help texts	Your games, box art and saves from a server at home: Romhost or RomM.	
+settings	Settings: options and their help texts	Your time zone, for the clock and your games. Summer time is included.	
+settings	Settings: options and their help texts	Updates	
+settings	Settings: options and their help texts	Covers, title screens, genres and years for your games: fetching them, and where they come from.	
+settings	Settings: options and their help texts	Covers, title screens, genres and years for your games, from libretro. Wi-Fi needed.	
+settings	Settings: options and their help texts	Where covers come from.	
+settings	Settings: options and their help texts	libretro's collections.	
+settings	Settings: options and their help texts	libretro, then TwilightBoxart for the covers it lacks.	
+settings	Settings: options and their help texts	TwilightBoxart first, where it has them.	
+settings	Settings: options and their help texts	Games on the card in the second slot.	
+settings	Settings: options and their help texts	Its games show with the others while it's in. exFAT or FAT32.	
+settings	Settings: options and their help texts	Its games stay hidden.	
+settings	Settings: options and their help texts	The first boot's setup again, a step at a time.	
+settings	Settings: options and their help texts	Puts the menu, display, sound, power and network settings back. Games and saves stay. Press A twice.	
+settings	Settings: options and their help texts	Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.	
+settings	Settings: options and their help texts	The buttons that do something everywhere, and in the menu.	
+settings	Settings: options and their help texts	Developer options	
+settings	Settings: options and their help texts	Tools for finding what went wrong: a recording of everything the handheld does, on the card.	
+settings	Settings: options and their help texts	Flight recorder	
+settings	Settings: options and their help texts	Records what the handheld does, in banana/logs/sessions on the card.	
+settings	Settings: options and their help texts	Not recording.	
+settings	Settings: options and their help texts	Recording. Hold Select for 2 seconds to mark a moment.	
+settings	Settings: options and their help texts	Hide developer options	
+settings	Settings: options and their help texts	Takes the Developer options row away again (A seven times on System > About brings it back). Press A twice.	
+settings	Settings: options and their help texts	In a DS game, in both emulators, as Nintendo DS > Buttons has it now; that page gives it another job.	
+settings	Settings: options and their help texts	SuperDrastic hotkeys	
+settings	Settings: options and their help texts	In SuperDrastic: save, load, quick settings (volume, brightness), quit.	
+settings	Settings: options and their help texts	In SuperDrastic: back to the menu, the spot saved to resume from when Quick resume is on.	
+settings	Settings: options and their help texts	In SuperDrastic: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	
+settings	Settings: options and their help texts	In SuperDrastic: DraStic's quick save state.	
+settings	Settings: options and their help texts	In SuperDrastic: loads it back.	
+settings	Settings: options and their help texts	BananaDS hotkeys	
+settings	Settings: options and their help texts	In BananaDS: save, load, quick settings, achievements, quit.	
+settings	Settings: options and their help texts	In BananaDS: your spot saved, then back to the menu.	
+settings	Settings: options and their help texts	In BananaDS: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	
+settings	Settings: options and their help texts	In BananaDS: to slot 1.	
+settings	Settings: options and their help texts	In BananaDS: slot 1, loaded back.	
+settings	Settings: options and their help texts	DS buttons	
+settings	Settings: options and their help texts	DS A	
+settings	Settings: options and their help texts	DS B	
+settings	Settings: options and their help texts	DS X	
+settings	Settings: options and their help texts	DS Y	
+settings	Settings: options and their help texts	DS L	
+settings	Settings: options and their help texts	DS R	
+settings	Settings: options and their help texts	DS START	
+settings	Settings: options and their help texts	DS SELECT	
+settings	Settings: options and their help texts	Nothing	
+settings	Settings: options and their help texts	In a DS game, in both emulators. Swap screens: as F + SELECT. Fast-forward: on, and off again. Blow on the mic: the game hears a blow while it is held, the microphone on or off. Save and load state: as F + R and F + L. F + a button and HOME keep their own (the Hotkeys page).	
+settings	Settings: options and their help texts	Swap A/B and X/Y	
+settings	Settings: options and their help texts	Swaps the face buttons in both DS emulators, for hands used to the other layout.	
+settings	Settings: options and their help texts	The buttons as printed.	
+settings	Settings: options and their help texts	A presses B, B presses A, X presses Y, Y presses X.	
+settings	Settings: options and their help texts	Puts L2, R2, L3 and R3 back to Banana's, A, B, X and Y as printed. Press A twice.	
+settings	Settings: options and their help texts	Other systems buttons	
+settings	Settings: options and their help texts	This system's buttons: what L2, R2, L3 and R3 do alone in its games, and A/B and X/Y swapped or not.	
+settings	Settings: options and their help texts	Game's own	
+settings	Settings: options and their help texts	Pause	
+settings	Settings: options and their help texts	Alone, in this system's games. Game's own: the game's button. Fast-forward: on, and off again (as F + R2). Save and load state: the current slot (as F + R and F + L). Menu: RetroArch's (as F + X). With F held, the button is RetroArch's hotkey.	
+settings	Settings: options and their help texts	Companion	
+settings	Settings: options and their help texts	{help} Companion: the second screen switches between its menu and the Pokémon or Game companion (F always shows the menu).	
+settings	Settings: options and their help texts	The button beside F, in this system's games. Companion: the second screen switches between its menu and the Pokémon or Game companion, as the button in its top-right corner does (F always shows the menu).	
+settings	Settings: options and their help texts	On: A and B swap places, and X and Y, in this system's games and in RetroArch's own menu while one runs: for hands used to the other layout. F + a button stays as printed.	
+settings	Settings: options and their help texts	Puts the handheld to sleep, as a press of the power button does. Your game pauses. Press A twice.	
+settings	Settings: options and their help texts	Copies the server's games to the card and syncs saves both ways. Your own files stay.	
+settings	Settings: options and their help texts	What comes from the server.	
+settings	Settings: options and their help texts	Games and their saves.	
+settings	Settings: options and their help texts	Only the saves.	
+settings	Settings: options and their help texts	Where downloaded games go.	
+settings	Settings: options and their help texts	This card's roms folder.	
+settings	Settings: options and their help texts	The second card's roms folder, while it's in.	
+settings	Settings: options and their help texts	Whether save states sync too.	
+settings	Settings: options and their help texts	Only the games' own saves.	
+settings	Settings: options and their help texts	Save states too (RomM). Quick-resume states never sync.	
+settings	Settings: options and their help texts	When syncing happens by itself.	
+settings	Settings: options and their help texts	Only when you choose Sync now.	
+settings	Settings: options and their help texts	After you leave a game.	
+settings	Settings: options and their help texts	After a game, and when Wi-Fi connects.	
+settings	Settings: options and their help texts	Games to sync	
+settings	Settings: options and their help texts	Which of the server's games come to the card.	
+settings	Settings: options and their help texts	All	
+settings	Settings: options and their help texts	Chosen	
+settings	Settings: options and their help texts	Every game of the systems above.	
+settings	Settings: options and their help texts	Only the games ticked in Choose games.	
+settings	Settings: options and their help texts	Choose games	
+settings	Settings: options and their help texts	The server's games, a system at a time. A ticks one, X ticks them all.	
+settings	Settings: options and their help texts	Check certificate	
+settings	Settings: options and their help texts	Whether an https server's certificate is checked.	
+settings	Settings: options and their help texts	Checked, as a browser does.	
+settings	Settings: options and their help texts	Not checked: for a server with its own certificate. Only on a network you trust.	
+settings	Settings: options and their help texts	Unpairs the handheld. Games and saves stay on the card. Press A twice.	
+settings	Settings: options and their help texts	Game & Watch	
+settings	Settings	Banana {version}{slot} on the {model}.	
+settings	Settings	(slot {slot})	
+settings	Settings	Battery {battery}%.	
+settings	Settings	Card: {space}.	
+settings	Settings: options and their help texts	Developer options are on	
+settings	Settings: options and their help texts	They're at the end of System now.	
+settings	Settings: options and their help texts	{aboutTaps} more	
+settings	Settings: options and their help texts	for the developer options	
+settings	Settings: options and their help texts	Developer options hidden	
+settings	Settings: options and their help texts	A seven times on System > About brings them back.	
+settings	Settings: options and their help texts	L2, R2, L3 and R3 are Banana's again.	
+settings	Settings	Wi-Fi: {wifiInfo}. Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).	
+settings	Settings	{value} (adjusted).	
+settings	Settings	Evens out the speakers: the peaks that make them shrill or boxy taken down, in every game and the menu (never the headphones). A profile measured for this handheld or one of your own (an Equalizer APO .txt, as AutoEq makes, in banana/speaker-eq on the card), and seven sliders to adjust it by ear. Now: {now}	
+settings	Settings	The card on the network: \\\\{address}\\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). {getConfValue}	
+settings	Settings	: %s at %.0f px, %d lines	
+settings	Settings	{items} > {items} (with a hint)	
+settings	Settings	Stop	
+settings	Settings	Connected to {network}{wstat}	
+settings	Settings	{value} network	
+settings	Settings	{value} networks	
+settings	Settings: Bluetooth	Connected to {n}.	
+settings	Settings: Bluetooth	Pairing with {value}	
+settings	Settings: Bluetooth	Connecting to {value}	
+settings	Settings: Bluetooth	Disconnecting {value}	
+settings	Settings: Bluetooth	Forgetting {value}	
+settings	Settings: Bluetooth	{value} device	
+settings	Settings: Bluetooth	{value} devices	
+settings	Settings	{value} character	
+settings	Settings	{value} characters	
+settings	Settings	{value} games match	
+settings	Settings	{value} game	
+settings	Settings	{value} games	
+settings	Settings	The password couldn't be checked: {out}.	
+settings	Settings	Beta channel on again, with the password kept.	
+settings	Settings	Beta channel off: Check for updates asks GitHub again. The password is kept: A turns the channel on again.	
+settings	Settings: updates	{percent}% · {done} of {percent} MB	
+settings	Settings: updates	Resume: {have} of {total} MB	
+settings	Settings: updates	{total} MB	
+settings	Settings	{hz} kHz	
+settings	Settings	{hz} Hz	
+settings	Settings	The speaker EQ can't be written now ({livePath}).	
+settings	Settings	The sliders back to the profile as it is. A keeps that, B goes back to what was kept.	
+settings	Settings	Kept, and heard from the next start: {livePath} can't be written now.	
+settings	Settings	{value} (adjusted)	
+settings	Settings	Heard at once in what's playing, on the speakers only. X: back to the profile as it is.	
+settings	Settings	Off: the speakers play the sound as it is.	
+settings	Settings	Profile	
+settings	Settings	{lvl} dB	
+settings	A game's page (X on a game)	{value} name	
+settings	A game's page (X on a game)	{value} names	
+settings	Settings	Beta password forgotten: A asks for it again.	
+settings	Settings: updates	Running {version}{slot}	
+settings	Settings: updates	, slot {slot}	
+settings	Settings: updates	The update wasn't applied: {status}. This version is untouched.	
+settings	Settings: updates	The check failed: {error}.	
+settings	Settings: updates	A downloads it ({total} MB) to banana/updates on the card and checks it; nothing is installed until you choose Install. X checks again.	
+settings	Settings: updates	GitHub has no release for this handheld. With Settings > System > Updates > Test versions left out, only stable versions count, and there are none yet.	
+settings	Settings: updates	Two channels: GitHub's releases, or the beta testers' builds on bananaos-cfw.dev. On: the beta builds. A, then A again, turns it off (GitHub again); the password is kept for turning it back on. X twice forgets the password.	
+settings	Settings: updates	Two channels: GitHub's releases (now), or the beta testers' builds on bananaos-cfw.dev. A turns the beta channel on again with the password kept on the card; X twice forgets the password.	
+settings	Settings: updates	Two channels: GitHub's releases (now), or the beta testers' builds on bananaos-cfw.dev. A asks for the beta password (once: it is checked with the site, then kept on the card for the updater only).	
+settings	Settings: updates	{value} package	
+settings	Settings: updates	Press X again: forget	
+settings	Settings: updates	Off (password kept)	
+settings	Settings: updates	for the {board}	
+settings	Settings	BananaOS {ver}	
+settings	Settings	Stopping the sync. What came already stays on the card; Sync now carries on from there.	
+settings	Settings	The sync couldn't be stopped (it may be ending by itself).	
+settings	Settings	The server doesn't know this handheld any more: pair it again.	
+settings	Settings	The server's list can't be read: {ln}.	
+settings	Settings	The server has no games for this handheld's systems.	
+settings	Settings	{on} chosen. With Games to sync on Chosen, Sync now brings only those.	
+settings	Settings	%.1f GB	
+settings	Settings	{chosenN} chosen, {chosenBytes}	
+settings	Settings	Asking the server for its games...	
+settings	Settings	A opens a system. X ticks all of its games, or unticks them when all are ticked. B saves and goes back.	
+settings	Settings	A ticks or unticks a game. X: all of this system's, or none. L and R jump a page. Games already on the card say so. B goes back to the systems.	
+settings	Settings	{value} · on the card	
+settings	Settings	{value} · chosen	
+settings	Settings	Loading...	
+settings	Settings	{ch} of {all}{b}	
+settings	Settings	Sync · on card	
+settings	Settings	On card	
+settings	Settings	All / none	
+settings	Settings	Tick	
+settings	Settings	A restarts into the new version now. If it ever fails to start, Settings > System > Updates > Previous version brings this one back.	
+settings	Settings	{status}. This version is untouched.	
+settings	Settings	The picture's shader for this game only, in either emulator; the others follow the Shader on the emulator's page in Settings > Nintendo DS. None scales smoothly and costs no GPU work.	
+settings	Settings	SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow Settings > Nintendo DS > SuperDrastic > Threaded 3D.	
+settings	Settings	The size the DS's 3D is drawn at for this game, in either emulator: 1x the DS's own, 2x twice, 3x and 4x (experimental) three and four times, the sharpest and the heaviest (a busy 3D scene can drop below full speed). SuperDrastic draws 3x and 4x at 2x, its most. The others follow each emulator's 3D resolution (Settings > Nintendo DS > BananaDS or SuperDrastic).	
+settings	Settings	BananaDS only. How fast the DS's own CPU runs for this game, over Settings' and its Timing's. Faster stops a game's own slowdown in busy places (Origin HeartGold's towns). Above 67 MHz isn't a DS's speed: if this game hangs or goes wrong, set it back.	
+settings	Settings	BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn loses its 3D world): if this one goes wrong, set it back. Fast, DSi CPU also runs the game's main CPU at the DSi's 133 MHz: a game that slows down by itself on a DS (Origin HeartGold's busy towns) keeps its speed, for more of the handheld's power. The others follow Settings > Nintendo DS > BananaDS > Timing.	
+settings	Settings	Removes this game's file from the card: {file}. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	
+settings	A game's page (X on a game)	As in Settings ({gcpu} MHz)	
+settings	A game's page (X on a game)	This game's DS CPU speed	
+settings	Settings	A Wi-Fi password has 8 to 63 characters; this one has {pw}.	
+settings	Settings	Asking {done}...	
+settings	Settings	pair {hsUrl} {code}	
+settings	Settings	Checking the account {user}...	
+settings	Settings	Logged in as {name}{score}	
+settings	Settings	· {score} points	
+settings	Settings	The server said no ({status})	
+settings	Settings	Testing {tSsid}...	
+settings	Settings	For the clock on the top screen and the games' own clocks. Left and right change it{tTime}	
+settings	Settings	; the time itself came from the internet.	
+settings	Settings	Checking {ra}...	
+settings	Settings	{value} (no internet)	
+settings	Settings	Connected, address {tIp}	
+settings	A game's page (X on a game)	{done} of {b} found	
+settings	Files	{folder} min	
+settings	Files	{folder} h {folder} min	
+settings	Files	The second SD card was taken out.	
+settings	Files	{d} can't be read: {reason}.	
+settings	Files	{files} free	
+settings	Files	Add a server	
+settings	Files	Download options	
+settings	Files	Folder	
+settings	Files	Downloading	
+settings	Files	Paste here	
+settings	Files	Download {clipWhat}	
+settings	Files	Copy {value}	
+settings	Files	Move {value}	
+settings	Files	Copy	
+settings	Files	Move	
+settings	Files	Rename	
+settings	Files	Unpack...	
+settings	Files	New folder	
+settings	Files	Mark all	
+settings	Files	Unmark all	
+settings	Files	Clear the clipboard	
+settings	Files	Keep both	
+settings	Files	New names	
+settings	Files	Skip those	
+settings	Files	Press Y again to stop. What is done stays; the file in hand is left out.	
+settings	Files	Nothing was pasted.	
+settings	Files	{value} to copy	
+settings	Files	{value} to move	
+settings	Files	{row}: open the folder they go to, then X, Paste here.	
+settings	Files	A types the key, B deletes, X capitals, L symbols, Y a space, START renames it, SELECT leaves it as it was. Or tap the keys. Not in a name: \\ / : * ? " < > |.	
+settings	Files	{value} A game's saves, play time and star in Favorites go by its file name: renamed, it starts without them (they stay where they are).	
+settings	Files	The clipboard is empty.	
+settings	Files	New folder in	
+settings	Files	A types the key, B deletes, X capitals, L symbols, Y a space, START makes the folder, SELECT cancels. Or tap the keys. Not in a name: \\ / : * ? " < > |.	
+settings	Files	Not into banana/: it holds Banana's own files (the settings, the servers, the jobs). Choose another folder.	
+settings	Files	Not into banana/: it holds Banana's own files (the settings, the servers, the jobs).	
+settings	Files	in {dir}	
+settings	Files	into {dest}	
+settings	Files	Deleted	
+settings	Files	Copied	
+settings	Files	Moved	
+settings	Files	into {jobWhere}.	
+settings	Files	Stopped: {done} of {pr}{del}	
+settings	Files	{value} deleted.	
+settings	Files	{value} done.	
+settings	Files	Nothing was deleted.	
+settings	Files	{value} left as it was.	
+settings	Files	{value} left as they were.	
+settings	Files	{failed} couldn't be: {error}	
+settings	Files	{value} But a card refused a write at the end, or was taken out: some of it may not be on it.	
+settings	Files	Made the folder {text}.	
+settings	Files	Renamed {renaming} to {text}.	
+settings	Files	In the clipboard: {clipWhat} to download, from {title} {dir}.	
+settings	Files	In the clipboard: {what}{clipOp}, from {clipFrom}.	
+settings	Files	Unpacking {value}	
+settings	Files	Downloading {value}	
+settings	Files	Choose a folder	
+settings	Files	Files	
+settings	Files	{files} free of {files}	
+settings	Files	{pickNote}A opens a card, then its folders: Y takes the folder shown (A too, on a file or in an empty folder), X makes a new one. B goes back to the download as it was.	
+settings	Files	The cards' folders and files: A opens a card. In a folder, Y marks, X copies, moves, renames, deletes or unpacks what is marked, or makes a new folder. LEFT and RIGHT turn a page, L and R go to the first and last rows. START: Files' settings (a new server, the download options).	
+settings	Files	A shows each file. It carries on in the background while you play (paused) or the menu shows anything else; with the lid closed it finishes before the handheld sleeps.	
+settings	Files	A opens its folders: Y marks, X downloads what is marked into a folder on a card, or copies it for Paste here in one. Y here changes the server or deletes it.	
+settings	Files	{value} Plain FTP sends the password unencrypted.	
+settings	Files	Files' settings	
+settings	Files	A NAS, or a computer sharing a folder: over SMB (Windows' and macOS's file sharing, most NAS), SFTP (SSH) or FTP. Its files are downloaded onto the cards, archives unpacked.	
+settings	Files	Unpacking after a download, the archive deleted after, an archive's single folder unwrapped, the servers' hidden files.	
+settings	Files	{value} B goes back to the cards and the servers.	
+settings	Files	An empty folder	
+settings	Files	{pickNote}A or Y takes this folder, X makes a new one in it. B goes up.	
+settings	Files	A or X makes a new folder here{clipEmpty}{clipNote}	
+settings	Files	, or pastes.	
+settings	Files	Folder · {n}	
+settings	Files	A opens it, Y marks, X: {value}	
+settings	Files	Y marks, A or X: {value}	
+settings	Files	{dir}copy, move, rename, delete, unpack, a new folder. B goes up.{clipNote}	
+settings	Files	{name}A download is writing it: it takes its own name once it is whole.{clipNote}	
+settings	Files	item marked	
+settings	Files	items marked	
+settings	Files	{marked}: X for what to do with them.{clipNote}	
+settings	Files	A opens it. Y takes	
+settings	Files	A or Y takes	
+settings	Files	{dir} the folder shown ({dir}), X makes a new one in it. B goes up; from the cards, back to the download as it was.	
+settings	Files	{value} A game's play time and its star in Favorites go by its place: moved, it starts without them (its saves go by its name and stay).	
+settings	Files	From {title} into this folder: {dir}. The next page says how (archives unpacked, files already here).	
+settings	Files	Into this folder: {dir}. A name already here asks first.{clipOp}	
+settings	Files	{value} Moved on one card it is at once; from the other card each file is copied, then deleted where it was.	
+settings	Files	Into the clipboard: then open the folder it goes to, and X, Paste here.	
+settings	Files	Into the clipboard, to be moved: then open the folder it goes to, and X, Paste here.	
+settings	Files	A new name, typed on the keyboard.	
+settings	Files	Press A again to delete {movable} for good (a folder with everything in it, hidden files too).	
+settings	Files	For good: there is no bin. A twice.	
+settings	Files	A folder in {dir}, its name typed on the keyboard.	
+settings	Files	Into a folder chosen on the next page (this one first): zip, 7z and RAR archives, multi-volume ones by their first part, one with a password asked for it.	
+settings	Files	Every entry of this folder, for Copy, Move or Delete.	
+settings	Files	What Copy or Move put in it is let go of: nothing on the cards or the servers changes.	
+settings	Files	{keep} So it can be copied, not moved, renamed or deleted.	
+settings	Files	Not {stay}: the card's own {stay} where {stay}	
+settings	Files	folder stays	
+settings	Files	folders stay	
+settings	Files	it is.	
+settings	Files	they are.	
+settings	Files	Already here	
+settings	Files	{names}. Keep both gives the new ones another name (2); Replace puts them over the old ones (a folder: the two in one); Skip those leaves them out. B pastes nothing.	
+settings	Files	Deleting	
+settings	Files	Copying	
+settings	Files	Moving	
+settings	Files	Counting...	
+settings	Files	{plural} so far	
+settings	Files	Files stays open till it is done. Y stops: what is deleted stays deleted.	
+settings	Files	Each file goes in under a hidden name and takes its own once it is whole. Files stays open till it is done; Y stops: what is done stays.	
+settings	Files	· {files}/s · {duration} left	
+settings	Files	{marked} marked	
+settings	Files	What to do	
+settings	Files	Nothing to show.	
+settings	Files	Stop!	
+settings	Files	Up	
+settings	Files	Edit	
+settings	Files	Add	
+settings	Files	Unpack here	
+settings	Files	Download here	
+settings	Files	Unmark	
+settings	Files	Mark	
+settings	Files	Actions	
+settings	Files	Paste	
+settings	Files	Unpack	
+settings	Files: servers, downloads and archives	FTPS	
+settings	Files: servers, downloads and archives	Files' helper ({prog}) couldn't be started.	
+settings	Files: servers, downloads and archives	Stopped.	
+settings	Files: servers, downloads and archives	{help} START when it is typed.	
+settings	Files: servers, downloads and archives	That card was taken out: choose the folder again.	
+settings	Files: servers, downloads and archives	Finished: {downloaded} downloaded	
+settings	Files: servers, downloads and archives	Finished	
+settings	Files: servers, downloads and archives	, {unpacked} unpacked	
+settings	Files: servers, downloads and archives	, {failed} failed	
+settings	Files: servers, downloads and archives	, {packed} left packed	
+settings	Files: servers, downloads and archives	Cancelling	
+settings	Files: servers, downloads and archives	Cancelling: the job stops	
+settings	Files: servers, downloads and archives	Needs a password	
+settings	Files: servers, downloads and archives	Waiting for the password of {name}	
+settings	Files: servers, downloads and archives	Stopped	
+settings	Files: servers, downloads and archives	Stopped: {reason} A goes on once it is back.	
+settings	Files: servers, downloads and archives	Stopped: A goes on from where it was	
+settings	Files: servers, downloads and archives	Downloading {of}: {percent}%	
+settings	Files: servers, downloads and archives	· {duration} left	
+settings	Files: servers, downloads and archives	Trying again	
+settings	Files: servers, downloads and archives	Trying again in {seconds} s ({attempt} of {retries})	
+settings	Files: servers, downloads and archives	Unpacking {percent}%	
+settings	Files: servers, downloads and archives	Unpacking {of}: {percent}%	
+settings	Files: servers, downloads and archives	Connecting	
+settings	Files: servers, downloads and archives	Connecting ({of})	
+settings	Files: servers, downloads and archives	Working	
+settings	Files: servers, downloads and archives	The password of {name}: the download goes on with it. It isn't kept (the server's Remember password is off).	
+settings	Files: servers, downloads and archives	Stopped. The files downloaded so far are kept: A goes on from where it was.	
+settings	Files: servers, downloads and archives	Cancelling...	
+settings	Files: servers, downloads and archives	Cancelled. The files it had finished stay on the card.	
+settings	Files: servers, downloads and archives	Link	
+settings	Files: servers, downloads and archives	{value} (by type)	
+settings	Files: servers, downloads and archives	{value} (as last time)	
+settings	Files: servers, downloads and archives	{value} (new)	
+settings	Files: servers, downloads and archives	· {fetch} free	
+settings	Files: servers, downloads and archives	Card	
+settings	Files: servers, downloads and archives	Unpack archives	
+settings	Files: servers, downloads and archives	Yes	
+settings	Files: servers, downloads and archives	No	
+settings	Files: servers, downloads and archives	Zips	
+settings	Files: servers, downloads and archives	Unpack them too	
+settings	Files: servers, downloads and archives	Keep them as they are	
+settings	Files: servers, downloads and archives	Delete the archive after	
+settings	Files: servers, downloads and archives	Delete archives after	
+settings	Files: servers, downloads and archives	Skip them	
+settings	Files: servers, downloads and archives	Replace them	
+settings	Files: servers, downloads and archives	Unpacked	
+settings	Files: servers, downloads and archives	Not unpacked	
+settings	Files: servers, downloads and archives	(the address)	
+settings	Files: servers, downloads and archives	Protocol	
+settings	Files: servers, downloads and archives	FTP	
+settings	Files: servers, downloads and archives	SFTP	
+settings	Files: servers, downloads and archives	SMB	
+settings	Files: servers, downloads and archives	Address	
+settings	Files: servers, downloads and archives	Type it	
+settings	Files: servers, downloads and archives	Port	
+settings	Files: servers, downloads and archives	Anonymous	
+settings	Files: servers, downloads and archives	User	
+settings	Files: servers, downloads and archives	Kept	
+settings	Files: servers, downloads and archives	Remember password	
+settings	Files: servers, downloads and archives	Domain	
+settings	Files: servers, downloads and archives	Start folder	
+settings	Files: servers, downloads and archives	Where the login lands	
+settings	Files: servers, downloads and archives	FTPS (TLS)	
+settings	Files: servers, downloads and archives	File names	
+settings	Files: servers, downloads and archives	Delete this server	
+settings	Files: servers, downloads and archives	Ask	
+settings	Files: servers, downloads and archives	Unpack after a download	
+settings	Files: servers, downloads and archives	Unwrap a single folder	
+settings	Files: servers, downloads and archives	Hidden files on servers	
+settings	Files: servers, downloads and archives	Shown	
+settings	Files: servers, downloads and archives	It is kept on the card, sealed for this handheld (Remember password).	
+settings	Files: servers, downloads and archives	It isn't kept: Files asks for it again next time (the server's Remember password is off).	
+settings	Files: servers, downloads and archives	Listing {listing}...	
+settings	Files: servers, downloads and archives	The server refused the name or the password: type it again.	
+settings	Files: servers, downloads and archives	{title}'s key changed: it isn't the server it was ({last} before, {last} now). If it wasn't reinstalled, someone may be in between. Press A again to trust the new key.	
+settings	Files: servers, downloads and archives	{existingCount} of {files}{existingCount} there already: skip them, replace them or keep both, then Download.	
+settings	Files: servers, downloads and archives	{value} is	
+settings	Files: servers, downloads and archives	{value} are	
+settings	Files: servers, downloads and archives	That password is wrong: type it again.	
+settings	Files: servers, downloads and archives	The archive is protected by a password.	
+settings	Files: servers, downloads and archives	{plural}, {fetch} unpacked.	
+settings	Files: servers, downloads and archives	Unpacking it takes {fetch} of memory, and {fetch} is free: it may fail. Press A again to try anyway.	
+settings	Files: servers, downloads and archives	Saved.	
+settings	Files: servers, downloads and archives	Deleted.	
+settings	Files: servers, downloads and archives	Listing the files...	
+settings	Files: servers, downloads and archives	Everything chosen is there already.	
+settings	Files: servers, downloads and archives	Not enough room on {label}: {fetch} needed, {fetch} free.	
+settings	Files: servers, downloads and archives	A file is {fetch}: this card (FAT32) takes 4 GB a file at most.	
+settings	Files: servers, downloads and archives	{todo} from {title}	
+settings	Files: servers, downloads and archives	Couldn't write the job in {jobs}.	
+settings	Files: servers, downloads and archives	Looking into {fetch}...	
+settings	Files: servers, downloads and archives	Unpack {fetch}	
+settings	Files: servers, downloads and archives	What the list calls it (empty: its address).	
+settings	Files: servers, downloads and archives	The NAS's or the computer's IP address on your network, like 192.168.1.10, or its name.	
+settings	Files: servers, downloads and archives	SMB 445, SFTP 22, FTP 21: change it only when the server uses another.	
+settings	Files: servers, downloads and archives	The account's name on the server.	
+settings	Files: servers, downloads and archives	The account's password. Kept sealed on the card when Remember password is on.	
+settings	Files: servers, downloads and archives	Only for an account in a Windows domain: usually empty.	
+settings	Files: servers, downloads and archives	Where its folders open, like /Games (on SMB the share first: /Games is the share Games). Empty: where the login lands.	
+settings	Files: servers, downloads and archives	The server's address is needed: an IP address like 192.168.1.10, or its name.	
+settings	Files: servers, downloads and archives	Plain FTP sends the password unencrypted: prefer FTPS or SFTP when the server has them. Press A again to save anyway.	
+settings	Files: servers, downloads and archives	Saving...	
+settings	Files: servers, downloads and archives	Press X again to stop. The files downloaded so far are kept, and Resume goes on.	
+settings	Files: servers, downloads and archives	Press Y again to cancel this job: what it hasn't finished is deleted (the files it finished stay on the card).	
+settings	Files: servers, downloads and archives	Trusting the new key...	
+settings	Files: servers, downloads and archives	{targets} to download: open the folder they go to on a card, then X, Paste here.	
+settings	Files: servers, downloads and archives	Its name	
+settings	Files: servers, downloads and archives	Its address	
+settings	Files: servers, downloads and archives	Its port	
+settings	Files: servers, downloads and archives	The user	
+settings	Files: servers, downloads and archives	The password	
+settings	Files: servers, downloads and archives	Its domain	
+settings	Files: servers, downloads and archives	The start folder	
+settings	Files: servers, downloads and archives	{title} goes from the list (its password too). Press A again.	
+settings	Files: servers, downloads and archives	Change a server	
+settings	Files: servers, downloads and archives	A new server	
+settings	Files: servers, downloads and archives	SMB: Windows' and macOS's file sharing, and most NAS (SMB 2 and 3). SFTP: SSH's file transfer, with a password. FTP: FTP or FTPS, passive.	
+settings	Files: servers, downloads and archives	Anonymous: the server's public files, no account.	
+settings	Files: servers, downloads and archives	Guest: the share without an account (a NAS's public folder).	
+settings	Files: servers, downloads and archives	Yes: kept on the card, sealed for this handheld (another one, or a computer, can't read it). No: asked each time.	
+settings	Files: servers, downloads and archives	FTPS: the login and the files encrypted (explicit TLS). Its certificate is trusted the first time and checked after.	
+settings	Files: servers, downloads and archives	How an old server writes names in Cyrillic: UTF-8 for any recent one, CP1251 or CP866 for an old Windows one.	
+settings	Files: servers, downloads and archives	START saves too.	
+settings	Files: servers, downloads and archives	The server goes from the list, its password with it.	
+settings	Files: servers, downloads and archives	{fieldHelp} A types it.	
+settings	Files: servers, downloads and archives	Not connected: A tries again. B goes back.	
+settings	Files: servers, downloads and archives	{marked} marked{bytes}.	
+settings	Files: servers, downloads and archives	A opens a folder. Y marks, X: download what is marked (a folder with all in it), or copy it to paste in a card's folder. SELECT reads the folder again, B goes up.	
+settings	Files: servers, downloads and archives	Into {dest}{how}: the next page says where, and any folder on a card can be chosen there.	
+settings	Files: servers, downloads and archives	, by the files' type	
+settings	Files: servers, downloads and archives	, as last time	
+settings	Files: servers, downloads and archives	Into Files' clipboard: then open a folder on a card, and X, Paste here downloads them there.	
+settings	Files: servers, downloads and archives	Every entry of this folder, for Download or Copy.	
+settings	Files: servers, downloads and archives	Into the folder chosen. Archives of one folder are unwrapped (Options).	
+settings	Files: servers, downloads and archives	Into the folder chosen. Archives are unpacked after their last part comes in.	
+settings	Files: servers, downloads and archives	The files' type says it. {value}	
+settings	Files: servers, downloads and archives	Where this server folder's downloads went last time. {value}	
+settings	Files: servers, downloads and archives	A chooses another folder on the cards, or makes one: Files opens on it, Y takes the folder shown (A too, on a file or in an empty folder), X makes a new one.{local}	
+settings	Files: servers, downloads and archives	{value} A server's folder goes in as a folder.	
+settings	Files: servers, downloads and archives	{value} The server's folder of this system goes into it itself.	
+settings	Files: servers, downloads and archives	The same folder on the other card (made when it starts, if it isn't there).	
+settings	Files: servers, downloads and archives	Yes: 7z and RAR archives unpacked into the folder, then (Delete archives after) deleted. This system plays its games zipped: its zips are kept as they are unless the next row says otherwise.	
+settings	Files: servers, downloads and archives	Yes: archives unpacked into the folder, then (Delete archives after) deleted. Zips for a system that plays them zipped are kept as they are by default.	
+settings	Files: servers, downloads and archives	This system plays its games zipped, so its zips are kept as they are, the 7z and RAR archives unpacked all the same. Unpack them too: the zips as well.	
+settings	Files: servers, downloads and archives	Skip them: those stay as they are. Replace them: the new ones over the old. Keep both: the new ones get another name (2).	
+settings	Files: servers, downloads and archives	Each archive into the folder chosen. One with a password stays packed: its row on the next page unpacks it, the password typed then.	
+settings	Files: servers, downloads and archives	Unpacking	
+settings	Files: servers, downloads and archives	Nothing to do	
+settings	Files: servers, downloads and archives	{value} A shows it in Files, to unpack it from there.	
+settings	Files: servers, downloads and archives	A clears it (the files stay on the card). Your games show in the menu when you go back to it.	
+settings	Files: servers, downloads and archives	The job stops, then what it hasn't finished is deleted.	
+settings	Files: servers, downloads and archives	A types the password. Y cancels the download.	
+settings	Files: servers, downloads and archives	A goes on from where it stopped. Y cancels it: what it hasn't finished is deleted.	
+settings	Files: servers, downloads and archives	B goes back: it carries on meanwhile, also while you play (paused) or the menu shows anything else. X stops it, Y cancels it.	
+settings	Files: servers, downloads and archives	{jobsBehind} after this one.	
+settings	Files: servers, downloads and archives	more job waits	
+settings	Files: servers, downloads and archives	more jobs wait	
+settings	Files: servers, downloads and archives	Ask: the Download page asks each time. Always or Never: it doesn't ask.	
+settings	Files: servers, downloads and archives	An archive unpacked is deleted after (all its parts): ask each time, always or never.	
+settings	Files: servers, downloads and archives	An archive holding a single folder: its contents go into the folder chosen, not the folder itself.	
+settings	Files: servers, downloads and archives	Files and folders whose names start with a dot, on the servers (the cards' stay hidden in Files).	
+settings	Files: servers, downloads and archives	Change the server	
+settings	Files: servers, downloads and archives	Unpack where	
+settings	Files: servers, downloads and archives	Download where	
+settings	Files: servers, downloads and archives	Last unpacking	
+settings	Files: servers, downloads and archives	Last download	
+settings	Files: servers, downloads and archives	Not connected.	
+settings	Files: servers, downloads and archives	Nothing to download.	
+settings	Files: servers, downloads and archives	Trust	
+settings	Files: servers, downloads and archives	Clear	
+settings	Files: servers, downloads and archives	Show	
+settings	Files: servers, downloads and archives	Cancel!	
+settings	Files: servers, downloads and archives	{title} isn't in the list of servers any more.	
+settings	Bshare	KB	
+settings	Bshare	MB	
+settings	Bshare	GB	
+settings	Bshare	TB	
+settings	Bshare	{value} file	
+settings	Bshare	{value} files	
+settings	Bshare	{m} files and folders	
+settings	Bshare	Wrong PIN for	
+settings	Bshare	PIN for	
+settings	Bshare	That PIN wasn't right. {value}	
+settings	Bshare	{value} asks for a PIN: it is in LocalSend there (Settings, Require PIN). START sends with it, B gives up.	
+settings	Bshare	accept {value}	
+settings	Bshare	decline {value}	
+settings	Bshare	Receiving from {reqFrom}...	
+settings	Bshare	Declined: nothing was saved.	
+settings	Bshare	That folder can't be read.	
+settings	Bshare	Computer	
+settings	Bshare	Handheld	
+settings	Bshare	Phone	
+settings	Bshare	Browser	
+settings	Bshare	Device	
+settings	Bshare	Send	
+settings	Bshare	{deviceName} (gone)	
+settings	Bshare	Receive when closed	
+settings	Bshare	Require PIN	
+settings	Bshare	PIN	
+settings	Bshare	Bshare	
+settings	Bshare	Your PIN	
+settings	Bshare	The PIN a phone or computer types to send here: 4 to 8 digits. START keeps it.	
+settings	Bshare	A send is under way: Sending shows it.	
+settings	Bshare	Choose a device first: a phone or computer with LocalSend open.	
+settings	Bshare	Choose the files first.	
+settings	Bshare	A PIN is 4 to 8 digits: kept as it was.	
+settings	Bshare	Get files from a phone or computer with LocalSend.	
+settings	Bshare	Seen as {name} while this page is open.	
+settings	Bshare	Send files or folders to a phone or computer with LocalSend open.	
+settings	Bshare	Receiving while Bshare is closed, and about Bshare.	
+settings	Bshare	{reqFrom} wants to send	
+settings	Bshare	First: {reqFirst}.	
+settings	Bshare	Nothing is saved.	
+settings	Bshare	Everything goes into {location}.	
+settings	Bshare	Seen as {name}{myPin}	
+settings	Bshare	·  PIN {myPin}	
+settings	Bshare	Open LocalSend on your phone or computer, on the same Wi-Fi, and send to {name}.{myPin}	
+settings	Bshare	It asks for your PIN, {myPin}.	
+settings	Bshare	Files go into {location}.	
+settings	Bshare	Games go into their system's folder, everything else into banana/received. Location changes that.	
+settings	Bshare	Receiving from {rc}	
+settings	Bshare	{rc} of {rc} files	
+settings	Bshare	Last: {files} from {rc}.	
+settings	Bshare	The cards	
+settings	Bshare	A opens a folder. This folder: everything received goes here.	
+settings	Bshare	A phone or computer with LocalSend open, on the same Wi-Fi.	
+settings	Bshare	Files or folders on the cards.	
+settings	Bshare	{marked} chosen. A changes them.	
+settings	Bshare	{marked} to {deviceName}. It asks there before taking them.	
+settings	Bshare	Choose a device and the files first.	
+settings	Bshare	A shows it.	
+settings	Bshare	Looking for devices	
+settings	Bshare	Phones and computers with LocalSend open, on the same Wi-Fi.	
+settings	Bshare	A opens a folder or picks a file. Y picks a whole folder. START: done.	
+settings	Bshare	{marked} chosen.	
+settings	Bshare	{who} asks for a PIN	
+settings	Bshare	Wrong PIN for {who}	
+settings	Bshare	Waiting for {who}	
+settings	Bshare	Sending to {who}	
+settings	Bshare	Sent to {who}	
+settings	Bshare	{who} said no	
+settings	Bshare	{who} is busy	
+settings	Bshare	Partly sent	
+settings	Bshare	It didn't work	
+settings	Bshare	The PIN is in LocalSend there (Settings, Require PIN). Send again to type it.	
+settings	Bshare	It asks there first.	
+settings	Bshare	You can leave: it carries on.	
+settings	Bshare	All the files arrived.	
+settings	Bshare	The device couldn't be reached. Is LocalSend open, on the same Wi-Fi?	
+settings	Bshare	Whether devices can send to {name} while Bshare is closed.	
+settings	Bshare	A notification asks; Bshare's Receive page answers.	
+settings	Bshare	Files are saved without asking: only on a network you trust.	
+settings	Bshare	Only while Bshare's Receive page is open.	
+settings	Bshare	Whether a phone or computer must type your PIN before it can send to {name}, as LocalSend's own Require PIN.	
+settings	Bshare	On: your PIN is {myPin}. The PIN row changes it.	
+settings	Bshare	Off: anyone on the Wi-Fi can ask to send (you still accept each one).	
+settings	Bshare	Your PIN, {myPin}: LocalSend asks for it on the phone or computer that sends here. A changes it.	
+settings	Bshare	Pick folder	
+settings	Bshare	Unpick	
+settings	Bshare	Pick	
+settings	Bshare	{marked} chosen	
+settings	Game panel (second screen)	Keys	
+settings	Game panel (second screen)	Tap	
+settings	Game panel (second screen)	RUN	
+settings	Game panel (second screen)	CLR	
+settings	Game panel (second screen)	RET	
+settings	Game panel (second screen)	SPACE	
+settings	Game panel (second screen)	DEL	
+settings	Game panel (second screen)	ESC	
+settings	Game panel (second screen)	TAB	
+settings	Game panel (second screen)	CAPS	
+settings	Game panel (second screen)	END	
+settings	Game panel (second screen)	INS	
+settings	Game panel (second screen)	CTRL	
+settings	Game panel (second screen)	Tap it again to load	
+settings	Game panel (second screen)	Tap a slot twice to load it	
+settings	Game panel (second screen)	Tap a key: the game hears it on the other screen	
+settings	Game panel (second screen)	DONE	
+settings	Game panel (second screen)	The game keeps running on the other screen. Done brings the tiles back.	
+settings	Game panel (second screen)	Tap: save states	
+settings	Game panel (second screen)	Waiting for the emulator...	
+settings	Game panel (second screen)	RetroArch can't read the game's memory with this emulator: {error}	
+settings	Game panel (second screen)	%s %s: %d screens	
+settings	Box art download	Commodore - 64	
+settings	Box art download	Sinclair - ZX Spectrum	
+settings	Pokémon companion (second screen)	AXVS	
+settings	Pokémon companion (second screen)	Pokémon Rubí	
+settings	Pokémon companion (second screen)	AXPS	
+settings	Pokémon companion (second screen)	Pokémon Zafiro	
+settings	Pokémon companion (second screen)	BPES	
+settings	Pokémon companion (second screen)	Pokémon Esmeralda	
+settings	Pokémon companion (second screen)	BPRS	
+settings	Pokémon companion (second screen)	Pokémon Rojo Fuego	
+settings	Pokémon companion (second screen)	BPGS	
+settings	Pokémon companion (second screen)	Pokémon Verde Hoja	
+settings	Pokémon companion (second screen)	Hardy	
+settings	Pokémon companion (second screen)	Lonely	
+settings	Pokémon companion (second screen)	Brave	
+settings	Pokémon companion (second screen)	Adamant	
+settings	Pokémon companion (second screen)	Naughty	
+settings	Pokémon companion (second screen)	Bold	
+settings	Pokémon companion (second screen)	Docile	
+settings	Pokémon companion (second screen)	Relaxed	
+settings	Pokémon companion (second screen)	Impish	
+settings	Pokémon companion (second screen)	Lax	
+settings	Pokémon companion (second screen)	Timid	
+settings	Pokémon companion (second screen)	Hasty	
+settings	Pokémon companion (second screen)	Serious	
+settings	Pokémon companion (second screen)	Jolly	
+settings	Pokémon companion (second screen)	Naive	
+settings	Pokémon companion (second screen)	Modest	
+settings	Pokémon companion (second screen)	Mild	
+settings	Pokémon companion (second screen)	Quiet	
+settings	Pokémon companion (second screen)	Bashful	
+settings	Pokémon companion (second screen)	Rash	
+settings	Pokémon companion (second screen)	Calm	
+settings	Pokémon companion (second screen)	Gentle	
+settings	Pokémon companion (second screen)	Sassy	
+settings	Pokémon companion (second screen)	Quirky	
+settings	Pokémon companion (second screen)	NORMAL	
+settings	Pokémon companion (second screen)	FIGHT	
+settings	Pokémon companion (second screen)	FAIRY	
+menu	Menu (layout themes)	Starting {game.title}	
+menu	Menu (layout themes)	ISSUE #{sys.index + 1}	
+menu	Menu (layout themes)	GAME INSIDE!	
+menu	Menu (layout themes)	GAMES INSIDE!	
+menu	Menu (layout themes)	PREVIOUSLY…	
+menu	Menu (layout themes)	A NEW STORY!	
+menu	Menu (layout themes)	NO GAME PLAYED YET	
+menu	Menu (layout themes)	CHAPTER {cursor + 1} OF {count}	
+menu	Menu (layout themes)	MEANWHILE… 	
+menu	Menu (layout themes)	 GAMES WAIT!	
+menu	Menu (layout themes)	a banana comic	
+menu	Menu (layout themes)	PLAYED 	
+menu	Menu (layout themes)	PLAYED ONCE!	
+menu	Menu (layout themes)	NEVER PLAYED?!	
+menu	Menu (layout themes)	TIME	
+menu	Menu (layout themes)	PLAYS	
+menu	Menu (layout themes)	♥ FAVE!	
+menu	Menu (layout themes)	{upper(sys.name)} · {count} ISSUES	
+menu	Menu (layout themes)	TO BE	
+menu	Menu (layout themes)	CONTINUED…	
+menu	Menu (layout themes)	HERE WE GO!	
+menu	Menu (layout themes)	IN THIS ISSUE:	
+menu	Menu (layout themes)	BANANA COMICS	
+menu	Menu (layout themes)	SPECIMEN {pad(cursor + 1, 2)} / {pad(count, 2)}	
+menu	Menu (layout themes)	Open water	
+menu	Menu (layout themes)	LAST DIVE	
+menu	Menu (layout themes)	Dive back in	
+menu	Menu (layout themes)	UNCHARTED	
+menu	Menu (layout themes)	No dives here yet. Press A to explore.	
+menu	Menu (layout themes)	LOG ENTRY {pad(game.index + 1, 3)}	
+menu	Menu (layout themes)	Last dive: 	
+menu	Menu (layout themes)	Never explored. Press A to dive.	
+menu	Menu (layout themes)	Shell {game.index + 1} of {count} on this reef	
+menu	Menu (layout themes)	TREASURED	
+menu	Menu (layout themes)	DIVING IN	
+menu	Menu (layout themes)	CHG 	
+menu	Menu (layout themes)	TANK 	
+menu	Menu (layout themes)	THE HOUSE PRESENTS	
+menu	Menu (layout themes)	The house	
+menu	Menu (layout themes)	CARDS IN THE DECK	
+menu	Menu (layout themes)	HANDS PLAYED	
+menu	Menu (layout themes)	TIME AT THE TABLE	
+menu	Menu (layout themes)	LAST HAND	
+menu	Menu (layout themes)	YOUR HAND	
+menu	Menu (layout themes)	card {cursor + 1} of {count}	
+menu	Menu (layout themes)	{upper(sys.name)}  ·  HAND {game.index + 1}	
+menu	Menu (layout themes)	No bets yet	
+menu	Menu (layout themes)	HAND PLAYED	
+menu	Menu (layout themes)	AT THE TABLE	
+menu	Menu (layout themes)	♥  HOUSE FAVOURITE	
+menu	Menu (layout themes)	DEALER'S LEDGER	
+menu	Menu (layout themes)	{sys.name} · {count} hands	
+menu	Menu (layout themes)	No.	
+menu	Menu (layout themes)	GAME	
+menu	Menu (layout themes)	HANDS	
+menu	Menu (layout themes)	NOW DEALING	
+menu	Menu (layout themes)	PLACE YOUR BETS	
+menu	Menu (layout themes)	GOOD LUCK	
+menu	Menu (layout themes)	♥  FELT TABLE	
+menu	Menu (layout themes)	 GAMES  /  	
+menu	Menu (layout themes)	PRESS A TO START	
+menu	Menu (layout themes)	FAV	
+menu	Menu (layout themes)	PLAYER 1	
+menu	Menu (layout themes)	FAVORITE	
+menu	Menu (layout themes)	HIGH SCORES	
+menu	Menu (layout themes)	RANK	
+menu	Menu (layout themes)	NAME	
+menu	Menu (layout themes)	TH	
+menu	Menu (layout themes)	ST	
+menu	Menu (layout themes)	ND	
+menu	Menu (layout themes)	RD	
+menu	Menu (layout themes)	1UP	
+menu	Menu (layout themes)	CREDIT 	
+menu	Menu (layout themes)	GET READY	
+menu	Menu (layout themes)	INSERT COIN	
+menu	Menu (layout themes)	1 COIN  1 PLAY	
+menu	Menu (layout themes)	CREDIT 00	
+menu	Menu (layout themes)	CREDIT 01	
+menu	Menu (layout themes)	LOADING	
+menu	Menu (layout themes)	EX LIBRIS	
+menu	Menu (layout themes)	{sys.played} read  ·  {either(sys.time, 'no time')} spent	
+menu	Menu (layout themes)	shelf {cursor + 1} of {count}	
+menu	Menu (layout themes)	BOOKMARKED	
+menu	Menu (layout themes)	vol. {item.games}	
+menu	Menu (layout themes)	Last out: {either(game.last, 'never')}	
+menu	Menu (layout themes)	Time with it: {either(game.time, 'none yet')}	
+menu	Menu (layout themes)	Marks: none yet	
+menu	Menu (layout themes)	no plate	
+menu	Menu (layout themes)	plate {pad(game.index + 1, 3, '0')}	
+menu	Menu (layout themes)	LAST OUT  {upper(either(game.last, 'never'))}	
+menu	Menu (layout themes)	FAVOURITE	
+menu	Menu (layout themes)	CARD {game.index + 1} OF {games.count}	
+menu	Menu (layout themes)	Borrowed {num(game.plays) + 1} times	
+menu	Menu (layout themes)	CHECKED OUT	
+menu	Menu (layout themes)	Opening	
+menu	Menu (layout themes)	page {round(312 * clamp(lp / 0.8, 0, 1))} of 312	
+menu	Menu (layout themes)	EX LIBRIS  ·  {upper(either(brand, 'BananaOS'))}	
+menu	Menu (layout themes)	PAYLOAD	
+menu	Menu (layout themes)	SORTIES	
+menu	Menu (layout themes)	FLIGHT TIME	
+menu	Menu (layout themes)	SECTOR	
+menu	Menu (layout themes)	* MARKED	
+menu	Menu (layout themes)	RESUME > {upper(sys.resumeTitle)}	
+menu	Menu (layout themes)	DOCKING BAYS	
+menu	Menu (layout themes)	BAY {pad(cursor + 1, 2)} / {pad(count, 2)}	
+menu	Menu (layout themes)	BAY {pad(i + 1, 2)}	
+menu	Menu (layout themes)	{pad(item.games, 3)} TGT	
+menu	Menu (layout themes)	{upper(sys.name)}  //  {upper(plural(sys.games, 'target'))}  //  {either(sys.time, '0m')} LOGGED	
+menu	Menu (layout themes)	TGT-{pad(cursor + 1, 3)}	
+menu	Menu (layout themes)	MISSION FILE	
+menu	Menu (layout themes)	LAST CONTACT	
+menu	Menu (layout themes)	STATUS	
+menu	Menu (layout themes)	PRIORITY	
+menu	Menu (layout themes)	STANDBY	
+menu	Menu (layout themes)	OBJECTIVES	
+menu	Menu (layout themes)	TELEMETRY	
+menu	Menu (layout themes)	TRACKING {pad(cursor + 1, 3)} / {pad(count, 3)}	
+menu	Menu (layout themes)	MISSION LOG // {upper(sys.name)}	
+menu	Menu (layout themes)	{pad(count, 3)} ENTRIES	
+menu	Menu (layout themes)	NO TARGETS IN RANGE	
+menu	Menu (layout themes)	ACQUIRING LOCK	
+menu	Menu (layout themes)	LOCK ACQUIRED	
+menu	Menu (layout themes)	IGNITION SEQUENCE	
+menu	Menu (layout themes)	THRUST	
+menu	Menu (layout themes)	{upper(sys.name)}  //  TGT-{pad(game.index + 1, 3)}	
+menu	Menu (layout themes)	 DECK	
+menu	Menu (layout themes)	LINK OK	
+menu	Menu (layout themes)	NO LINK	
+menu	Menu (layout themes)	 in here	
+menu	Menu (layout themes)	• played for 	
+menu	Menu (layout themes)	no time yet	
+menu	Menu (layout themes)	• by 	
+menu	Menu (layout themes)	→ carry on: 	
+menu	Menu (layout themes)	→ nothing started yet	
+menu	Menu (layout themes)	★ starred	
+menu	Menu (layout themes)	page {cursor + 1}	
+menu	Menu (layout themes)	My systems	
+menu	Menu (layout themes)	• played 	
+menu	Menu (layout themes)	• total: 	
+menu	Menu (layout themes)	not yet	
+menu	Menu (layout themes)	• last: 	
+menu	Menu (layout themes)	★ a favourite!	
+menu	Menu (layout themes)	☆ not starred yet	
+menu	Menu (layout themes)	To play: {sys.name}	
+menu	Menu (layout themes)	Date	
+menu	Menu (layout themes)	now playing	
+menu	Menu (layout themes)	have fun!	
+menu	Menu (layout themes)	see you later!	
+menu	Menu (layout themes)	[ /sys/info ]	
+menu	Menu (layout themes)	maker ........	
+menu	Menu (layout themes)	games ........	
+menu	Menu (layout themes)	played ........	
+menu	Menu (layout themes)	uptime ........	
+menu	Menu (layout themes)	% played	
+menu	Menu (layout themes)	> last session: {sys.resumeTitle}	
+menu	Menu (layout themes)	> no saved session	
+menu	Menu (layout themes)	  press [X] to resume it	
+menu	Menu (layout themes)	{systems.count} filesystems mounted on /roms   |   {either(brand, 'BananaOS')}	
+menu	Menu (layout themes)	Last login: {date} on tty1. Type 'help' for help.	
+menu	Menu (layout themes)	root@banana:~$ ls -l /roms	
+menu	Menu (layout themes)	total {systems.count}	
+menu	Menu (layout themes)	root@banana:~/roms/{lower(game.systemId)}$ stat \\"{game.title}\\"	
+menu	Menu (layout themes)	[ NO SIGNAL ]	
+menu	Menu (layout themes)	ach   (none recorded)	
+menu	Menu (layout themes)	File: {game.rom}	
+menu	Menu (layout themes)	inode {game.index + 1} of {games.count} in {game.systemName}	
+menu	Menu (layout themes)	$ ls -l ~/roms/{lower(sys.id)}	
+menu	Menu (layout themes)	MODE	
+menu	Menu (layout themes)	root@banana:~$ exec \\"{game.rom}\\"	
+menu	Menu (layout themes)	[  OK  ]	
+menu	Menu (layout themes)	Mounting /roms/	
+menu	Menu (layout themes)	Loading 	
+menu	Menu (layout themes)	Reading ROM header	
+menu	Menu (layout themes)	Verifying checksum	
+menu	Menu (layout themes)	Restoring save RAM	
+menu	Menu (layout themes)	Mapping input devices	
+menu	Menu (layout themes)	Allocating video memory	
+menu	Menu (layout themes)	Syncing audio clock	
+menu	Menu (layout themes)	Releasing the console	
+menu	Menu (layout themes)	Handing over. Good luck.	
+menu	Menu (layout themes)	[ loading image ]	
+menu	Menu (layout themes)	do not power off the console	
+menu	Menu (layout themes)	BANANA tty1	
+menu	Menu (layout themes)	AC	
+menu	Menu (layout themes)	Continue (X)	
+menu	Menu (layout themes)	Starred	
+menu	Menu (layout themes)	Index	
+menu	Menu (layout themes)	Nothing here yet.	
+menu	Menu (layout themes)	No. {pad(game.index + 1, 3)}	
+menu	Menu (layout themes)	Offline	
+menu	Menu (layout themes)	NOW SPINNING	
+menu	Menu (layout themes)	Various artists	
+menu	Menu (layout themes)	NOW PLAYING	
+menu	Menu (layout themes)	Resume where you left off	
+menu	Menu (layout themes)	THE DECK IS QUIET	
+menu	Menu (layout themes)	Pick a record and press A to put it on.	
+menu	Menu (layout themes)	THE CRATE	
+menu	Menu (layout themes)	LP	
+menu	Menu (layout themes)	SIDE {side}	
+menu	Menu (layout themes)	IN THE COLLECTION	
+menu	Menu (layout themes)	SIDE PROGRESS	
+menu	Menu (layout themes)	TRACK {game.index + 1} OF {count}	
+menu	Menu (layout themes)	  ·  TRACKLIST	
+menu	Menu (layout themes)	NEEDLE DOWN	
+menu	Menu (layout themes)	CUEING UP	
+menu	Menu (layout themes)	SIDE {side}  ·  {upper(sys.name)}	
+menu	Menu (layout themes)	DROPPING THE NEEDLE	
+menu	Menu (layout themes)	33⅓ RPM	
+menu	Menu (layout themes)	Platter at speed. Enjoy the record.	
+menu	Menu (layout themes)	ON AIR	
+systems	Menu: systems	Commodore 64	
+systems	Menu: systems	Commodore	
+systems	Menu: systems	ZX Spectrum	
+systems	Menu: systems	Sinclair	
+systems	Menu: systems	Game & Watch	
+systems	Menu: systems	Bshare	
+systems	Menu: systems	Banana	
+systems	Menu: systems	Store	
+systems	Menu: systems	Activity	
+systems	Menu: systems	Apps	
+systems	Menu: systems	Files	
+settings	Settings: updates (progress and errors)	that is a package for the {package's handheld}, this is the {board}	
+settings	Settings: updates (progress and errors)	writing {n}%	
