@@ -27,6 +27,15 @@ echo 1 > $CH/online
 [ $r = 1 ] && ok "a restart: exit 1" || bad "exit $r"
 [ ! -e /data/banana/.restart ] && [ ! -e /data/banana/.charge-next ] && ok "both marks used up" || bad "marks left: $(ls -a /data/banana)"
 
+echo "charging 2b. the charger seen late (the RK817 reads it offline for the boot's first seconds): charging all the same"
+echo 0 > $CH/online; : > /data/banana/.charge-next
+BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" --charge & CB=$!
+sleep 2; echo 1 > $CH/online
+asleep && ok "charging (asleep) once the charger showed, 2 s in" || bad "not charging"
+grep -q "the charger seen [0-9.]* s into charging while off" /data/banana/logs/charging.log && ok "logged how late" || bad "not logged"
+ev $EV_KEY $KEY_POWER 1; wake; sleep 1.4; finish; ev $EV_KEY $KEY_POWER 0
+[ $r = 0 ] && ok "held: it starts (exit 0)" || bad "exit $r"
+
 echo "charging 3. turned off with the charger in: the panels dark, amber, asleep; a short press sleeps on, held starts it"
 : > /data/banana/.charge-next
 ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0      # an old press, waiting: not for the charging

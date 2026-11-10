@@ -1885,11 +1885,15 @@ static int charge_mode(void)
 		if (charger_online() && !start_ok(&pct, &uv)) why = "the battery too low to start, the charger in";
 	}
 	if (!why) return 1;
-	/* started by the cable, but it is out again already (plugged in and out at once): off again, not the menu, as a
-	 * phone off stays off. A second look a second later (the cable's contacts as it goes in) */
+	/* started by the cable, but no charger seen: the RK817's charger reads offline for the first seconds of a boot
+	 * with the cable in (sorting out what is plugged in: logs-test19, +1.5 A into the battery while "offline"), and
+	 * that start went on to the menu. Up to 6 s for it; none by then: the cable is out again (plugged in and straight
+	 * out), and it is off again, not the menu, as a phone off stays off */
 	if (!charger_online()) {
-		sleep(1);
+		double w0 = mono();
+		while (!charger_online() && mono() - w0 < 6) usleep(250000);
 		if (!charger_online()) { charge_log("%s, but the charger out again already: turned off again", why); return 3; }
+		charge_log("(the charger seen %.1f s into charging while off)", mono() - w0);
 	}
 	char bat[256] = "";
 	int pct = -1, charging = 0;
