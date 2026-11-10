@@ -10,6 +10,8 @@ mkdir -p "$T/data" "$T/run" "$T/boot"
 # the version the settings screen's About shows, and the board (an update package must be for the same one)
 cp "$(dirname "$0")/../../../VERSION" "$T/etc/banana/version"
 echo "${2:-rgds}" > "$T/etc/banana/board"
+# when it was built: the clock never starts earlier (rcS: a clock chip that lost its time)
+date -u +%s > "$T/etc/banana/built"
 # who we are, for programs that ask (PortMaster names the firmware from it)
 V=$(cat "$(dirname "$0")/../../../VERSION")
 printf 'NAME=BananaOS\nID=bananaos\nID_LIKE=buildroot\nVERSION="%s"\nVERSION_ID=%s\nPRETTY_NAME="BananaOS %s"\nHOME_URL="https://github.com/JorreFog/BananaLinux"\n' \

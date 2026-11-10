@@ -33,6 +33,14 @@ banana-perf performance
 # the loopback up (127.0.0.1): nothing brought it up, so a program that talks to itself on localhost (a port, a tool,
 # a helper's local server) couldn't even bind there
 ip link set lo up 2>/dev/null
+# the clock never earlier than the system's build: a clock chip that lost its time (the battery fully drained) starts
+# from years before, and the saves and logs written until Wi-Fi sets it got those dates (rcK saves it to the chip)
+clock_floor() {
+    b=$(cat /etc/banana/built 2>/dev/null)
+    [ -n "$b" ] && [ "$(date +%s)" -lt "$b" ] && date -s "@$b" >/dev/null 2>&1
+    return 0
+}
+clock_floor
 hostname banana	# (before syslogd: it takes the name once, and the kernel's default is ROCKNIX's unfilled @DEVICENAME@)
 syslogd -O /run/banana/messages -s 256 -b 1
 
