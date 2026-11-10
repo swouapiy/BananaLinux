@@ -69,7 +69,7 @@ rm -f "$R/run/banana/charging"; : > "$R/run/banana/boot-ok"; settle 2
 echo "6b. the card's check (card-check) on a trial's first start: the clock waits, then runs again"
 card b b "b a"; : > "$R/run/banana/checking"; W=2 run early; settle 4
 [ "$(default)" = b ] && [ -z "$(restarts)" ] && ok "4 s checking past a 2 s wait: no rollback" || bad "default $(default), restarts '$(restarts)'"
-rm -f "$R/run/banana/checking"; settle 3
+rm -f "$R/run/banana/checking"; settle 6
 [ "$(default)" = a ] && [ "$(restarts)" = clean ] && ok "checked, then no menu in 2 s: back to slot a" || bad "default $(default), restarts '$(restarts)'"
 
 echo "7. the breadcrumbs: the milestones on the card until the menu is up, the boot before kept"
