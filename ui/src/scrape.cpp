@@ -295,6 +295,51 @@ namespace
 		}
 		return out;
 	}
+	// the logos libretro's thumbnails have none of (PSP, arcade): LaunchBox's games database's, by the list of its
+	// names and logo files the image carries (tools/launchbox-logos.py makes it), one logo fetched a game
+	const std::map<std::string, std::vector<std::string>> LAUNCHBOX = {
+		{ "psp", { "Sony PSP", "Sony PSP Minis" } }, { "arcade", { "Arcade" } }, { "cps1", { "Arcade" } },
+		{ "cps2", { "Arcade" } }, { "cps3", { "Arcade" } }, { "neogeo", { "SNK Neo Geo MVS", "SNK Neo Geo AES", "Arcade" } } };
+	struct Logos { std::map<std::string, std::string> byNorm, byWords; };	// norm() / words() of a name -> its file
+	Logos launchboxLogos(const std::string& sysId)
+	{
+		Logos x;
+		auto p = LAUNCHBOX.find(sysId);
+		if (p == LAUNCHBOX.end()) return x;
+		std::ifstream f(getenv("BANANA_LAUNCHBOX") ? getenv("BANANA_LAUNCHBOX") : "/usr/share/banana/launchbox-logos.tsv");
+		// (the platforms in their order: a Neo Geo game's own logo before the arcade's)
+		std::map<std::string, std::vector<std::pair<std::string, std::string>>> rows;
+		for (std::string ln; std::getline(f, ln);)
+		{
+			size_t a = ln.find('\t'), b = a == std::string::npos ? a : ln.find('\t', a + 1);
+			if (b == std::string::npos) continue;
+			rows[ln.substr(0, a)].push_back({ ln.substr(a + 1, b - a - 1), ln.substr(b + 1) });
+		}
+		for (auto& plat : p->second)
+			for (auto& [name, file] : rows[plat]) { x.byNorm.emplace(norm(name), file); x.byWords.emplace(words(name), file); }
+		return x;
+	}
+	// a game's logo there: the same name, the same words in another order, else one name the start of the other (at
+	// least 8 letters, the closest in length); its URL, or ""
+	std::string launchboxLogo(const Logos& x, const std::string& name)
+	{
+		std::string k = norm(name), file;
+		if (auto a = x.byNorm.find(k); a != x.byNorm.end()) file = a->second;
+		else if (auto w = x.byWords.find(words(name)); w != x.byWords.end()) file = w->second;
+		else if (k.size() >= 8)
+		{
+			size_t bestD = 1000;
+			for (auto it = x.byNorm.lower_bound(k.substr(0, 8)); it != x.byNorm.end() && it->first.compare(0, 8, k, 0, 8) == 0; ++it)
+			{
+				const std::string& c = it->first;
+				size_t n = std::min(c.size(), k.size());
+				if (c.compare(0, n, k, 0, n) != 0) continue;
+				size_t d = c.size() > k.size() ? c.size() - k.size() : k.size() - c.size();
+				if (d < bestD) { bestD = d; file = it->second; }
+			}
+		}
+		return file.empty() ? "" : "https://images.launchbox-app.com/" + esc(file);
+	}
 	// a name as the collection's files write it (libretro's thumbnails put _ for &*/:`<>?\\|)
 	std::string thumbName(std::string s)
 	{
@@ -524,6 +569,8 @@ int main(int argc, char** argv)
 			if (savePicture(title, dir + "/media/label/" + stem + ".jpg", 320)) unlink((dir + "/media/label/" + stem + ".png").c_str());
 		}
 		std::string logo = get(base + "Named_Logos/" + esc(name) + ".png");
+		if (logo.empty())	// (PSP, arcade: LaunchBox's)
+			if (std::string u = launchboxLogo(launchboxLogos(argv[2]), name); !u.empty()) logo = get(u);
 		if (!logo.empty())
 		{
 			mkdir((dir + "/media/marquee").c_str(), 0755);
@@ -593,6 +640,7 @@ int main(int argc, char** argv)
 		std::vector<std::string> boxes = indexNames(get(base + "Named_Boxarts/")), titles = indexNames(get(base + "Named_Titles/"));
 		// the games' logos (the Glass themes' cartridges; a DS game shows its own icon instead)
 		std::vector<std::string> logos = sys.id == "nds" ? std::vector<std::string>() : indexNames(get(base + "Named_Logos/"));
+		Logos lb = logos.empty() ? launchboxLogos(sys.id) : Logos();	// (PSP, arcade: none there)
 		std::map<std::string, std::vector<std::string>> byBox, byTitle, byBoxW, byTitleW, byLogo, byLogoW;
 		for (auto& n : boxes) { byBox[norm(n)].push_back(n); byBoxW[words(n)].push_back(n); }
 		for (auto& n : titles) { byTitle[norm(n)].push_back(n); byTitleW[words(n)].push_back(n); }
@@ -623,6 +671,7 @@ int main(int argc, char** argv)
 				j.box = base + "Named_Boxarts/" + esc(mi->second) + ".png";
 				j.title = base + "Named_Titles/" + esc(mi->second) + ".png";
 				if (!logos.empty()) j.logo = base + "Named_Logos/" + esc(mi->second) + ".png";
+				else if (!lb.byNorm.empty()) j.logo = launchboxLogo(lb, mi->second);
 				jobs.push_back(j);
 				continue;
 			}
@@ -655,6 +704,7 @@ int main(int argc, char** argv)
 			if (auto v = find(byBox, byBoxW)) j.box = base + "Named_Boxarts/" + esc(best(*v, key)) + ".png";
 			if (auto v = find(byTitle, byTitleW)) j.title = base + "Named_Titles/" + esc(best(*v, key)) + ".png";
 			if (auto v = find(byLogo, byLogoW)) j.logo = base + "Named_Logos/" + esc(best(*v, key)) + ".png";
+			else if (!lb.byNorm.empty()) j.logo = launchboxLogo(lb, key);
 			jobs.push_back(j);
 		}
 		total += count;
