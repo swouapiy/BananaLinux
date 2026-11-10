@@ -1836,7 +1836,7 @@ settings		IP address	IP 地址
 settings		Wi-Fi MAC address	Wi-Fi MAC 地址
 settings		Up time	运行时间
 settings		The handheld, as its device tree names it.	掌机的型号，取自其设备树。
-settings		The version of Banana running, and its slot (a or b: Update writes the other one).	正在运行的 Banana 版本及其槽位（a 或 b：更新会写入另一个）。
+settings		The version of Banana running.	正在运行的 Banana 版本。
 settings		The Linux kernel's version.	Linux 内核的版本。
 settings		RetroArch's version. It updates with Banana.	RetroArch 的版本。它随 Banana 一起更新。
 settings		The chip, and how many cores it has.	芯片型号及其核心数。

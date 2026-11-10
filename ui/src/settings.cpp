@@ -995,7 +995,7 @@ namespace banana
 			const char* AB = "About";
 			struct { const char* key; const char* label; const char* help; } rows[] = {
 				{ "ab_model", "Device", "The handheld, as its device tree names it." },
-				{ "ab_version", "Version", "The version of Banana running, and its slot (a or b: Update writes the other one)." },
+				{ "ab_version", "Version", "The version of Banana running." },
 				{ "ab_kernel", "Kernel", "The Linux kernel's version." },
 				{ "ab_retroarch", "RetroArch", "RetroArch's version. It updates with Banana." },
 				{ "ab_chip", "Processor", "The chip, and how many cores it has." },
@@ -1243,8 +1243,10 @@ namespace banana
 		std::string ssid = wstat.connected ? wstat.ssid : "";
 		std::string sd2 = access("/run/banana/sd2/slot", F_OK) == 0 ? space("/run/sd2") : "";
 		const std::map<std::string, std::string> v = {
-			{ "ab_model", model.empty() ? "Unknown" : model },
-			{ "ab_version", (version.empty() ? "dev" : version) + (slot.empty() ? "" : " (slot " + slot + ")") },
+			// the model as the box names it ("RG DS Plus": the device tree says "Anbernic RG DS Plus"), the version alone (the
+			// slot it runs from is in the boot's logs)
+			{ "ab_model", model.empty() ? "Unknown" : model.compare(0, 9, "Anbernic ") == 0 ? model.substr(9) : model },
+			{ "ab_version", version.empty() ? "dev" : version },
 			{ "ab_kernel", kernel.empty() ? "Unknown" : kernel },
 			{ "ab_retroarch", ra.empty() ? "Not installed" : ra },
 			{ "ab_chip", chip.empty() ? "Unknown" : chip },
