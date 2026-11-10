@@ -2920,7 +2920,9 @@ int main(int argc, char** argv)
 		// Parental controls: today's play time used up (bananad counts it): no game until tomorrow
 		if (parental::playLeft(o.data) == 0)
 		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
 			events.showPlaytime("up", 0, nowMs());
+			ui->setLibrary(lib.currentShelf(), game);	// (back from the ready screen's "Starting...": no game comes)
 			sound.play("notify");
 			dirty = true;
 			logf("launch refused: today's play time is up");
