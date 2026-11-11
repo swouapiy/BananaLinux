@@ -5,7 +5,7 @@
 #   tools/qemu-together.sh <qemu-out/card.img> [out dir]
 # The test, through each VM's keys and its SSH: Play together opened on both, A sees B and invites it, B accepts,
 # linked; A starts the GBA game, B is asked and joins; then the two RetroArch netplay sessions connected (port 55435),
-# A the host and B connected to it, with each one's screenshots. Needs what qemu-boot.sh needs; the card isn't changed.
+# A the host and B connected to it (RetroArch without a picture: QEMU's GPU can't give it one). Needs what qemu-boot.sh needs; the card isn't changed.
 set -e
 SRC=$1; OUT=${2:-qemu-together}
 [ -n "$SRC" ] && [ -f "$SRC" ] || { echo "usage: $0 <card.img from qemu-boot.sh> [out dir]" >&2; exit 2; }
@@ -110,6 +110,9 @@ grep -q '^linked' "$OUT/A-link.txt" && grep -q '^linked' "$OUT/B-link.txt" && ok
 shot A linked; shot B linked
 
 echo "3. A starts the GBA game: B is asked and joins; their netplay connects"
+# (QEMU's virtual GPU has no GBM device for RetroArch's video, which then quits after a few seconds: here it runs
+# without a picture, the netplay the same; only the cards' copies changed)
+for v in A B; do vm $v "sed -i '/^video_driver *=/d' /data/retroarch/retroarch.cfg; echo 'video_driver = \"null\"' >> /data/retroarch/retroarch.cfg"; done
 key A backspace; sleep 1
 vm A "echo '/data/roms/gba/Boot Test Advance.gba' > /run/banana/launch"
 wait_for A "play together: hosting" 30 "hosting the game (START sent)"
