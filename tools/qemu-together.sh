@@ -112,7 +112,8 @@ shot A linked; shot B linked
 echo "3. A starts the GBA game: B is asked and joins; their netplay connects"
 # (QEMU's virtual GPU has no GBM device for RetroArch's video, which then quits after a few seconds: here it runs
 # without a picture, the netplay the same; only the cards' copies changed)
-for v in A B; do vm $v "sed -i '/^video_driver *=/d' /data/retroarch/retroarch.cfg; echo 'video_driver = \"null\"' >> /data/retroarch/retroarch.cfg"; done
+# (the file made as run-retroarch makes it when there's none yet: a card new from the boot test has none)
+for v in A B; do vm $v "C=/data/retroarch/retroarch.cfg; [ -f \$C ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg \$C; }; sed -i '/^video_driver *=/d' \$C; echo 'video_driver = \"null\"' >> \$C"; done
 key A backspace; sleep 1
 vm A "echo '/data/roms/gba/Boot Test Advance.gba' > /run/banana/launch"
 wait_for A "play together: hosting" 30 "hosting the game (START sent)"
