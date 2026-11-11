@@ -278,7 +278,7 @@ namespace banana
 		void renderCredits();
 		// the credits list's lines: a section's heading, then its names (index into credits; -1 - section for a heading)
 		std::vector<int> crLines;
-		// Display & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
+		// Look & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
 		// "preview", else drawn by banana-ui itself, headless, once per theme file, kept in banana/themes/.thumbs)
 		std::vector<std::string> thNames, thValues;
 		int thSel = 0, thTop = 0;

@@ -93,7 +93,7 @@ The full list, with every fix: the [0.5.0 release notes](https://github.com/Jorr
 
 **Look and feel**
 
-- **Ten layout themes, built in:** a theme file can now draw the whole menu, and [ten come with the system](#themes), made with the Banana Theme Studio. Pick one in Settings › Display & sound › Theme. The theme engine got 2–4x faster on the RG DS without changing a pixel.
+- **Ten layout themes, built in:** a theme file can now draw the whole menu, and [ten come with the system](#themes), made with the Banana Theme Studio. Pick one in Settings › Look & sound › Theme. The theme engine got 2–4x faster on the RG DS without changing a pixel.
 - **A new first boot:** an arrival animation, then a step-by-step setup (language, Wi-Fi with a connection test, time zone, the DS's name, RetroAchievements, box art). Run it again from Settings › System › First-time setup.
 - **Credits** (Settings › System › Credits), and the UX team's review: brightness kept across restarts, box art in a fixed frame, accent colours, L/R page jumps, stick navigation, a Power menu, Shown systems and a Hotkeys page.
 
@@ -231,7 +231,7 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 
 ## Themes
 
-In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks and how it moves. Ten layout themes come built in: pick one in **Settings › Display & sound › Theme** (A opens a gallery with previews). They were made with the **Banana Theme Studio**, the theme editor that runs in your browser.
+In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks and how it moves. Ten layout themes come built in: pick one in **Settings › Look & sound › Theme** (A opens a gallery with previews). They were made with the **Banana Theme Studio**, the theme editor that runs in your browser.
 
 <p align="center">
   <img src="docs/img/readme/themes.png" width="100%" alt="The ten layout themes on the home screen: Comic Panel, Coral Reef, Felt Table, Neon Arcade, Oak Bookshelf, Orbital HUD, Paper Notebook, Phosphor Terminal, Swiss Poster and Vinyl Lounge">

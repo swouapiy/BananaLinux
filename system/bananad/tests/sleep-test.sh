@@ -524,13 +524,13 @@ sleep 0.5; ls "${F%.txt}"-marker-1-dmesg.txt >/dev/null 2>&1 && ok "the kernel's
 # banana-ui's events: a datagram on the recorder's socket, copied in (control characters made spaces)
 python3 -c "
 import socket; s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-s.sendto(b'setting\tTurn off when idle: 1 hour -> 5 minutes', '/run/banana/recorder.sock')
+s.sendto(b'setting\tPower-off after sleep: 1 hour -> 5 minutes', '/run/banana/recorder.sock')
 s.sendto(b'game\tstart: Peel Quest\n(nds, run-nds)', '/run/banana/recorder.sock')"
 sleep 0.3
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "asleep" || bad "no sleep"
 grep -q "button .*b down" "$F" && grep -q "lid .*closed" "$F" && ok "flushed before the sleep: the button, the lid" || bad "not flushed before the sleep: $(tail -n 3 "$F" 2>/dev/null | tr '\n' '|')"
-grep -q "setting  Turn off when idle: 1 hour -> 5 minutes" "$F" && ok "banana-ui's event copied in (setting)" || bad "no setting line: $(grep -c setting "$F")"
+grep -q "setting  Power-off after sleep: 1 hour -> 5 minutes" "$F" && ok "banana-ui's event copied in (setting)" || bad "no setting line: $(grep -c setting "$F")"
 grep -q "game     start: Peel Quest (nds, run-nds)" "$F" && ok "its newline made a space: one line each" || bad "game line: $(grep game "$F")"
 grep -q "touch .*down 100,200" "$F" && grep -q "touch .*up 100,200" "$F" && ok "the touch, where (100,200)" || bad "touch lines: $(grep touch "$F" | tr '\n' '|')"
 grep -q "keyboard open: where not recorded" "$F" && ! grep -q "300,50" "$F" && ok "the touch while typing, without where" || bad "while typing: $(grep touch "$F" | tr '\n' '|')"

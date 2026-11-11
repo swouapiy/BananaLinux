@@ -128,7 +128,7 @@ namespace banana
 		// Parental controls (parental.h): on as of the last scan, and every game for the Allowed games page
 		bool parentalOn() const { return kids; }
 		const std::vector<parental::GameRef>& allGames() const { return everything; }
-		// Settings > Display & sound > Menu look > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
+		// Settings > Look & sound > Menu look > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
 		// "icon" (the DS game's own icon on every cartridge, as the DSi menu shows it)
 		bool dsCartIcons = false;
 

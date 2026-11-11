@@ -528,7 +528,7 @@ namespace banana
 		};
 		// each row: what it is, in a sentence (help); then what the chosen option does, short and plain (hint)
 		auto hint = [&](std::vector<std::string> h) { items.back().hints = h; };
-		const char* D = "Display & sound";
+		const char* D = "Look & sound";
 		{
 			// Banana's three, then the themes in banana/themes on the card and the image's examples (theme.h)
 			std::vector<std::string> names = { "Dark", "Light", "Carts" }, values = { "dark", "light", "carts" };
@@ -557,7 +557,7 @@ namespace banana
 		items.back().hints = { "The menu plays its sounds.", "The menu is silent. Games keep their sound." };
 		add(D, "picture", "Shown systems", "Which systems are on the home row. A opens the list.", "", "shelves", {}, {}, Item::PAGE);
 		add(D, "picture", "Menu look", "Motion, the battery and clock, the boot animation and the DS cartridges.", "", "menu_look", {}, {}, Item::PAGE);
-		// the Menu look page (Display & sound > Menu look)
+		// the Menu look page (Look & sound > Menu look)
 		{
 			const char* ML = "Menu look";
 			add(ML, "picture", "Motion", "The top screen's gentle movement and shine.", menu, "motion", { "On", "Off" }, { "on", "off" });
@@ -582,7 +582,7 @@ namespace banana
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
 		hint({ "It never falls asleep by itself.", "Sleeps after 5 minutes without use.", "Sleeps after 10 minutes without use.",
 			"Sleeps after 15 minutes without use.", "Sleeps after 30 minutes without use." });
-		add(P, "moon", "Turn off when idle", "Turns off after sleeping a while. Your game is saved first.", power, "poweroff_minutes",
+		add(P, "moon", "Power-off after sleep", "Turns off after sleeping a while. Your game is saved first.", power, "poweroff_minutes",
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour", "3 hours", "6 hours" }, { "0", "5", "10", "15", "30", "60", "180", "360" });
 		hint({ "It stays asleep until you wake it.", "Turns off after 5 minutes asleep.", "Turns off after 10 minutes asleep.",
 			"Turns off after 15 minutes asleep.", "Turns off after 30 minutes asleep.", "Turns off after 1 hour asleep.",
@@ -605,7 +605,9 @@ namespace banana
 		const char* N = "Nintendo DS";
 		add(N, "nds", "Emulator", "Which emulator plays DS games. X on a game picks one for that game only.",
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
-		items.back().hints = { "DraStic: the fastest. Its own settings are on its page below.", "Banana's own, built on melonDS: the most accurate. Its own settings are on its page below." };
+		items.back().hints = { "DraStic: the fastest. Its own settings are in Emulator settings.", "Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator settings." };
+		// the chosen emulator's own page (SuperDrastic's or BananaDS's: change(), by nds_emulator)
+		add(N, "nds", "Emulator settings", "The chosen emulator's own settings: picture, speed, sound and its hotkeys.", "", "nds_emu", {}, {}, Item::PAGE);
 		add(N, "nds", "Quick resume", "What quitting a game does.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
 		hint({ "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place, even through a shutdown. Next time the game carries on from there." });
@@ -617,8 +619,6 @@ namespace banana
 		// the DS's own name (its firmware's user name), in both emulators at once: what a game calls you (#30)
 		add(N, "nds", "DS name", "What DS games call you. Up to 10 characters.",
 			"", "ds_name", {}, {}, Item::PAGE);
-		add(N, "nds", "SuperDrastic", "SuperDrastic's own settings: picture, speed, sound and its hotkeys.", "", "nds_superdrastic", {}, {}, Item::PAGE);
-		add(N, "nds", "BananaDS", "BananaDS's own settings: picture, speed, sound and its hotkeys.", "", "nds_bananads", {}, {}, Item::PAGE);
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
 		std::string shaderHelpS = "The look of the DS screens. Your own go in banana/shaders.";
@@ -828,7 +828,7 @@ namespace banana
 				menu, "timezone", names, tzs);
 		}
 		add(S, "gear", "Updates", "New versions of Banana: checking, installing, and going back.", "", "sys_updates", {}, {}, Item::PAGE);
-		add(S, "picture", "Box art", "Covers, title screens, genres and years: fetch them and pick their source.", "", "sys_boxart", {}, {}, Item::PAGE);
+		add(D, "picture", "Box art", "Covers, title screens, genres and years: fetch them and pick their source.", "", "sys_boxart", {}, {}, Item::PAGE);
 		// the Updates page (System > Updates)
 		{
 			const char* UP = "Updates";
@@ -841,7 +841,7 @@ namespace banana
 			items.back().hints = { "Only when you choose Check for updates.", "Also once a day, when Wi-Fi connects." };
 			add(UP, "gear", "Previous version", "Restarts into the version from before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		}
-		// the Box art page (System > Box art)
+		// the Box art page (Look & sound > Box art)
 		{
 			const char* BA = "Box art";
 			add(BA, "picture", "Box art", "Covers, title screens, genres and years from libretro. Needs Wi-Fi.",
@@ -866,11 +866,17 @@ namespace banana
 				menu, "parental_minutes", { "No limit", "30 min", "45 min", "1 h", "1 h 30", "2 h", "3 h" }, { "0", "30", "45", "60", "90", "120", "180" });
 		}
 		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time.", "", "setup", {}, {}, Item::PAGE);
-		add(S, "gear", "Reset system settings", "Restores menu, display, sound, power and network settings. Games and saves stay. Press A twice.",
-			"", "reset_system", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "Reset emulator settings", "Restores every emulator setting. Games and saves stay. Press A twice.",
-			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "About", "The model, the versions, the storage, the battery and the network.", "", "about", {}, {}, Item::PAGE);
+		add(S, "gear", "Reset options", "Settings back to how they came. Games and saves stay.", "", "sys_reset", {}, {}, Item::PAGE);
+		// the Reset options page (System > Reset options), as Android's
+		{
+			const char* RS = "Reset options";
+			add(RS, "gear", "Reset system settings", "Restores menu, display, sound, power and network settings. Games and saves stay. Press A twice.",
+				"", "reset_system", { "" }, { "" }, Item::ACTION);
+			add(RS, "gear", "Reset emulator settings", "Restores every emulator setting. Games and saves stay. Press A twice.",
+				"", "reset_emulator", { "" }, { "" }, Item::ACTION);
+		}
+		// (an info row: its facts on the top screen while it's picked; A seven times there unlocks the developer options)
+		add(S, "gear", "About", "The model, the versions, the storage, the battery and the network.", "", "about", {}, {}, Item::INFO);
 		if (!readCredits().empty())
 			add(S, "gear", "Credits", "The people behind this version of BananaOS.", "", "credits", {}, {}, Item::PAGE);
 		add(S, "gear", "Hotkeys", "The buttons that do something everywhere, and in the menu.", "", "hotkeys", {}, {}, Item::PAGE);
@@ -896,7 +902,7 @@ namespace banana
 			};
 			rows("Hotkeys", "gear", {
 				{ "Volume keys", "Volume", "Everywhere, in games too: the speakers, or the headphones while they are in." },
-				{ "F + volume", "Brightness", "Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound." },
+				{ "F + volume", "Brightness", "Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound." },
 				{ "Power", "Sleep", "Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same." },
 				{ "Hold power", "Shut down", "Everywhere: held for 2 seconds. A game running saves first." },
 				{ "Menu: START", "Settings", "In the menu: Settings. Y there: Sleep, Restart and Shut down." },
@@ -1037,7 +1043,7 @@ namespace banana
 			"Each step in banana/logs/shutdown.txt. A power-off that hangs restarts, saves where it stopped, and turns off again." };
 		add(DEV, "moon", "Night test", "Six hours on battery, then off. Report: banana/logs/night-test.txt. Press A twice.",
 			"", "night_test", { "" }, { "" }, Item::ACTION);
-		add(DEV, "gear", "Hide developer options", "Hides this row. A seven times on About > Version brings it back. Press A twice.",
+		add(DEV, "gear", "Hide developer options", "Hides this row. A seven times on System > About brings it back. Press A twice.",
 			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 		addShelfRows();
 		// the sections in the order they first come, those with a tile first (the grid is the first groups) and each
@@ -1045,13 +1051,15 @@ namespace banana
 		// The grid's tiles and each page's rows most used first (ORDER, by section and label); what ORDER doesn't name keeps
 		// the order it was added in, after what it does name
 		static const std::vector<std::pair<std::string, std::vector<std::string>>> ORDER = {
-			{ "", { "Nintendo DS", "Other systems", "Display & sound", "Network", "Sleep & power", "System" } },	// the tiles
-			{ "Nintendo DS", { "Emulator", "Buttons", "SuperDrastic", "BananaDS", "Quick resume", "DS language", "DS name" } },
-			{ "Other systems", { "Buttons", "Picture & sound", "Quick resume", "Screen", "Second screen", "Emulators", "Frontend", "RetroAchievements", "Reset RetroArch" } },
-			{ "Display & sound", { "Volume", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
-			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
-			{ "Sleep & power", { "Dim when idle", "Sleep when idle", "Turn off when idle", "Idle timers", "Closing the lid", "Waking up", "LEDs", "LED while asleep" } },
-			{ "System", { "Updates", "Language", "Time zone", "Box art", "Parental controls", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
+			{ "", { "Nintendo DS", "Other systems", "Look & sound", "Network", "Sleep & power", "System" } },	// the tiles
+			// (what runs the games first, as in Other systems)
+			{ "Nintendo DS", { "Emulator", "Emulator settings", "Buttons", "Quick resume", "DS language", "DS name" } },
+			{ "Other systems", { "Emulators", "Frontend", "Buttons", "Picture & sound", "Screen", "Second screen", "Quick resume", "RetroAchievements", "Reset RetroArch" } },
+			// (the menu's own look first, then the screens and the sound)
+			{ "Look & sound", { "Shown systems", "Theme", "Accent colour", "Text on accent", "Menu look", "Box art", "Top brightness", "Bottom brightness", "Screen colours", "Volume", "Menu sounds" } },
+			{ "Network", { "Wi-Fi", "Bluetooth", "File sharing", "Home server", "Network" } },
+			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power-off after sleep", "Idle timers", "Waking up", "LEDs", "LED while asleep" } },
+			{ "System", { "Language", "Time zone", "Updates", "Second SD card", "Parental controls", "Hotkeys", "First-time setup", "Reset options", "About", "Credits", "Developer options" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
 			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency" } },
@@ -1466,8 +1474,8 @@ namespace banana
 			std::vector<Subpage> v = {
 				{ "shelves", "Shown systems" },
 				{ "hotkeys", "Hotkeys" },
-				{ "nds_superdrastic", "SuperDrastic" },
-				{ "nds_bananads", "BananaDS" },
+				{ "nds_emu", "SuperDrastic" },	// (both from Emulator settings: the one chosen; B back on that row)
+				{ "nds_emu", "BananaDS" },
 				{ "hotkeys_sd", "SuperDrastic hotkeys" },
 				{ "hotkeys_bds", "BananaDS hotkeys" },
 					{ "ra_second", "Second screen", "retroarch_panel" },
@@ -1477,6 +1485,7 @@ namespace banana
 				{ "net_share", "File sharing", "share" },
 				{ "sys_updates", "Updates" },
 				{ "sys_boxart", "Box art" },
+				{ "sys_reset", "Reset options" },
 				{ "sys_parental", "Parental controls", "parental" },
 				{ "menu_look", "Menu look" },
 				{ "ds_buttons", "DS buttons" },
@@ -1504,10 +1513,10 @@ namespace banana
 	Settings::Result Settings::change(int dir)
 	{
 		Item& it = items[sel];
-		if (it.key == "ab_version" && dir > 0 && !devOn)
+		if (it.key == "about" && dir > 0 && !devOn)
 		{
-			// (PR #94) A seven times on About's Version: the Developer options row (as a phone's build number); a count from
-			// the fourth. (It was on the About row itself, before About was a page: there it kept A from opening it)
+			// (PR #94) A seven times on System's About: the Developer options row (as a phone's build number); a count from
+			// the fourth. About opens nothing: its facts are on the top screen while it's picked
 			if (++aboutTaps >= 7)
 			{
 				aboutTaps = 0;
@@ -1524,11 +1533,16 @@ namespace banana
 			if (dir <= 0) return NONE;
 			if (it.key == "developer") { recordEvent("settings", "Developer options"); openSection("Developer options"); return MOVED; }
 			if (it.key == "scrape") { startScrape(); return MOVED; }
-			if (it.key == "about") { refreshInfo(); openSection("About"); aboutTaps = 0; return MOVED; }
 			if (it.key == "colors") { openColors(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
+			if (it.key == "nds_emu")
+			{
+				const Item* e = itemByKey("nds_emulator");
+				bool bds = e && e->at < (int)e->values.size() && e->values[e->at] == "bananads";
+				message.clear(); openSection(bds ? "BananaDS" : "SuperDrastic"); return MOVED;
+			}
 			if (const Subpage* s = subpageFrom(it.key)) { message.clear(); openSection(s->section); return MOVED; }
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
 			if (it.key == "hs_sync") { if (syncing()) stopSync(); else startSync(); return MOVED; }
@@ -1568,8 +1582,8 @@ namespace banana
 				armed = -1;
 				devOn = false;
 				setConfValue(data + "/settings.conf", "developer", "off");
-				toRow("about");	// (the Developer row gone: System's About, whose Version takes the seven A's)
-				toast("Developer options hidden", "A seven times on System > About > Version brings them back.", 0x6ad07a, 1, 4000);
+				toRow("about");	// (the Developer row gone: System's About, which takes the seven A's)
+				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
 				return MOVED;
 			}
 			if (it.key == "night_test")
@@ -1871,7 +1885,7 @@ namespace banana
 	}
 	void Settings::addShelfRows()
 	{
-		// one row a system, after everything else (its own section, opened from Display & sound's Shown systems)
+		// one row a system, after everything else (its own section, opened from Look & sound's Shown systems)
 		items.erase(std::remove_if(items.begin(), items.end(), [](const Item& it) { return it.section == "Shown systems"; }), items.end());
 		for (auto& sy : shelfSystems)
 		{
@@ -2676,12 +2690,12 @@ namespace banana
 		// what the group is for, in a line, as Android's settings list says it (its rows' names, all of them, read as a
 		// wall of text: the user, 2026-10-28)
 		static const std::pair<const char*, const char*> ABOUT[] = {
-			{ "Display & sound", "The theme, brightness, volume and sounds, and which systems show." },
+			{ "Look & sound", "Which systems show, the theme, box art, brightness, volume and sounds." },
 			{ "Sleep & power", "When the handheld dims, sleeps and turns off, the lid and the LEDs." },
 			{ "Nintendo DS", "The DS emulator, and how DS games look, sound and run." },
 			{ "Other systems", "RetroArch's games: the game panel, achievements, shaders and sound." },
 			{ "Network", "Wi-Fi, Bluetooth, file sharing and your home server." },
-			{ "System", "Language, time zone, updates, box art, hotkeys and resets." },
+			{ "System", "Language, time zone, updates, parental controls, hotkeys and resets." },
 		};
 		std::string about;
 		for (auto& a : ABOUT) if (groups[g0] == a.first) about = a.second;
@@ -2920,8 +2934,7 @@ namespace banana
 		}
 		else if (cur.key == "about")
 		{
-			// About's facts at a glance, a line each, the label then its value (A opens the page: a row each, with what
-			// each one is)
+			// About's facts at a glance, a line each, the label then its value (the About section's rows, never opened)
 			std::vector<const Item*> facts;
 			for (const Item& it : items) if (it.section == "About" && it.kind == Item::INFO && !it.names.empty()) facts.push_back(&it);
 			float lh = facts.empty() ? 0 : std::min(24.0f, (HELP_BOTTOM - HELP_TOP) / (float)facts.size());
@@ -2989,10 +3002,10 @@ namespace banana
 			}
 			else if (it.kind == Item::INFO) v = it.key == "hk" && !it.names.empty() ? it.names[0] : "";	// (Hotkeys: what it does)
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
-			else if (it.kind == Item::PAGE && (it.key == "nds_superdrastic" || it.key == "nds_bananads"))	// the DS emulator chosen
+			else if (it.kind == Item::PAGE && it.key == "nds_emu")	// the DS emulator chosen, whose page it opens
 			{
 				const Item* e = itemByKey("nds_emulator");
-				if (e && e->at < (int)e->values.size() && "nds_" + e->values[e->at] == it.key) v = "In use";
+				if (e && e->at < (int)e->names.size()) v = e->names[e->at];
 			}
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "bt_devices") v = btRow();

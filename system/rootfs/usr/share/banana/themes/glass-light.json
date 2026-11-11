@@ -6,7 +6,7 @@
   "author": "BananaOS",
   "base": "light",
   "accent": "#ff9f0a",
-  // Settings > Display & sound > Accent colour picks one of these (Apple's system colours); the one above for any other
+  // Settings > Look & sound > Accent colour picks one of these (Apple's system colours); the one above for any other
   "accents": { "yellow": "#f59300", "orange": "#f2600f", "green": "#28b14c", "blue": "#007aff", "pink": "#ff2d55", "purple": "#af52de" },
   "colors": { "screenBg": "#f2eef6", "ink": "#14141c", "muted": "#5a5a68" },
   "font": "inter",

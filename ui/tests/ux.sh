@@ -88,12 +88,12 @@ ux_check ink-light "inkon f0b429: ink ffffff"
 sed -i 's/^accent_text = .*//' "$UXFX/data/settings.conf"
 
 # L/R go a page: five games in a list (the shoulders name the games they land on), five rows in a settings list
-# (Display & sound, the third tile: R twice from Volume is its last row, up is Menu look; A opens it, Clock is its first
-# row, Right sets 12-hour)
-ux_run page "lib nds 0; wait 2400; shot ux-page; press r; press l; press start; press r; press r; press a; press r; press r; press up; press a; press right; press b; press b; press b"
+# (Look & sound, the third tile, eleven rows: R twice from Shown systems is its last row, L back five rows to Box art, up
+# is Menu look; A opens it, Clock is its first row, Right sets 12-hour)
+ux_run page "lib nds 0; wait 2400; shot ux-page; press r; press l; press start; press r; press r; press a; press r; press r; press l; press up; press a; press right; press b; press b; press b"
 ux_check page "press r: used, view 1 sys 2 game 4"
 ux_check page "press l: used, view 1 sys 2 game 0"
-grep -q '^clock = 12h' "$UXFX/data/settings.conf" || { echo "FAIL $size: R twice in Display & sound and Menu look didn't reach Clock"; fail=1; }
+grep -q '^clock = 12h' "$UXFX/data/settings.conf" || { echo "FAIL $size: R and L in Look & sound and Menu look didn't reach Clock"; fail=1; }
 sed -i 's/^clock = 12h/clock = 24h/' "$UXFX/data/settings.conf"
 
 # no noise: the home bubble has no second line repeating the name ("Nintendo DS" / "Nintendo"), and no count under a
@@ -151,10 +151,10 @@ ux_check noports-link "press a: used, view 1 sys 6"
 UXFX=$UXFX_SAVE
 
 # the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
-# gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R twice to the last row,
-# Menu look, then up) hides one (Game Boy Advance), then Ports (the row before Files, the last)
+# gets ports: deleting the last port must not take it away); Look & sound > Shown systems (its first row) hides one
+# (Game Boy Advance), then Ports (the row before Files, the last)
 UXP=$UXFX/roms/ports; mkdir -p "$UXP"; printf '#!/bin/bash\n' > "$UXP/PortMaster.sh"
-ux_run shelves "home recently-played; press left; press start; press r; press r; press a; press r; press a; press down; press right; press up; press up; press up; press right; press b; press start; home recently-played; press left"
+ux_run shelves "home recently-played; press left; press start; press r; press r; press a; press a; press down; press right; press up; press up; press up; press right; press b; press start; home recently-played; press left"
 grep -q '^shelf.gba = hide' "$UXFX/data/settings.conf" && grep -q '^shelf.ports = hide' "$UXFX/data/settings.conf" || { echo "FAIL $size: shown systems: $(grep shelf "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
 # the row's systems: n at first with Ports (left from the first is n - 1), n - 1 without the GBA, n - 2 without Ports
 first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-shelves.log" | head -1)
@@ -164,25 +164,24 @@ sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
 # System > Language (its first row) asks before switching, No first: right then A keeps English; right, down, A
 # switches (the menu starts again: settings result 9, LANGUAGE) to the first language after English, ru
-ux_run langask "home nds; press start; press r; press r; press r; press r; press r; press a; press down; press right; shot ux-langask; press a"
+ux_run langask "home nds; press start; press r; press r; press r; press r; press r; press a; press right; shot ux-langask; press a"
 grep -q '^language = ' "$UXFX/data/settings.conf" && { echo "FAIL $size: the language switched without a Yes"; fail=1; }
 ux_check langask "press a: settings result 1"
-ux_run langyes "home nds; press start; press r; press r; press r; press r; press r; press a; press down; press right; press down; press a"
+ux_run langyes "home nds; press start; press r; press r; press r; press r; press r; press a; press right; press down; press a"
 grep -q '^language = ru' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 
-# System > Credits (after About, before Hotkeys: up two from the first row) opens the credits from credits.txt; with no
-# names in it, no row (up two is then About, which A leaves as it is)
-ux_run credits "home nds; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press down; press down; shot ux-credits-row; press a; shot ux-credits; press down; press b" BANANA_CREDITS="$HERE/../system/rootfs/etc/banana/credits.txt"
+# System > Credits (after About) opens the credits from credits.txt; with no names in it, no row
+ux_run credits "home nds; press start; row System credits; shot ux-credits-row; press a; shot ux-credits; press down; press b" BANANA_CREDITS="$HERE/../system/rootfs/etc/banana/credits.txt"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-credits-bot.png" "$OUT/$size-ux-credits-row-bot.png")" || { echo "FAIL $size: Credits didn't open"; fail=1; }
 grep -q 'Majirefy = ' "$HERE/../system/rootfs/etc/banana/credits.txt" || { echo "FAIL: credits.txt lost Majirefy's credit"; fail=1; }
 
-# System > Hotkeys (its last row: up from the first) opens the list of hotkeys, B back to System on its row
-ux_run hotkeys "home nds; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press a; wait 400; shot ux-hotkeys; press b; wait 400; shot ux-hotkeys-back"
+# System > Hotkeys opens the list of hotkeys, B back to System on its row
+ux_run hotkeys "home nds; press start; row System hotkeys; press a; wait 400; shot ux-hotkeys; press b; wait 400; shot ux-hotkeys-back"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-hotkeys-bot.png" "$OUT/$size-ux-hotkeys-back-bot.png")" || { echo "FAIL $size: Hotkeys didn't open"; fail=1; }
-# Nintendo DS > SuperDrastic (its sixth row) opens that emulator's own page, and Hotkeys there (third from its end) its
-# hotkeys; B back on that row, B again back on SuperDrastic in Nintendo DS
-ux_run hotkeys-sd "home nds; press start; press a; press down; press down; wait 400; shot ux-ds-row; press a; press up; press up; press up; wait 400; shot ux-sd-page; press a; wait 400; shot ux-hotkeys-sd; press b; wait 400; shot ux-hotkeys-sd-back; press b; wait 400; shot ux-sd-back"
+# Nintendo DS > Emulator settings (its second row) opens the chosen emulator's own page (SuperDrastic, the default), and
+# Hotkeys there (third from its end) its hotkeys; B back on that row, B again back on Emulator settings in Nintendo DS
+ux_run hotkeys-sd "home nds; press start; press a; press down; wait 400; shot ux-ds-row; press a; press up; press up; press up; wait 400; shot ux-sd-page; press a; wait 400; shot ux-hotkeys-sd; press b; wait 400; shot ux-hotkeys-sd-back; press b; wait 400; shot ux-sd-back"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-ds-row-bot.png" "$OUT/$size-ux-sd-page-bot.png")" || { echo "FAIL $size: Nintendo DS > SuperDrastic didn't open"; fail=1; }
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-hotkeys-sd-bot.png" "$OUT/$size-ux-hotkeys-sd-back-bot.png")" || { echo "FAIL $size: SuperDrastic > Hotkeys didn't open"; fail=1; }
 # (the list's header, its title and "row / rows" (x 18-622, y 16-66), the same: the same page and row, wherever it scrolled)
@@ -190,8 +189,8 @@ ux_head() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 
 for s in sd-page hotkeys-sd-back ds-row sd-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
 [ "$(ux_diff "$OUT/$size-ux-sd-page-head.png" "$OUT/$size-ux-hotkeys-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic's hotkeys wasn't back on its Hotkeys row"; fail=1; }
 [ "$(ux_diff "$OUT/$size-ux-ds-row-head.png" "$OUT/$size-ux-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic wasn't back on its row in Nintendo DS"; fail=1; }
-# Other systems > Picture & sound (its fifth row) opens its page (Shader first), B back on its row
-ux_run ra-picture "home nds; press start; press r; press a; press down; wait 400; shot ux-ra-row; press a; wait 400; shot ux-ra-picture; press b; wait 400; shot ux-ra-back"
+# Other systems > Picture & sound opens its page (Shader first), B back on its row
+ux_run ra-picture "home nds; press start; row Other systems ra_picture; wait 400; shot ux-ra-row; press a; wait 400; shot ux-ra-picture; press b; wait 400; shot ux-ra-back"
 for s in ra-row ra-picture ra-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-ra-row-bot.png" "$OUT/$size-ux-ra-picture-bot.png")" || { echo "FAIL $size: Other systems > Picture & sound didn't open"; fail=1; }
 [ "$(ux_diff "$OUT/$size-ux-ra-row-head.png" "$OUT/$size-ux-ra-back-head.png")" = 0 ] || { echo "FAIL $size: B from Picture & sound wasn't back on its row in Other systems"; fail=1; }
@@ -354,3 +353,17 @@ ux_run splore-own "lib pico-8 0; wait 2400; shot ux-splore-own"
 UXFX=$UXFX_SAVE
 [ "$(convert "$OUT/$size-ux-splore-own-top.png" -fx '(r > 0.9 && g < 0.1 && b > 0.9) ? 1 : 0' -format '%[fx:mean > 0.02]' info: 2>/dev/null)" = 1 ] ||
     { echo "FAIL $size: Splore doesn't show PICO-8's own icon"; fail=1; }
+
+# System > About opens nothing (its facts are on the top screen while it's picked): A leaves the list's header as it was;
+# A seven times on it turns the developer options on
+ux_run about "home nds; press start; row System about; shot ux-about-0; press a; shot ux-about-1; press a; press a; press a; press a; press a; press a"
+for s in about-0 about-1; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
+[ "$(ux_diff "$OUT/$size-ux-about-0-head.png" "$OUT/$size-ux-about-1-head.png")" = 0 ] || { echo "FAIL $size: A on About opened something"; fail=1; }
+grep -q '^developer = on' "$UXFX/data/settings.conf" || { echo "FAIL $size: seven A's on About didn't turn the developer options on"; fail=1; }
+sed -i '/^developer = /d' "$UXFX/data/settings.conf"
+# with BananaDS chosen, Nintendo DS > Emulator settings opens BananaDS's page (its header isn't SuperDrastic's)
+echo "nds_emulator = bananads" >> "$UXFX/data/settings.conf"
+ux_run emu-bds "home nds; press start; press a; press down; press a; wait 400; shot ux-emu-bds"
+ux_head "$OUT/$size-ux-emu-bds-bot.png" "$OUT/$size-ux-emu-bds-head.png"
+[ "$(ux_diff "$OUT/$size-ux-emu-bds-head.png" "$OUT/$size-ux-sd-page-head.png")" = 0 ] && { echo "FAIL $size: Emulator settings opened SuperDrastic's page with BananaDS chosen"; fail=1; }
+sed -i '/^nds_emulator = /d' "$UXFX/data/settings.conf"

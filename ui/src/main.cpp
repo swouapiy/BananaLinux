@@ -853,7 +853,7 @@ static std::pair<int, int> artCount(Host& lib)
 	return { (int)have.size(), (int)all.size() };
 }
 
-// the systems for Settings > Display & sound > Shown systems (id, name), from systems.conf
+// the systems for Settings > Look & sound > Shown systems (id, name), from systems.conf
 static std::vector<std::pair<std::string, std::string>> shelfSystems(const Host& lib)
 {
 	std::vector<std::pair<std::string, std::string>> r;
@@ -2319,7 +2319,7 @@ int main(int argc, char** argv)
 	SoftBackend be(disp.width(), disp.height());
 	logf("panels %dx%d%s", disp.width(), disp.height(), disp.masterAtOpen ? "" : " (the display's master still held by another program: taken at the first frame)");
 	bootMark("banana-ui: panels open");
-	// the screen colours (Settings > Display & sound > Screen colours): the one colour table, on the screen it corrects
+	// the screen colours (Settings > Look & sound > Screen colours): the one colour table, on the screen it corrects
 	auto applyColors = [&](const char* when)
 	{
 		ScreenColors c = ScreenColors::load(o.data + "/screen-colors.conf");
