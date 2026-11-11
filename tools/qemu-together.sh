@@ -80,11 +80,15 @@ for v in A B; do for i in $(seq 50); do [ -S "$OUT/monitor-$v" ] && break; sleep
 wait_for A "banana-ui: the menu" 300 "the menu is up"
 wait_for B "banana-ui: the menu" 300 "the menu is up"
 sleep 3
+# (both given their address first, then each one's ping: A's went out before B had one)
 for v in A B; do
     n=1; [ $v = B ] && n=2
     for i in $(seq 60); do vm $v true 2>/dev/null && break; sleep 1; done
     # the second network card (the first is QEMU's own for SSH): the address its own, the name whatever it got
     vm $v "i=\$(ls /sys/class/net | grep -v '^lo\$' | sort | sed -n 2p); ip addr add 10.9.0.$n/24 brd + dev \$i 2>/dev/null || ifconfig \$i 10.9.0.$n netmask 255.255.255.0; ip link set \$i up 2>/dev/null || ifconfig \$i up; echo \$i" > "$OUT/$v-net.txt" 2>&1
+done
+for v in A B; do
+    n=1; [ $v = B ] && n=2
     vm $v "ping -c 1 -W 3 10.9.0.$((3 - n))" > /dev/null 2>&1 && ok "$v: reaches the other on the shared network ($(cat "$OUT/$v-net.txt"))" || bad "$v: can't reach the other: $(cat "$OUT/$v-net.txt")"
 done
 
@@ -124,8 +128,13 @@ vm B "netstat -tn 2>/dev/null | grep ':55435'" > "$OUT/B-netstat.txt" 2>&1 || tr
 grep -q ESTABLISHED "$OUT/A-netstat.txt" && grep -q ESTABLISHED "$OUT/B-netstat.txt" && ok "the netplay connection is up between them" ||
     bad "no netplay connection: A $(tr '\n' ' ' < "$OUT/A-netstat.txt"), B $(tr '\n' ' ' < "$OUT/B-netstat.txt")"
 sleep 5; shot A game; shot B game
-vm A "cat /run/banana/retroarch.log 2>/dev/null | grep -i netplay | tail -n 8" > "$OUT/A-retroarch-netplay.txt" 2>&1 || true
-vm B "cat /run/banana/retroarch.log 2>/dev/null | grep -i netplay | tail -n 8" > "$OUT/B-retroarch-netplay.txt" 2>&1 || true
+for v in A B; do
+    vm $v "cat /run/banana/retroarch.log" > "$OUT/$v-retroarch.log" 2>&1 || true
+    vm $v "cat /run/banana/together.log" > "$OUT/$v-together.log" 2>&1 || true
+    grep -i netplay "$OUT/$v-retroarch.log" | tail -n 8 > "$OUT/$v-retroarch-netplay.txt" || true
+done
+echo "--- A's Play together helper"; sed 's/^/    /' "$OUT/A-together.log"
+echo "--- B's Play together helper"; sed 's/^/    /' "$OUT/B-together.log"
 echo "--- A's RetroArch on netplay"; sed 's/^/    /' "$OUT/A-retroarch-netplay.txt"
 echo "--- B's RetroArch on netplay"; sed 's/^/    /' "$OUT/B-retroarch-netplay.txt"
 

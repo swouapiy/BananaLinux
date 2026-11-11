@@ -78,7 +78,7 @@ namespace banana
 		}
 	}
 
-	// the helper on or off; it's started on its own (setsid, its output nowhere), as banana-bshare is
+	// the helper on or off; it's started on its own (setsid, its output in together.log), as banana-bshare is
 	void Settings::togetherServe(bool want)
 	{
 		pid_t p = tgPid();
@@ -89,7 +89,11 @@ namespace banana
 			{
 				setsid();
 				int null = ::open("/dev/null", O_RDWR);
-				if (null >= 0) { dup2(null, 0); dup2(null, 1); dup2(null, 2); }
+				if (null >= 0) dup2(null, 0);
+				// (its output: what became of each link, and why, for the logs)
+				int log = ::open((tgRun() + "/together.log").c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+				if (log < 0) log = null;
+				if (log >= 0) { dup2(log, 1); dup2(log, 2); }
 				std::string h = tgHelper();
 				execl(h.c_str(), h.c_str(), "serve", (char*)nullptr);
 				_exit(127);

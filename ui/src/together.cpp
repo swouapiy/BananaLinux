@@ -189,7 +189,11 @@ int main(int argc, char** argv)
 	struct Link { std::string id, addr, name, version; bool linked = false; double since = 0, linkedAt = 0; } link;	// since: last heard
 	struct Invite { std::string id, addr, name; double since = 0; } invite;
 	int newsNo = 0, startNo = 0;
-	auto news = [&](const std::string& what, const std::string& who) { writeFile("together-news", std::to_string(++newsNo) + "\t" + what + "\t" + who + "\n"); };
+	auto news = [&](const std::string& what, const std::string& who)
+	{
+		writeFile("together-news", std::to_string(++newsNo) + "\t" + what + "\t" + who + "\n");
+		fprintf(stderr, "%.1f %s: %s\n", now(), what.c_str(), who.c_str());
+	};
 	auto sendTo = [&](const std::string& addr, const std::string& msg)
 	{
 		sockaddr_in to{};
@@ -217,6 +221,7 @@ int main(int argc, char** argv)
 		self.state = sc.size() > 0 && !sc[0].empty() ? sc[0] : "menu";
 		self.game = sc.size() > 1 ? sc[1] : "";
 	};
+	fprintf(stderr, "%.1f started (pid %d, id %s)\n", now(), (int)getpid(), self.id.c_str());
 	writeFile("together-peers", "");
 	writeFile("together-invite", "");
 	writeFile("together-link", "");
@@ -284,7 +289,11 @@ int main(int argc, char** argv)
 						if (link.linked && link.id == id)
 						{
 							link.since = t;
-							if (p.linkedWith != self.id && t - link.linkedAt > 6) { news("left", link.name); link = Link(); writeLink(); }
+							if (p.linkedWith != self.id && t - link.linkedAt > 6)
+							{
+								fprintf(stderr, "%.1f %s's HELLO names %s, not this one\n", t, link.name.c_str(), p.linkedWith.empty() ? "nobody" : p.linkedWith.c_str());
+								news("left", link.name); link = Link(); writeLink();
+							}
 						}
 					}
 					else if (kind == "INVITE")
@@ -325,7 +334,7 @@ int main(int argc, char** argv)
 						news(c[5] == "join" ? "joining" : "stayout", name);
 					else if (kind == "LEAVE")
 					{
-						if (link.id == id) { link = Link(); writeLink(); news("left", name); }
+						if (link.id == id) { fprintf(stderr, "%.1f LEAVE from %s\n", t, name.c_str()); link = Link(); writeLink(); news("left", name); }
 						if (invite.id == id) { invite = Invite(); writeInvite(); }
 					}
 				}
@@ -394,6 +403,7 @@ int main(int argc, char** argv)
 		}
 	}
 	// gone: the linked one told, and the files taken away (the menu shows nothing of it then)
+	fprintf(stderr, "%.1f stopped%s\n", now(), link.id.empty() ? "" : (", telling " + link.name).c_str());
 	readMe();
 	if (!link.id.empty()) sendTo(link.addr, line("LEAVE") + "\n");
 	if (!invite.id.empty()) sendTo(invite.addr, line("DECLINE") + "\n");

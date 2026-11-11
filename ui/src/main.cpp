@@ -3246,6 +3246,26 @@ int main(int argc, char** argv)
 				setenv("BANANA_NETPLAY", np.mode.c_str(), 1);
 				setenv("BANANA_NETPLAY_NICK", settingsView.playerName().c_str(), 1);
 				if (np.mode == "connect") { setenv("BANANA_NETPLAY_ADDR", np.addr.c_str(), 1); setenv("BANANA_NETPLAY_CORE", np.core.c_str(), 1); }
+				// RetroArch tries the friend's game once: until it's taking players (its game loaded there too, port 55435),
+				// for up to 20 s, this one waits (here, the menu already let go)
+				in_addr host{};
+				if (np.mode == "connect" && inet_pton(AF_INET, np.addr.c_str(), &host) == 1)
+					for (int i = 0; i < 40; i++)
+					{
+						int s = socket(AF_INET, SOCK_STREAM, 0);
+						sockaddr_in a{};
+						a.sin_family = AF_INET; a.sin_port = htons(55435); a.sin_addr = host;
+						bool up = s >= 0 && connect(s, (sockaddr*)&a, sizeof a) == 0;
+						if (s >= 0) ::close(s);
+						if (up)
+						{
+							char m[96];	// (no stdio after the fork: another thread may have held its lock)
+							int n = snprintf(m, sizeof m, "play together: the friend's game takes players after %.1f s\n", i * 0.5);
+							if (write(2, m, n) < 0) {}
+							break;
+						}
+						usleep(500000);
+					}
 			}
 			if (panel)
 			{
