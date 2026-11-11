@@ -10,7 +10,8 @@
 //   banana-together serve
 // The menu and this talk through small files in /run/banana (the menu watches the folder):
 //   together-me      the menu's: the name, the version
-//   together-state   the menu's too, while a game runs: "game" and its title (none: in the menu)
+//   together-state   the menu's too, while a game runs: "game" (or "hosting": a Play together game, to be joined) and
+//                    its title (none: in the menu)
 //   together-peers   the handhelds seen in the last 8 s: id, address, name, version, state, game, linked with
 //   together-invite  an invitation waiting for an answer: id, name (gone after 60 s, or once answered)
 //   together-link    "linked" or "waiting" (for an answer to ours): id, address, name, version

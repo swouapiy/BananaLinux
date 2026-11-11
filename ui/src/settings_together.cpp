@@ -113,7 +113,7 @@ namespace banana
 
 	struct Settings::Together
 	{
-		enum Kind { K_ACCEPT, K_DECLINE, K_LINKED, K_LEAVE, K_WAITING, K_CANCEL, K_PEER, K_VISIBLE, K_JOIN, K_STAYOUT };
+		enum Kind { K_ACCEPT, K_DECLINE, K_LINKED, K_LEAVE, K_WAITING, K_CANCEL, K_PEER, K_VISIBLE, K_JOIN, K_STAYOUT, K_DROPIN };
 		struct Row { std::string label, value, icon; Kind kind; int index = -1; bool choice = false, warn = false; };
 		struct Peer { std::string id, name, version, state, game, linkedWith; };
 
@@ -123,6 +123,7 @@ namespace banana
 		std::vector<Peer> peers;
 		std::string inviteId, inviteName;		// together-invite
 		std::string linkState, linkId, linkName;	// together-link: "linked" or "waiting"
+		std::string linkDoing, linkGame;		// the linked one's HELLO: "hosting" (a game to join) and its title
 		std::string seen;						// the files as last read (a change redraws)
 		// the friend started a game (together-start): from whom, its address, the game's system, file, size, core, title;
 		// the game found here for it ("": none), and why not
@@ -174,6 +175,7 @@ namespace banana
 			auto lc = tgFields(lk.substr(0, lk.find('\n')));
 			linkState = lc.size() >= 4 ? lc[0] : ""; linkId = lc.size() >= 4 ? lc[1] : ""; linkName = lc.size() >= 4 ? lc[3] : "";
 			peers.clear();
+			linkDoing.clear(); linkGame.clear();
 			std::stringstream in(ps);
 			std::string l;
 			while (std::getline(in, l))
@@ -182,15 +184,24 @@ namespace banana
 				if (c.size() < 6) continue;
 				Peer p{ c[0], c[2], c[3], c[4], c[5], c.size() > 6 ? c[6] : "" };
 				if (p.id != linkId) peers.push_back(p);	// (the linked one has its own row)
+				else { linkDoing = p.state; linkGame = p.game; }
 			}
 			std::sort(peers.begin(), peers.end(), [](const Peer& a, const Peer& b) { return a.name < b.name; });
 			return true;
 		}
 
+		// the friend's game (together-start's fields after its number): who, where, which, and the game here for it
+		void fillAsk(const std::vector<std::string>& s)
+		{
+			auto f = [&](size_t i) { return i < s.size() ? s[i] : std::string(); };
+			ask.from = f(0); ask.addr = f(1); ask.system = f(2); ask.file = f(3); ask.size = atoll(f(4).c_str()); ask.core = f(5); ask.title = f(6);
+			ask.path = ui->findGame ? ui->findGame(ask.system, ask.file, ask.size) : "";
+		}
+
 		static std::string doing(const Peer& p)
 		{
 			if (!p.linkedWith.empty()) return "Playing with someone";
-			if (p.state == "game") return p.game.empty() ? "In a game" : p.game;
+			if (p.state == "game" || p.state == "hosting") return p.game.empty() ? "In a game" : p.game;
 			return "In the menu";
 		}
 
@@ -213,7 +224,9 @@ namespace banana
 			}
 			if (linkState == "linked")
 			{
-				add("Playing with " + linkName, "Linked", K_LINKED).icon = "bshare-handheld";
+				add("Playing with " + linkName, linkDoing == "hosting" && !linkGame.empty() ? linkGame : "Linked", K_LINKED).icon = "bshare-handheld";
+				// the friend's game, running: joined late, as when asked
+				if (linkDoing == "hosting" && !linkGame.empty()) add("Join " + linkGame, "Player 2", K_DROPIN).icon = "bshare-accept";
 				add("Leave", "", K_LEAVE).icon = "bshare-decline";
 			}
 			else if (linkState == "waiting")
@@ -252,6 +265,20 @@ namespace banana
 				return MOVED;
 			}
 			case K_VISIBLE: return change(1);
+			case K_DROPIN:
+			{
+				// the game's details: its start, as the friend sent it (together-start), if it's this game's
+				std::string st = tgRead("together-start");
+				auto f = tgFields(st.substr(0, st.find('\n')));
+				if (f.size() < 8 || f[7] != linkGame) { message = linkName + "'s game can't be joined from here. Ask them to start it again."; return MOVED; }
+				fillAsk(std::vector<std::string>(f.begin() + 1, f.end()));
+				if (ask.path.empty())
+				{
+					message = ask.title + " isn't on this handheld" + (parental::on(ui->data) ? ", or isn't one of the allowed games." : " (" + ask.file + ").");
+					return MOVED;
+				}
+				[[fallthrough]];
+			}
 			case K_JOIN:
 				tgSay("answer join");
 				asking = false;
@@ -348,6 +375,7 @@ namespace banana
 			case K_ACCEPT: t.help = inviteName + " wants to play together. Accept, and the games either of you starts can be played as two players."; break;
 			case K_DECLINE: t.help = "Says no to " + inviteName + "."; break;
 			case K_LINKED: t.help = "You and " + linkName + " are linked. When one of you starts a game, the other is asked to join as player 2."; break;
+			case K_DROPIN: t.help = linkName + " is playing " + linkGame + ". Join as player 2: it starts here, connected to " + linkName + "'s game."; break;
 			case K_LEAVE: t.help = "Ends the link with " + linkName + ". Each plays alone again."; break;
 			case K_WAITING: t.help = linkName + " is asked. The link starts when they accept."; break;
 			case K_CANCEL: t.help = "Takes the invitation back."; break;
@@ -392,7 +420,7 @@ namespace banana
 				case K_CANCEL: a = "Cancel"; break;
 				case K_PEER: a = "Invite"; break;
 				case K_VISIBLE: a = "Change"; break;
-				case K_JOIN: a = "Join"; break;
+				case K_JOIN: case K_DROPIN: a = "Join"; break;
 				case K_STAYOUT: a = ask.path.empty() ? "OK" : "Stay out"; break;
 				default: break;
 				}
@@ -475,10 +503,7 @@ namespace banana
 	void Settings::togetherAsk(const std::vector<std::string>& s)
 	{
 		openTogether();
-		auto f = [&](size_t i) { return i < s.size() ? s[i] : std::string(); };
-		Together::Ask& a = tg->ask;
-		a.from = f(0); a.addr = f(1); a.system = f(2); a.file = f(3); a.size = atoll(f(4).c_str()); a.core = f(5); a.title = f(6);
-		a.path = findGame ? findGame(a.system, a.file, a.size) : "";
+		tg->fillAsk(s);
 		tg->asking = true;
 		tg->sel = tg->top = 0;
 		tg->message.clear();

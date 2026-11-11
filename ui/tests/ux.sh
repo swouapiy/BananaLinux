@@ -405,6 +405,15 @@ ux_run together-nogame "togethercheck; shot ux-tg-nogame; press a; sleep 1000" $
 for i in $(seq 30); do grep -q "stayout" "$TGB/together-news" 2>/dev/null && break; sleep 0.1; done
 grep -q "stayout	" "$TGB/together-news" 2>/dev/null || { echo "FAIL $size: Play together: a game not here didn't tell Bob she stays out: $(cat "$TGB/together-news" 2>&1)"; fail=1; }
 grep -q "join:" "$OUT/$size-together-nogame.log" && { echo "FAIL $size: Play together: joined a game that isn't here"; fail=1; }
+# joined late: Bob's game running (his HELLOs say hosting), the page's Join under "Playing with Bob" starts it here
+# as the asked Join does
+tg_bob "$(printf 'start snes\tSuper Smoothie World.sfc\t1024\tsnes9x\tSuper Smoothie World')"
+printf 'hosting\tSuper Smoothie World\n' > "$TGB/together-state"
+for i in $(seq 50); do grep -q "	hosting	Super Smoothie World" "$TGA/together-peers" 2>/dev/null && break; sleep 0.1; done
+ux_run together-dropin "homeid together; press a; sleep 1200; shot ux-tg-dropin; press down; press a; sleep 1000" $tg_env
+ux_check together-dropin "join: .*/roms/snes/Super Smoothie World.sfc, connected to 127.0.0.1, core snes9x"
+rm -f "$TGB/together-state"
+for i in $(seq 50); do grep -q "	hosting	" "$TGA/together-peers" 2>/dev/null || break; sleep 0.1; done
 ux_run together-linked "homeid together; press a; sleep 1200; shot ux-tg-linked; press down; press a; sleep 1200" $tg_env
 for i in $(seq 30); do [ -s "$TGB/together-link" ] || break; sleep 0.1; done
 [ ! -s "$TGB/together-link" ] && grep -q "left	" "$TGB/together-news" 2>/dev/null || { echo "FAIL $size: Play together: Leave didn't end Bob's link: $(cat "$TGB/together-link" "$TGB/together-news" 2>&1)"; fail=1; }

@@ -3055,7 +3055,8 @@ int main(int argc, char** argv)
 		{
 			// what the others on the Wi-Fi see this one doing (banana-together's HELLOs), while the game runs
 			std::string p = getenv("TOGETHER_RUN") ? std::string(getenv("TOGETHER_RUN")) : "/run/banana";
-			std::ofstream(p + "/together-state") << "game\t" << lib.gameAt(game).title << "\n";
+			// ("hosting": a Play together game, the friend can join it late from the page)
+			std::ofstream(p + "/together-state") << (np.mode == "host" ? "hosting" : "game") << "\t" << lib.gameAt(game).title << "\n";
 		}
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
