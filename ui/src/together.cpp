@@ -120,8 +120,16 @@ namespace
 		if (getifaddrs(&ifs) != 0) return r;
 		for (ifaddrs* i = ifs; i; i = i->ifa_next)
 			if (i->ifa_addr && i->ifa_addr->sa_family == AF_INET && (i->ifa_flags & IFF_BROADCAST) && !(i->ifa_flags & IFF_LOOPBACK) &&
-				(i->ifa_flags & IFF_UP) && i->ifa_broadaddr)
-				add(((sockaddr_in*)i->ifa_broadaddr)->sin_addr, port);
+				(i->ifa_flags & IFF_UP))
+			{
+				// (an address given without its broadcast one has 0.0.0.0 there, which only reaches the handheld itself:
+				// then it's the address with the netmask's host bits all set)
+				in_addr b{};
+				if (i->ifa_broadaddr) b = ((sockaddr_in*)i->ifa_broadaddr)->sin_addr;
+				if (b.s_addr == 0 && i->ifa_netmask)
+					b.s_addr = ((sockaddr_in*)i->ifa_addr)->sin_addr.s_addr | ~((sockaddr_in*)i->ifa_netmask)->sin_addr.s_addr;
+				if (b.s_addr != 0) add(b, port);
+			}
 		freeifaddrs(ifs);
 		return r;
 	}

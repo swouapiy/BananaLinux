@@ -84,7 +84,7 @@ for v in A B; do
     n=1; [ $v = B ] && n=2
     for i in $(seq 60); do vm $v true 2>/dev/null && break; sleep 1; done
     # the second network card (the first is QEMU's own for SSH): the address its own, the name whatever it got
-    vm $v "i=\$(ls /sys/class/net | grep -v '^lo\$' | sort | sed -n 2p); ip addr add 10.9.0.$n/24 dev \$i 2>/dev/null || ifconfig \$i 10.9.0.$n netmask 255.255.255.0; ip link set \$i up 2>/dev/null || ifconfig \$i up; echo \$i" > "$OUT/$v-net.txt" 2>&1
+    vm $v "i=\$(ls /sys/class/net | grep -v '^lo\$' | sort | sed -n 2p); ip addr add 10.9.0.$n/24 brd + dev \$i 2>/dev/null || ifconfig \$i 10.9.0.$n netmask 255.255.255.0; ip link set \$i up 2>/dev/null || ifconfig \$i up; echo \$i" > "$OUT/$v-net.txt" 2>&1
     vm $v "ping -c 1 -W 3 10.9.0.$((3 - n))" > /dev/null 2>&1 && ok "$v: reaches the other on the shared network ($(cat "$OUT/$v-net.txt"))" || bad "$v: can't reach the other: $(cat "$OUT/$v-net.txt")"
 done
 
@@ -92,11 +92,12 @@ echo "2. Play together opened on both; A sees B and invites it; B accepts"
 for v in A B; do vm $v "echo '/usr/share/banana/apps/together/Play together.app' > /run/banana/launch"; done
 sleep 8
 shot A list; shot B list
+# (A's helper a few HELLOs in: one each 2 s)
+for i in $(seq 10); do vm A test -s /run/banana/together-peers && break; sleep 1; done
 vm A cat /run/banana/together-peers > "$OUT/A-peers.txt" 2>&1 || true
-[ "$(grep -c . "$OUT/A-peers.txt")" -ge 1 ] && ok "A sees a handheld: $(cut -f2,3,4 "$OUT/A-peers.txt" | head -n 1 | tr '\t' ' ')" || bad "A sees nobody: $(cat "$OUT/A-peers.txt")"
+[ "$(grep -c . "$OUT/A-peers.txt")" -ge 1 ] && ! grep -q "can't open" "$OUT/A-peers.txt" && ok "A sees a handheld: $(cut -f2,3,4 "$OUT/A-peers.txt" | head -n 1 | tr '\t' ' ')" || bad "A sees nobody: $(cat "$OUT/A-peers.txt")"
 key A ret; sleep 3
-vm B cat /run/banana/together-invite > "$OUT/B-invite.txt" 2>&1 || true
-[ -s "$OUT/B-invite.txt" ] && ok "B is invited" || bad "B wasn't invited"
+vm B cat /run/banana/together-invite > "$OUT/B-invite.txt" 2>&1 && [ -s "$OUT/B-invite.txt" ] && ok "B is invited" || bad "B wasn't invited"
 shot B invited
 key B ret; sleep 3
 vm A cat /run/banana/together-link > "$OUT/A-link.txt" 2>&1 || true
