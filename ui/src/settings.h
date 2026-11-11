@@ -88,6 +88,11 @@ namespace banana
 		// Bshare's helper serving (seen by LocalSend's apps, receiving): from the start while Receive is on
 		static void bshareServe(bool want);
 		bool bshareReceiving() const;
+		// Apps' Play together (settings_together.cpp): the handhelds on the same Wi-Fi, invited and linked
+		void openTogether();
+		// its helper (banana-together) on or off; from the start when Seen by others is Always
+		static void togetherServe(bool want);
+		bool togetherAlways() const;
 		bool isOpen() const { return mOpen; }
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
@@ -230,7 +235,7 @@ namespace banana
 		std::string wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, PIN, KIDGAMES } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, PIN, KIDGAMES, TOGETHER } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -667,6 +672,15 @@ namespace banana
 		int bshareWake(double nowMs) const;
 		Result finishBshareEntry();
 		void closeBshare();
+		// Play together (settings_together.cpp): its page, reading banana-together's files in /run/banana
+		struct Together;
+		std::shared_ptr<Together> tg;
+		Result pressTogether(Key k);
+		Result touchTogether(float cx, float cy);
+		void renderTogether();
+		bool updateTogether(double nowMs);
+		int togetherWake(double nowMs) const;
+		void closeTogether();
 		void tick(float x, float y, const rnds::Color& c);	// a mark on a 2 px grid (a chosen file)
 		void meter(float x, float y, float w, double fraction);	// a progress bar
 		std::string gTitle, gSystem;

@@ -373,3 +373,25 @@ sed -i '/^nds_emulator = /d' "$UXFX/data/settings.conf"
 ux_run artsys "home nds; press start; row Games artworks art_systems; press a; shot ux-artsys; press right; press b; press b; press b"
 grep -q '^art\.[a-z0-9-]* = off' "$UXFX/data/settings.conf" || { echo "FAIL $size: Games artworks > Systems: Skip wasn't saved: $(grep '^art\.' "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
 sed -i '/^art\./d' "$UXFX/data/settings.conf"
+
+# Apps > Play together, with the real helper (banana-together) and a second handheld beside it (Bob: another helper on
+# this machine, the HELLOs to each other's port): Bob listed, A on him invites him (his invitation file names this
+# one), he accepts (his socket, as his menu would), and the page shows the link; Leave ends it on both
+TGA=$OUT/tg-ann-$size TGB=$OUT/tg-bob-$size
+rm -rf "$TGA" "$TGB"; mkdir -p "$TGA" "$TGB"
+tgp=$((46200 + ${size%%x*} % 7 * 2))	# (a port pair each size)
+printf 'Bob\tdev\tmenu\t\n' > "$TGB/together-me"
+TOGETHER_RUN=$TGB TOGETHER_PORT=$((tgp + 1)) TOGETHER_ID=bbbbbbbbbbbbbbbb TOGETHER_ANNOUNCE=127.0.0.1:$tgp "$HERE/banana-together" serve 2>"$OUT/tg-bob-$size.log" & TGBOB=$!
+tg_env="TOGETHER_RUN=$TGA BANANA_TOGETHER=$HERE/banana-together TOGETHER_PORT=$tgp TOGETHER_ID=aaaaaaaaaaaaaaaa TOGETHER_ANNOUNCE=127.0.0.1:$((tgp + 1))"
+ux_run together "homeid together; press a; sleep 3500; shot ux-tg-list; press a; sleep 1200; shot ux-tg-asked" $tg_env
+ux_check together "homeid together: app"
+grep -q "^aaaaaaaaaaaaaaaa	" "$TGB/together-invite" 2>/dev/null && ok_tg=1 || { echo "FAIL $size: Play together: A on Bob didn't invite him: $(cat "$TGB/together-invite" 2>&1) bob: $(cat "$OUT/tg-bob-$size.log") alive: $(kill -0 $TGBOB 2>&1 && echo yes) files: $(ls "$TGB" "$TGA" | tr "\n" " ")"; fail=1; }
+python3 -I -c 'import socket, sys; s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM); s.sendto(b"accept", sys.argv[1])' "$TGB/together.sock" 2>/dev/null
+for i in $(seq 30); do grep -q '^linked' "$TGA/together-link" 2>/dev/null && break; sleep 0.1; done
+grep -q "^linked	bbbbbbbbbbbbbbbb	.*	Bob" "$TGA/together-link" 2>/dev/null || { echo "FAIL $size: Play together: not linked once Bob accepted: $(cat "$TGA/together-link" 2>&1)"; fail=1; }
+ux_run together-linked "homeid together; press a; sleep 1200; shot ux-tg-linked; press down; press a; sleep 1200" $tg_env
+for i in $(seq 30); do [ -s "$TGB/together-link" ] || break; sleep 0.1; done
+[ ! -s "$TGB/together-link" ] && grep -q "left	" "$TGB/together-news" 2>/dev/null || { echo "FAIL $size: Play together: Leave didn't end Bob's link: $(cat "$TGB/together-link" "$TGB/together-news" 2>&1)"; fail=1; }
+kill $TGBOB 2>/dev/null
+# (the menu's helper, started on its own: this size's alone, by its folder; the other size runs beside this one)
+for p in $(grep -l "TOGETHER_RUN=$TGA" /proc/[0-9]*/environ 2>/dev/null | cut -d/ -f3); do grep -q "banana-together" "/proc/$p/cmdline" 2>/dev/null && kill "$p" 2>/dev/null; done

@@ -13,6 +13,8 @@ SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/co
 SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
 SRC += src/settings_bshare.cpp
+# (Play together's page: its helper, banana-together, does the network)
+SRC += src/settings_together.cpp
 # (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
 SRC += src/settings_servers.cpp src/nas.cpp src/sysfolders.cpp src/fetch/names.cpp src/fetch/jobfile.cpp src/fetch/servers.cpp
 PKGS = freetype2 libdrm zlib
@@ -41,6 +43,11 @@ banana-sync: src/sync.cpp src/sync_util.h src/json.cpp src/json.h
 banana-bshare: src/bshare.cpp src/json.cpp src/json.h
 	$(CXX) $(CXXFLAGS) $(shell $(PKG_CONFIG) --cflags libcurl libcrypto) $(LDFLAGS) -o $@ src/bshare.cpp src/json.cpp \
 		$(shell $(PKG_CONFIG) --libs libcurl libcrypto) -lpthread
+
+# Play together (the Apps tile's): the handhelds on the same Wi-Fi seeing each other, invitations and the link, run by
+# banana-ui while its page is open, it's set to be seen, or a link is on (settings_together.cpp)
+banana-together: src/together.cpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/together.cpp
 
 # Files' servers: SMB, SFTP and FTP, the downloads and the unpacking, run by banana-ui while there is work
 # (settings_servers.cpp). SMB=0 builds it without libsmb2, for a computer that has none.
@@ -83,10 +90,14 @@ install:
 	install -D -m 755 banana-scrape $(DESTDIR)/usr/bin/banana-scrape
 	install -D -m 755 banana-sync $(DESTDIR)/usr/bin/banana-sync
 	install -D -m 755 banana-bshare $(DESTDIR)/usr/bin/banana-bshare
+	install -D -m 755 banana-together $(DESTDIR)/usr/bin/banana-together
 	install -D -m 755 banana-fetch $(DESTDIR)/usr/bin/banana-fetch
 	# (Bshare's tile on the shelf: its one entry, systems.conf's [bshare])
 	mkdir -p $(DESTDIR)/usr/share/banana/apps/bshare
 	touch $(DESTDIR)/usr/share/banana/apps/bshare/Bshare.app
+	# (Play together's tile in Apps: its one entry, systems.conf's [together])
+	mkdir -p $(DESTDIR)/usr/share/banana/apps/together
+	touch "$(DESTDIR)/usr/share/banana/apps/together/Play together.app"
 	# (the folders' contents: "cp -r dir dst" into a dst that is there from a build before nests a copy in it, and
 	# the files in use were never replaced)
 	mkdir -p $(DESTDIR)/usr/share/banana/rnds $(DESTDIR)/usr/share/banana/splash $(DESTDIR)/usr/share/banana/banana
@@ -101,7 +112,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-together banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test
 
 .PHONY: host install clean
 

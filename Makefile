@@ -35,6 +35,7 @@ $(foreach b,$(BOARDS),$(eval $(call board,$(b))))
 
 ui:
 	$(MAKE) -C ui host
+	$(MAKE) -C ui banana-together
 	@if pkg-config --exists libcurl libcrypto; then $(MAKE) -C ui banana-bshare; \
 	else echo "banana-bshare not built (libcurl's and OpenSSL's dev packages): Bshare's tests are skipped"; fi
 	@if pkg-config --exists libcurl libssh2 libssl libcrypto zlib; then \
@@ -44,6 +45,7 @@ ui:
 test: ui
 	ui/tests/run.sh
 	@if [ -x ui/banana-bshare ]; then sh ui/tests/bshare-test.sh; fi
+	sh ui/tests/together-test.sh
 	@if [ -x ui/banana-fetch ]; then sh ui/tests/fetch-test.sh; fi
 
 # ui/fuzz: themes, expressions, zips, DS ROM banners and Banana's own files on the card, under libFuzzer, ASan and UBSan

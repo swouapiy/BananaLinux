@@ -361,6 +361,7 @@ static bool openPage(Settings& st, const std::string& page)
 {
 	if (page == "files") { st.openFiles(); return true; }
 	if (page == "bshare") { st.openBshare(); return true; }
+	if (page == "together") { st.openTogether(); return true; }
 	return false;
 }
 
@@ -580,6 +581,7 @@ struct EventNotice
 	double until = 0, lookedAt = -1e9, wifiDownAt = -1e9;
 	int recording = -1, wifi = -1, bt = -1;	// (-1: not looked at yet)
 	std::string bsReq, bsRecv = "?", bsSend = "?";	// Bshare's request, receive and send, as last read ("?": not yet)
+	std::string tgInvite = "?", tgNews = "?";	// Play together's invitation and news, as last read ("?": not yet)
 	std::string ptSeen = "?";	// Parental controls' play time notice (bananad's), as last read ("?": not yet)
 	bool btHeld = false;	// the headphones gone for a sleep: their coming back isn't news
 	bool showing(double now) const { return until > now; }
@@ -677,6 +679,29 @@ struct EventNotice
 			while (std::getline(in, l)) { auto c = cols(l); if (c.size() >= 2 && c[0] == "from") from = c[1]; if (c.size() >= 2 && c[0] == "files") n = c[1]; }
 			if (!req.empty()) { show(from + " wants to send " + n + (n == "1" ? " file" : " files"), "Open Bshare to accept.", 3, 0x4a9bff, now); came = true; }
 			bsReq = req;
+		}
+		// Play together: an invitation, and what became of one (banana-together's files, settings_together.cpp)
+		std::string iv = read("together-invite");
+		if (iv != tgInvite)
+		{
+			auto c = cols(iv.substr(0, iv.find('\n')));
+			if (tgInvite != "?" && c.size() >= 2) { show(c[1] + " wants to play together", "Open Play together in Apps to answer.", 3, 0x9b6cff, now); came = true; }
+			tgInvite = iv;
+		}
+		std::string nw = read("together-news");
+		if (nw != tgNews)
+		{
+			auto c = cols(nw.substr(0, nw.find('\n')));
+			if (tgNews != "?" && c.size() >= 3)
+			{
+				const std::string &what = c[1], &who = c[2];
+				if (what == "accepted") show("Playing together with " + who, "When one of you starts a game, the other is asked to join.", 1, 0x6fdc87, now);
+				else if (what == "declined") show(who + " said no", "Play together: invite someone else, or ask again later.", 2, 0xffb340, now);
+				else if (what == "noanswer") show(who + " didn't answer", "The invitation to play together ran out.", 2, 0xffb340, now);
+				else show(who + " left Play together", "You play on your own again.", 2, 0xffb340, now);
+				came = true;
+			}
+			tgNews = nw;
 		}
 		std::string rc = read("bshare-receive");
 		if (rc != bsRecv)
@@ -2468,6 +2493,7 @@ int main(int argc, char** argv)
 	nds::Overlay ndsOverlay;	// the DS companion's picture for BananaDS's bottom screen (nds/overlay.h)
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
 	if (settingsView.bshareReceiving()) Settings::bshareServe(true);	// (Bshare's Receive on: seen from the start)
+	if (settingsView.togetherAlways()) Settings::togetherServe(true);	// (Play together's Seen by others: Always)
 	LowBattery low;
 	HealthNotice health;	// (the early check's notice is there before the menu: the loop's first pass shows it)
 	FetchNotice fetchNotice;

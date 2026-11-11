@@ -1337,6 +1337,7 @@ namespace banana
 		page = LIST;
 		wizard = false;
 		closeBshare();
+		closeTogether();
 		closeServers();	// (banana-fetch's session: its answers wake the loop through the worker's eventfd)
 	}
 
@@ -1790,6 +1791,7 @@ namespace banana
 		if (page == FILES) return pressFiles(k);
 		if (langAsk >= 0) return pressLangAsk(k);
 		if (page == BSHARE) return pressBshare(k);
+		if (page == TOGETHER) return pressTogether(k);
 		if (page == SERVERS) return pressServers(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
@@ -1989,6 +1991,7 @@ namespace banana
 			return t < 0 ? NONE : t == 0 ? MOVED : pressLangAsk(Key::A);
 		}
 		if (page == BSHARE) return touchBshare(cx, cy);
+		if (page == TOGETHER) return touchTogether(cx, cy);
 		if (page == SERVERS) return touchServers(cx, cy);
 		if (page == SETUP)
 		{
@@ -2917,6 +2920,7 @@ namespace banana
 		if (page == FILES) { renderFiles(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (page == BSHARE) { renderBshare(); return; }
+		if (page == TOGETHER) { renderTogether(); return; }
 		if (page == SERVERS) { renderServers(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
@@ -3203,6 +3207,7 @@ namespace banana
 		changed |= btUpdate();
 		if (fm && updateFiles(t)) changed = true;	// (a job's progress, its end)
 		if (bs && page == BSHARE && updateBshare(t)) changed = true;
+		if (tg && page == TOGETHER && updateTogether(t)) changed = true;
 		if (srv && updateServers(t)) changed = true;	// (also under the keyboard: a login answered; Files' row of the job)
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
@@ -3301,6 +3306,8 @@ namespace banana
 		if (d >= 0 && (w < 0 || d < w)) w = d;
 		int b = bshareWake(t);	// Bshare's request countdown, a send's progress
 		if (b >= 0 && (w < 0 || b < w)) w = b;
+		int tw = togetherWake(t);	// Play together: the handhelds come and go
+		if (tw >= 0 && (w < 0 || tw < w)) w = tw;
 		int v = serversWake(t);	// a server's answer, a download's progress
 		if (v >= 0 && (w < 0 || v < w)) w = v;
 		return w;
