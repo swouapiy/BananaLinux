@@ -93,6 +93,15 @@ namespace banana
 		// its helper (banana-together) on or off; from the start when Seen by others is Always
 		static void togetherServe(bool want);
 		bool togetherAlways() const;
+		static void togetherSay(const std::string& cmd);	// a word to the helper (its socket)
+		static std::string togetherFile(const std::string& name);	// one of its files in /run/banana, read
+		// the linked one started a game (together-start's fields after its number): its page opens, asking whether to
+		// join (the player answers: Join, or Stay out)
+		void togetherAsk(const std::vector<std::string>& start);
+		// (the host's library) a game here for the friend's: its system, its file (under the system's folder), its size;
+		// its path, or "" when there's none (or Parental controls don't allow it)
+		std::function<std::string(const std::string&, const std::string&, long long)> findGame;
+		std::string playerName() { std::string n = dsName(); return n.empty() ? "RG DS" : n; }	// (Play together's)
 		bool isOpen() const { return mOpen; }
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
@@ -141,7 +150,10 @@ namespace banana
 
 		// what the host has to do after an input (ACTED: a page did something that changes no setting, as Files' copy or
 		// rename: the select sound alone, not CHANGED's settings.conf read again and the menu's texts made again)
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES, ACTED };
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES, ACTED, JOIN };
+		// JOIN: Play together's friend started a game and the player joins: joinPath started as player 2, connected to
+		// joinAddr's netplay with its core, joinCore (the Settings already closed)
+		std::string joinPath, joinAddr, joinCore;
 		// DELETED: the game page's Delete game removed the ROM (deletedFiles says what went): the library read again
 		// SELECT in the menu: the keyboard alone, for a search of the games; SEARCH when it is done, with the text in
 		// searchText (empty: the search taken away)

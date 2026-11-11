@@ -4,17 +4,22 @@
 //   HELLO   every 2 s, to the network's broadcast address: who it is (an id, the name, BananaOS's version, what it's
 //           doing: in the menu or a game's title), and whom it's linked with
 //   INVITE, ACCEPT, DECLINE, LEAVE   to one handheld: an invitation, its answer, and the end of a link
+//   START   to the linked one: a game started here (its system, its file, its size, the core, its title): join it?
+//   ANSWER  back: "join" (it's starting the game, connected to this one's) or "stay" (it stays out)
 // Nothing is answered unasked: an invitation is only shown, and only the menu, once the player said so, accepts it.
 //   banana-together serve
 // The menu and this talk through small files in /run/banana (the menu watches the folder):
-//   together-me      the menu's: the name, the version, the state ("menu" or "game"), the game's title
+//   together-me      the menu's: the name, the version
+//   together-state   the menu's too, while a game runs: "game" and its title (none: in the menu)
 //   together-peers   the handhelds seen in the last 8 s: id, address, name, version, state, game, linked with
 //   together-invite  an invitation waiting for an answer: id, name (gone after 60 s, or once answered)
 //   together-link    "linked" or "waiting" (for an answer to ours): id, address, name, version
-//   together-news    the last thing that happened, for a banner: a number, then accepted/declined/left/gone, the name
+//   together-news    the last thing that happened, for a banner: a number, then accepted/declined/left/gone/
+//                    joining/stayout, the name
+//   together-start   the linked one started a game: a number, its name, its address, then START's fields
 //   together.pid     this one's process, while it runs
 // and the menu tells it what to do by a datagram on /run/banana/together.sock: invite <id>, accept, decline, cancel,
-// leave. Environment (the test's): TOGETHER_RUN (the folder), TOGETHER_PORT (45789), TOGETHER_ANNOUNCE ("host:port"
+// leave, start <system> TAB <file> TAB <size> TAB <core> TAB <title>, answer join|stay. Environment (the test's): TOGETHER_RUN (the folder), TOGETHER_PORT (45789), TOGETHER_ANNOUNCE ("host:port"
 // a comma between them: where the HELLOs go instead of the broadcast addresses), TOGETHER_ID (the id).
 #include <arpa/inet.h>
 #include <cerrno>
@@ -175,7 +180,7 @@ int main(int argc, char** argv)
 	std::map<std::string, Peer> peers;
 	struct Link { std::string id, addr, name, version; bool linked = false; double since = 0, linkedAt = 0; } link;	// since: last heard
 	struct Invite { std::string id, addr, name; double since = 0; } invite;
-	int newsNo = 0;
+	int newsNo = 0, startNo = 0;
 	auto news = [&](const std::string& what, const std::string& who) { writeFile("together-news", std::to_string(++newsNo) + "\t" + what + "\t" + who + "\n"); };
 	auto sendTo = [&](const std::string& addr, const std::string& msg)
 	{
@@ -199,8 +204,10 @@ int main(int argc, char** argv)
 		auto c = f.empty() ? std::vector<std::string>() : split(f[0], '\t');
 		self.name = c.size() > 0 && !c[0].empty() ? c[0] : "RG DS";
 		self.version = c.size() > 1 ? c[1] : "";
-		self.state = c.size() > 2 ? c[2] : "menu";
-		self.game = c.size() > 3 ? c[3] : "";
+		auto st = split(readFile(run + "/together-state"), '\n');
+		auto sc = st.empty() ? std::vector<std::string>() : split(st[0], '\t');
+		self.state = sc.size() > 0 && !sc[0].empty() ? sc[0] : "menu";
+		self.game = sc.size() > 1 ? sc[1] : "";
 	};
 	writeFile("together-peers", "");
 	writeFile("together-invite", "");
@@ -298,6 +305,16 @@ int main(int argc, char** argv)
 						writeLink();
 						news("declined", name);
 					}
+					else if (kind == "START" && link.linked && link.id == id && c.size() >= 10)
+					{
+						// the linked one started a game: the menu asks whether to join it (its address without the
+						// test's port: the game's netplay has a port of its own)
+						std::string ip = addr.substr(0, addr.find(':'));
+						writeFile("together-start", std::to_string(++startNo) + "\t" + name + "\t" + ip + "\t" + c[5] + "\t" + c[6] + "\t" +
+							c[7] + "\t" + c[8] + "\t" + c[9] + "\n");
+					}
+					else if (kind == "ANSWER" && link.linked && link.id == id && c.size() >= 6)
+						news(c[5] == "join" ? "joining" : "stayout", name);
 					else if (kind == "LEAVE")
 					{
 						if (link.id == id) { link = Link(); writeLink(); news("left", name); }
@@ -349,6 +366,16 @@ int main(int argc, char** argv)
 					invite = Invite();
 					writeInvite();
 				}
+				else if (cmd == "start" && link.linked)
+				{
+					// (the fields as the menu wrote them, tabs between: system, file, size, core, title)
+					auto f = split(arg, '\t');
+					if (f.size() >= 5)
+						sendTo(link.addr, line("START") + "\t" + clean(f[0]) + "\t" + clean(f[1], 300) + "\t" + clean(f[2]) + "\t" + clean(f[3]) +
+							"\t" + clean(f[4], 100) + "\n");
+				}
+				else if (cmd == "answer" && link.linked)
+					sendTo(link.addr, line("ANSWER") + "\t" + (arg == "join" ? "join" : "stay") + "\n");
 				else if ((cmd == "leave" || cmd == "cancel") && !link.id.empty())
 				{
 					sendTo(link.addr, line("LEAVE") + "\n");

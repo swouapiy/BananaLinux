@@ -9,6 +9,7 @@
 #include "settings.h"
 #include "settings_defaults.h"
 #include "settings_draw.h"
+#include "parental.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -97,6 +98,9 @@ namespace banana
 		if (!want && p) kill(p, SIGTERM);
 	}
 
+	void Settings::togetherSay(const std::string& cmd) { tgSay(cmd); }
+	std::string Settings::togetherFile(const std::string& name) { return tgRead(name); }
+
 	// Seen by others: Always, the helper from the start (the menu then shows an invitation as a banner)
 	bool Settings::togetherAlways() const
 	{
@@ -105,7 +109,7 @@ namespace banana
 
 	struct Settings::Together
 	{
-		enum Kind { K_ACCEPT, K_DECLINE, K_LINKED, K_LEAVE, K_WAITING, K_CANCEL, K_PEER, K_VISIBLE };
+		enum Kind { K_ACCEPT, K_DECLINE, K_LINKED, K_LEAVE, K_WAITING, K_CANCEL, K_PEER, K_VISIBLE, K_JOIN, K_STAYOUT };
 		struct Row { std::string label, value, icon; Kind kind; int index = -1; bool choice = false, warn = false; };
 		struct Peer { std::string id, name, version, state, game, linkedWith; };
 
@@ -116,14 +120,14 @@ namespace banana
 		std::string inviteId, inviteName;		// together-invite
 		std::string linkState, linkId, linkName;	// together-link: "linked" or "waiting"
 		std::string seen;						// the files as last read (a change redraws)
+		// the friend started a game (together-start): from whom, its address, the game's system, file, size, core, title;
+		// the game found here for it ("": none), and why not
+		struct Ask { std::string from, addr, system, file, core, title, path; long long size = 0; } ask;
+		bool asking = false;
 		double lookedAt = 0;
 
 		std::string conf() const { return ui->data + "/settings.conf"; }
-		std::string myName() const
-		{
-			std::string n = ui->dsName();
-			return n.empty() ? "RG DS" : n;
-		}
+		std::string myName() const { return ui->playerName(); }
 		std::string myVersion() const { return ui->version.empty() ? "dev" : ui->version; }
 
 		// what this handheld tells the others: its name, version, and that it's in the menu
@@ -191,6 +195,13 @@ namespace banana
 		{
 			std::vector<Row> r;
 			auto add = [&](const std::string& label, const std::string& value, Kind k) -> Row& { r.push_back({ label, value, "", k }); return r.back(); };
+			if (asking)
+			{
+				// the friend's game: join it, or stay out (always asked); not here: only OK
+				if (!ask.path.empty()) { add("Join " + ask.title, "Player 2", K_JOIN).icon = "bshare-accept"; add("Stay out", "", K_STAYOUT).icon = "bshare-decline"; }
+				else add("OK", "", K_STAYOUT);
+				return r;
+			}
 			if (!inviteId.empty() && linkState != "linked")
 			{
 				add("Accept " + inviteName, "", K_ACCEPT).icon = "bshare-accept";
@@ -237,6 +248,17 @@ namespace banana
 				return MOVED;
 			}
 			case K_VISIBLE: return change(1);
+			case K_JOIN:
+				tgSay("answer join");
+				asking = false;
+				ui->joinPath = ask.path; ui->joinAddr = ask.addr; ui->joinCore = ask.core;
+				ui->close();
+				return JOIN;
+			case K_STAYOUT:
+				tgSay("answer stay");
+				asking = false;
+				sel = top = 0;
+				return MOVED;
 			default: return NONE;
 			}
 		}
@@ -271,7 +293,10 @@ namespace banana
 			case Key::LEFT: case Key::RIGHT:
 				if (cur && cur->choice) return change(k == Key::LEFT ? -1 : 1);
 				return NONE;
-			case Key::B: ui->close(); return CLOSED;
+			case Key::B:
+				if (asking) { for (const Row& x : r) if (x.kind == K_STAYOUT) return activate(x); }	// (B: stays out)
+				ui->close();
+				return CLOSED;
 			case Key::A: return cur ? activate(*cur) : NONE;
 			default: return NONE;
 			}
@@ -330,6 +355,13 @@ namespace banana
 					: "A invites " + p.name + " to play together.";
 				break;
 			}
+			case K_JOIN: t.help = ask.from + " started " + ask.title + ". Join as player 2: it starts here, connected to " + ask.from + "'s game."; break;
+			case K_STAYOUT:
+				if (ask.path.empty()) t.title = ask.title + " isn't on this handheld";
+				t.help = !ask.path.empty() ? ask.from + " plays " + ask.title + " alone. You stay in the menu."
+					: ask.from + " started " + ask.title + ", but it isn't on this handheld" +
+						(parental::on(ui->data) ? ", or isn't one of the allowed games." : " (" + ask.file + ").") + " " + ask.from + " plays alone.";
+				break;
 			case K_VISIBLE:
 				t.help = "When the other handhelds on this Wi-Fi see you.";
 				t.hint = ui->togetherAlways() ? "Always: an invitation comes as a notification, even with this page closed."
@@ -345,7 +377,7 @@ namespace banana
 		std::vector<Settings::Chip> chips(const std::vector<Row>& r) const
 		{
 			const Row* cur = sel < (int)r.size() ? &r[sel] : nullptr;
-			std::vector<Settings::Chip> cs = { { Key::B, "B", "Close" } };
+			std::vector<Settings::Chip> cs = { { Key::B, "B", asking ? (ask.path.empty() ? "OK" : "Stay out") : "Close" } };
 			std::string a;
 			if (cur)
 				switch (cur->kind)
@@ -356,6 +388,8 @@ namespace banana
 				case K_CANCEL: a = "Cancel"; break;
 				case K_PEER: a = "Invite"; break;
 				case K_VISIBLE: a = "Change"; break;
+				case K_JOIN: a = "Join"; break;
+				case K_STAYOUT: a = ask.path.empty() ? "OK" : "Stay out"; break;
 				default: break;
 				}
 			if (!a.empty()) cs.push_back({ Key::A, "A", a, true });
@@ -432,6 +466,18 @@ namespace banana
 		mOpen = true;
 		page = TOGETHER;
 		tg->open();
+	}
+
+	void Settings::togetherAsk(const std::vector<std::string>& s)
+	{
+		openTogether();
+		auto f = [&](size_t i) { return i < s.size() ? s[i] : std::string(); };
+		Together::Ask& a = tg->ask;
+		a.from = f(0); a.addr = f(1); a.system = f(2); a.file = f(3); a.size = atoll(f(4).c_str()); a.core = f(5); a.title = f(6);
+		a.path = findGame ? findGame(a.system, a.file, a.size) : "";
+		tg->asking = true;
+		tg->sel = tg->top = 0;
+		tg->message.clear();
 	}
 
 	void Settings::closeTogether() { if (tg) tg->close(); }	// (from Settings' close: the page is LIST by then)

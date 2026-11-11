@@ -29,6 +29,7 @@ n64|psx|"") ;;
     esac
     # (the program in /usr/bin; beside the launchers in a test deploy, which can only replace whole folders)
     bfbin=/usr/bin/bananafront; [ -x $bfbin ] || bfbin=/usr/libexec/banana/bananafront
+    [ -n "$BANANA_NETPLAY" ] && bf=0    # (Play together's two players: netplay is RetroArch's)
     [ $bf = 1 ] && [ -x $bfbin ] && [ -x /usr/libexec/banana/run-bananafront ] &&
         BANANAFRONT_BIN=$bfbin exec /usr/libexec/banana/run-bananafront "$@" ;;
 esac
@@ -40,6 +41,12 @@ if [ -n "$BANANA_SYSTEM" ]; then
     # (the image's cores, then the ones RetroArch's Core Downloader put on the card)
     for d in /usr/lib/libretro /data/retroarch/cores; do
         [ -n "$c" ] && [ -f $d/${c}_libretro.so ] && { CORE=$d/${c}_libretro.so; break; }
+    done
+fi
+# Play together, joining: the core the friend's handheld runs (netplay needs the same one on both), when it's here
+if [ -n "$BANANA_NETPLAY_CORE" ]; then
+    for d in /usr/lib/libretro /data/retroarch/cores; do
+        [ -f $d/${BANANA_NETPLAY_CORE}_libretro.so ] && { CORE=$d/${BANANA_NETPLAY_CORE}_libretro.so; break; }
     done
 fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
@@ -359,6 +366,15 @@ fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
+# Play together (banana-ui's settings_together.cpp): the game with the linked handheld, by RetroArch's netplay: its
+# host, player 1 (BANANA_NETPLAY=host), or connected to the friend's, player 2 (connect, BANANA_NETPLAY_ADDR), each
+# by its player name (the DS name)
+NP1= NP2=
+case $BANANA_NETPLAY in
+host) NP1=--host ;;
+connect) NP1=--connect=$BANANA_NETPLAY_ADDR ;;
+esac
+[ -n "$NP1" ] && NP2=--nick=${BANANA_NETPLAY_NICK:-Banana} && echo "run-retroarch: netplay $NP1 $NP2" >&2
 MON=$(sed -n '/^video_monitor_index = "\([0-9]\)"/{s//\1/;h};${x;p}' $CFG)
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the game panel (banana-ui keeps the other panel): RetroArch draws on the panel it was lent (a DRM lease, its
@@ -374,7 +390,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
     if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>&1; fi
     LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$BA$RBA" --verbose \
-        --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
+        --log-file /run/banana/retroarch.log $NP1 ${NP2:+"$NP2"} -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
     P=$!
     exec 4>&-
 else
@@ -389,7 +405,7 @@ else
     printf 'stdin_cmd_enable = "true"\n' > $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
     [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
-    retroarch --config $CFG --appendconfig "$L|$RA$BA$RBA" -L "$CORE" "$2" < $FIFO &
+    retroarch --config $CFG --appendconfig "$L|$RA$BA$RBA" $NP1 ${NP2:+"$NP2"} -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP

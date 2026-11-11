@@ -792,6 +792,47 @@ static int shutdownPercent(const std::string& data)
 }
 
 // a game in the library by its path, launched as A on it in its own system's shelf would (false: not in the library)
+// Play together: the game here for the friend's (its system, its file under the system's folder, its size): the same
+// file (by name, a second card's too), else one of the same size whose name is the same but for its tags ("Contra
+// (USA).nes", "Contra.nes"); "" without one. In Parental controls' library only the allowed games are there
+static std::string findForFriend(Host& lib, const std::string& sys, const std::string& rel, long long size)
+{
+	auto base = [](std::string r)
+	{
+		if (r.compare(0, 5, "@sd2/") == 0) r = r.substr(5);
+		return r.substr(r.rfind('/') == std::string::npos ? 0 : r.rfind('/') + 1);
+	};
+	auto stem = [&](const std::string& r)
+	{
+		std::string b = base(r), o;
+		int depth = 0;
+		for (char c : b.substr(0, b.rfind('.')))
+		{
+			if (c == '(' || c == '[') depth++;
+			else if (c == ')' || c == ']') { if (depth) depth--; }
+			else if (!depth && isalnum((unsigned char)c)) o += (char)tolower((unsigned char)c);
+		}
+		return o;
+	};
+	auto sizeOf = [](const std::string& p) { struct stat st; return stat(p.c_str(), &st) == 0 ? (long long)st.st_size : -1LL; };
+	std::string want = base(rel), wantStem = stem(rel), byStem;
+	for (int s = 0; s < lib.systemCount(); s++)
+	{
+		const auto& sh = lib.shelf(s);
+		if (sh.favorites || sh.apps || sh.def.id != sys) continue;
+		for (auto& g : sh.games)
+		{
+			if (base(g.rel) == want && sizeOf(g.path) == size) return g.path;
+			if (byStem.empty() && stem(g.rel) == wantStem && sizeOf(g.path) == size) byStem = g.path;
+		}
+	}
+	return byStem;
+}
+
+// Play together's game with the linked handheld (RetroArch's netplay): "host" (this one started it: player 1) or
+// "connect" (joining the friend's: player 2, its address and core); runGame takes it
+struct Netplay { std::string mode, addr, core; };
+
 static bool launchPath(Host& lib, const std::string& want)
 {
 	for (int s = 0; s < lib.systemCount(); s++)
@@ -1057,6 +1098,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settings.allGames = [&]() { return lib.allGames(); };
 	settings.artCount = [&] { return artCount(lib); };
+	settings.findGame = [&](const std::string& sys, const std::string& rel, long long size) { return findForFriend(lib, sys, rel, size); };
 	LowBattery low;
 	HealthNotice health;
 	FetchNotice fetchNotice;
@@ -1126,6 +1168,17 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// after this command tells its outcome
 		else if (op == "filesdone") { for (int i = 0; i < 3000 && settings.filesWorking(); i++) usleep(10000); }
 		// fetchdone: banana-fetch's runner said a job finished (fetch.finished), as the device's loop hears of it
+		// togethercheck: Play together's together-start looked at, as the menu's loop does (its age not: a test's)
+		else if (op == "togethercheck")
+		{
+			std::string st = Settings::togetherFile("together-start");
+			std::vector<std::string> f;
+			std::stringstream in(st.substr(0, st.find('\n')));
+			for (std::string x; std::getline(in, x, '\t');) f.push_back(x);
+			// (a number, the friend's name, its address, the system, the file, its size, the core, the title)
+			if (f.size() >= 8) { settings.togetherAsk(std::vector<std::string>(f.begin() + 1, f.end())); logf("play together: %s started %s: asked", f[1].c_str(), f[7].c_str()); }
+			else logf("play together: nothing started");
+		}
 		else if (op == "fetchdone")
 		{
 			if (fetchNotice.check(o.data, now))
@@ -1231,6 +1284,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				}
 				if (r == Settings::DELETED) afterDelete(lib, ui, settings.deletedFiles);
 				if (r == Settings::SHELVES) afterShelves(lib, ui);
+				// (Play together's Join: the game the menu would start, and how)
+				if (r == Settings::JOIN) logf("join: %s, connected to %s, core %s", settings.joinPath.c_str(), settings.joinAddr.c_str(), settings.joinCore.c_str());
 				if (r == Settings::SEARCH)
 				{
 					lib.setSearch(settings.searchText);
@@ -2442,6 +2497,7 @@ int main(int argc, char** argv)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.allGames = [&]() { return lib.allGames(); };
 	settingsView.artCount = [&] { return artCount(lib); };
+	settingsView.findGame = [&](const std::string& sys, const std::string& rel, long long size) { return findForFriend(lib, sys, rel, size); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	if (setupNow)
 	{
@@ -2555,10 +2611,18 @@ int main(int argc, char** argv)
 	};
 
 	// what a change on the settings screen means for the menu (called with uiLock held)
+	Netplay netplay;	// (Play together: the next game's, Join's; runGame takes it)
 	auto applySettings = [&](Settings::Result r)
 	{
 		switch (r)
 		{
+		case Settings::JOIN:
+			// Play together: the friend's game, here, as player 2 (the main loop starts it: runGame)
+			netplay = Netplay{ "connect", settingsView.joinAddr, settingsView.joinCore };
+			logf("play together: joining %s's game at %s (core %s)", settingsView.joinPath.c_str(), netplay.addr.c_str(), netplay.core.c_str());
+			recordEvent("together", "join %s", settingsView.joinPath.c_str());
+			if (!launchPath(lib, settingsView.joinPath)) { logf("play together: %s isn't in the library", settingsView.joinPath.c_str()); netplay = Netplay(); }
+			break;
 		case Settings::MOVED: sound.play("scroll"); break;
 		case Settings::LANGUAGE:
 			// every text cached in the menus is in the old language: banana-ui starts again (init runs it anew)
@@ -2966,6 +3030,33 @@ int main(int argc, char** argv)
 		std::string rom = lib.gameAt(game).path;
 		gameRomPath = rom;
 		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
+		// Play together: a RetroArch game with a linked handheld is played as two (netplay): joined (Join, applySettings),
+		// or started here, the friend asked to join (START: the system, the file, its size, the core, the title)
+		Netplay np = netplay;
+		netplay = Netplay();
+		const bool viaRetroArch = sd.run.find("run-retroarch") != std::string::npos;
+		if (!viaRetroArch) np = Netplay();
+		else if (np.mode.empty() && Settings::togetherFile("together-link").compare(0, 6, "linked") == 0)
+		{
+			std::string core = getConfValue(o.data + "/settings.conf", "core." + sd.id, "");
+			if (core.empty())
+			{
+				std::istringstream w(sd.run);
+				std::string launcher;
+				w >> launcher >> core;	// (systems.conf's: run-retroarch <core> %ROM%)
+			}
+			struct stat st;
+			long long size = stat(rom.c_str(), &st) == 0 ? (long long)st.st_size : 0;
+			std::string rel = lib.gameAt(game).rel;
+			Settings::togetherSay("start " + sd.id + "\t" + rel + "\t" + std::to_string(size) + "\t" + core + "\t" + lib.gameAt(game).title);
+			np.mode = "host";
+			logf("play together: hosting %s (core %s)", lib.gameAt(game).title.c_str(), core.c_str());
+		}
+		{
+			// what the others on the Wi-Fi see this one doing (banana-together's HELLOs), while the game runs
+			std::string p = getenv("TOGETHER_RUN") ? std::string(getenv("TOGETHER_RUN")) : "/run/banana";
+			std::ofstream(p + "/together-state") << "game\t" << lib.gameAt(game).title << "\n";
+		}
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
 		{
@@ -3150,6 +3241,12 @@ int main(int argc, char** argv)
 			setenv("BANANA_ROM", rom.c_str(), 1);
 			setenv("BANANA_SYSTEM", sd.id.c_str(), 1);
 			setenv("BANANA_RA_PROGRESS", PROGRESS, 1);
+			if (!np.mode.empty())	// (run-retroarch: netplay, RetroArch always)
+			{
+				setenv("BANANA_NETPLAY", np.mode.c_str(), 1);
+				setenv("BANANA_NETPLAY_NICK", settingsView.playerName().c_str(), 1);
+				if (np.mode == "connect") { setenv("BANANA_NETPLAY_ADDR", np.addr.c_str(), 1); setenv("BANANA_NETPLAY_CORE", np.core.c_str(), 1); }
+			}
 			if (panel)
 			{
 				setenv("BANANA_DRM_LEASE_FD", std::to_string(leaseFd).c_str(), 1);
@@ -3270,6 +3367,7 @@ int main(int argc, char** argv)
 		be.invalidate();
 		input.open(o.touch, disp.width(), disp.height());
 		bottomIdle.setOwned(false, nowMs());	// the game session is over: the menu keeps the bottom screen awake
+		unlink(((getenv("TOGETHER_RUN") ? std::string(getenv("TOGETHER_RUN")) : "/run/banana") + "/together-state").c_str());	// (in the menu again)
 		std::lock_guard<std::mutex> l(worker.uiLock);
 		{
 			int achA = -1, achB = 0;
@@ -3524,6 +3622,32 @@ int main(int argc, char** argv)
 		// watch wakes the loop when it's moved into place)
 		if (health.check(now)) { logf("health notice: %s", health.title.c_str()); recordEvent("notice", "%s", health.title.c_str()); dirty = true; sound.play("notify"); }
 		if (events.check(now)) { logf("notice: %s", events.title.c_str()); recordEvent("notice", "%s", events.title.c_str()); dirty = true; sound.play("notify"); }
+		{
+			// Play together: the linked friend started a game (banana-together's together-start): Play together opens
+			// here in the menu, asking whether to join (always asked). One older than a minute came during a game: let go
+			static std::string tgStartSeen = Settings::togetherFile("together-start");
+			std::string st = Settings::togetherFile("together-start");
+			if (st != tgStartSeen)
+			{
+				tgStartSeen = st;
+				std::vector<std::string> f;
+				{
+					std::stringstream in(st.substr(0, st.find('\n')));
+					for (std::string x; std::getline(in, x, '\t');) f.push_back(x);
+				}
+				struct stat sst;
+				std::string p = (getenv("TOGETHER_RUN") ? std::string(getenv("TOGETHER_RUN")) : "/run/banana") + "/together-start";
+				if (f.size() >= 8 && stat(p.c_str(), &sst) == 0 && time(nullptr) - sst.st_mtime < 60)
+				{
+					std::lock_guard<std::mutex> l(worker.uiLock);
+					settingsView.togetherAsk(std::vector<std::string>(f.begin() + 1, f.end()));
+					logf("play together: %s started %s: asked", f[1].c_str(), f[7].c_str());
+					recordEvent("together", "%s started %s", f[1].c_str(), f[7].c_str());
+					sound.play("notify");
+					dirty = true;
+				}
+			}
+		}
 
 		bool want;
 		{

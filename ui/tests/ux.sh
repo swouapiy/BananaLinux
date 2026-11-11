@@ -389,6 +389,22 @@ grep -q "^aaaaaaaaaaaaaaaa	" "$TGB/together-invite" 2>/dev/null && ok_tg=1 || { 
 python3 -I -c 'import socket, sys; s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM); s.sendto(b"accept", sys.argv[1])' "$TGB/together.sock" 2>/dev/null
 for i in $(seq 30); do grep -q '^linked' "$TGA/together-link" 2>/dev/null && break; sleep 0.1; done
 grep -q "^linked	bbbbbbbbbbbbbbbb	.*	Bob" "$TGA/together-link" 2>/dev/null || { echo "FAIL $size: Play together: not linked once Bob accepted: $(cat "$TGA/together-link" 2>&1)"; fail=1; }
+# linked, Bob starts a game (his menu's START): this one asked; Join names the game here, Bob's address and his core,
+# and Bob hears she's joining. Then one this handheld hasn't: only OK, and Bob hears she stays out
+tg_bob() { python3 -I -c 'import socket, sys; s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM); s.sendto(sys.argv[2].encode(), sys.argv[1])' "$TGB/together.sock" "$1"; }
+tg_bob "$(printf 'start snes\tSuper Smoothie World.sfc\t1024\tsnes9x\tSuper Smoothie World')"
+for i in $(seq 30); do [ -s "$TGA/together-start" ] && break; sleep 0.1; done
+ux_run together-join "togethercheck; shot ux-tg-ask; press a; sleep 1000" $tg_env
+ux_check together-join "play together: Bob started Super Smoothie World: asked"
+ux_check together-join "join: .*/roms/snes/Super Smoothie World.sfc, connected to 127.0.0.1, core snes9x"
+for i in $(seq 30); do grep -q "joining" "$TGB/together-news" 2>/dev/null && break; sleep 0.1; done
+grep -q "joining	" "$TGB/together-news" 2>/dev/null || { echo "FAIL $size: Play together: Bob wasn't told she joins: $(cat "$TGB/together-news" 2>&1)"; fail=1; }
+tg_bob "$(printf 'start nes\tContra (USA).nes\t131088\tfceumm\tContra')"
+for i in $(seq 30); do grep -q "Contra" "$TGA/together-start" 2>/dev/null && break; sleep 0.1; done
+ux_run together-nogame "togethercheck; shot ux-tg-nogame; press a; sleep 1000" $tg_env
+for i in $(seq 30); do grep -q "stayout" "$TGB/together-news" 2>/dev/null && break; sleep 0.1; done
+grep -q "stayout	" "$TGB/together-news" 2>/dev/null || { echo "FAIL $size: Play together: a game not here didn't tell Bob she stays out: $(cat "$TGB/together-news" 2>&1)"; fail=1; }
+grep -q "join:" "$OUT/$size-together-nogame.log" && { echo "FAIL $size: Play together: joined a game that isn't here"; fail=1; }
 ux_run together-linked "homeid together; press a; sleep 1200; shot ux-tg-linked; press down; press a; sleep 1200" $tg_env
 for i in $(seq 30); do [ -s "$TGB/together-link" ] || break; sleep 0.1; done
 [ ! -s "$TGB/together-link" ] && grep -q "left	" "$TGB/together-news" 2>/dev/null || { echo "FAIL $size: Play together: Leave didn't end Bob's link: $(cat "$TGB/together-link" "$TGB/together-news" 2>&1)"; fail=1; }

@@ -66,6 +66,18 @@ echo "6. both inviting each other at once: linked"
 say Ann "invite bbbbbbbbbbbbbbbb"; say Bob "invite aaaaaaaaaaaaaaaa"
 wait_for "$T/Ann/together-link" "^linked" && wait_for "$T/Bob/together-link" "^linked" && ok "linked both ways" || bad "links: $(cat "$T/Ann/together-link" "$T/Bob/together-link" 2>&1)"
 
+echo "6b. linked, Ann starts a game: Bob told what and from where; he joins, Ann told; then he stays out of the next"
+say Ann "$(printf 'start nes\tContra (USA).nes\t131088\tfceumm\tContra')"
+wait_for "$T/Bob/together-start" "^1	Ann	127.0.0.1	nes	Contra (USA).nes	131088	fceumm	Contra$" && ok "Bob told: Ann started Contra" || bad "Bob's start: $(cat "$T/Bob/together-start" 2>&1)"
+say Bob "answer join"
+wait_for "$T/Ann/together-news" "joining	Bob" && ok "Ann told: Bob joins" || bad "Ann's news: $(cat "$T/Ann/together-news" 2>&1)"
+say Ann "$(printf 'start snes\tMario.sfc\t1\tsnes9x\tMario')"
+wait_for "$T/Bob/together-start" "^2	Ann	" || bad "no second start"
+say Bob "answer stay"
+wait_for "$T/Ann/together-news" "stayout	Bob" && ok "Ann told: Bob stays out" || bad "Ann's news: $(cat "$T/Ann/together-news" 2>&1)"
+printf 'game\tContra\n' > "$T/Ann/together-state"
+wait_for "$T/Bob/together-peers" "	Ann	0.5.2.2	game	Contra	" && ok "Bob sees Ann playing Contra" || bad "Bob's peers: $(cat "$T/Bob/together-peers")"
+
 echo "7. Bob stops (the handheld turned off): Ann told he left, and its files gone"
 kill $PB; wait $PB 2>/dev/null; PB=
 wait_for "$T/Ann/together-news" "left	Bob" && ok "Ann told: Bob left" || bad "Ann's news: $(cat "$T/Ann/together-news" 2>&1)"

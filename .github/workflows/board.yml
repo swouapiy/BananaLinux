@@ -81,6 +81,11 @@ jobs:
       - name: Serial log on failure
         if: failure()
         run: tail -n 80 qemu-out/serial.log
+      - name: Play together between two handhelds in QEMU
+        run: sh tools/qemu-together.sh qemu-out/card.img qemu-together
+      - name: Play together's serial logs on failure
+        if: failure()
+        run: for v in A B; do echo "--- $v"; grep -a "together\|netplay\|launch" qemu-together/serial-$v.log | tail -n 30; done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -88,3 +93,6 @@ jobs:
           path: |
             qemu-out/*.png
             qemu-out/*.log
+            qemu-together/*.png
+            qemu-together/*.log
+            qemu-together/*.txt
