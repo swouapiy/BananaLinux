@@ -38,6 +38,8 @@
 #include <unistd.h>
 #include <vector>
 
+#include "artsystems.h"
+
 namespace
 {
 	// ---- libcurl, dlopen()ed as banana-ui does it ------------------------------------------------------------------
@@ -252,21 +254,7 @@ namespace
 
 	// ---- the card ---------------------------------------------------------------------------------------------------
 	struct System { std::string id, name, folder; std::vector<std::string> exts; };
-	const std::map<std::string, std::string> LIBRETRO = {
-		{ "nds", "Nintendo - Nintendo DS" }, { "gba", "Nintendo - Game Boy Advance" }, { "gbc", "Nintendo - Game Boy Color" },
-		{ "gb", "Nintendo - Game Boy" }, { "nes", "Nintendo - Nintendo Entertainment System" },
-		{ "snes", "Nintendo - Super Nintendo Entertainment System" }, { "megadrive", "Sega - Mega Drive - Genesis" },
-		{ "fds", "Nintendo - Family Computer Disk System" }, { "mastersystem", "Sega - Master System - Mark III" },
-		{ "gamegear", "Sega - Game Gear" }, { "sg-1000", "Sega - SG-1000" }, { "megacd", "Sega - Mega-CD - Sega CD" }, { "sega32x", "Sega - 32X" },
-		{ "ngp", "SNK - Neo Geo Pocket" }, { "ngpc", "SNK - Neo Geo Pocket Color" }, { "wonderswan", "Bandai - WonderSwan" },
-		{ "wonderswancolor", "Bandai - WonderSwan Color" }, { "atarilynx", "Atari - Lynx" }, { "virtualboy", "Nintendo - Virtual Boy" },
-		{ "pokemini", "Nintendo - Pokemon Mini" }, { "gameandwatch", "Handheld Electronic Game" },
-		{ "pcengine", "NEC - PC Engine - TurboGrafx 16" }, { "pcenginecd", "NEC - PC Engine CD - TurboGrafx-CD" }, { "atari2600", "Atari - 2600" },
-		{ "atari7800", "Atari - 7800" }, { "colecovision", "Coleco - ColecoVision" }, { "intellivision", "Mattel - Intellivision" },
-		{ "vectrex", "GCE - Vectrex" }, { "odyssey2", "Magnavox - Odyssey2" },
-		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" }, { "psp", "Sony - PlayStation Portable" },
-		{ "arcade", "FBNeo - Arcade Games" }, { "neogeo", "FBNeo - Arcade Games" }, { "cps1", "FBNeo - Arcade Games" },
-		{ "cps2", "FBNeo - Arcade Games" }, { "cps3", "FBNeo - Arcade Games" } };
+	const std::map<std::string, std::string>& LIBRETRO = banana::artCollections();	// (artsystems.h)
 	// the arcade systems: their games' files are the sets' short names (sf2.zip), the collection's pictures are named
 	// after the games ("Street Fighter II_ The World Warrior (World 910522)"); FBNeo's DAT in libretro-database's
 	// metadat (fbneo-split) gives one from the other, and the year
@@ -622,6 +610,7 @@ int main(int argc, char** argv)
 	{
 		auto lr = LIBRETRO.find(sys.id);
 		if (lr == LIBRETRO.end()) continue;
+		if (setting(("art." + sys.id).c_str(), "on") == "off") continue;	// (Games artworks > Systems: Skip)
 		std::vector<std::pair<std::string, std::vector<std::string>>> places;	// a folder and the games in it
 		int count = 0;
 		for (size_t ri = 0; ri < roots.size(); ri++)

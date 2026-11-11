@@ -367,3 +367,9 @@ ux_run emu-bds "home nds; press start; press a; press down; press a; wait 400; s
 ux_head "$OUT/$size-ux-emu-bds-bot.png" "$OUT/$size-ux-emu-bds-head.png"
 [ "$(ux_diff "$OUT/$size-ux-emu-bds-head.png" "$OUT/$size-ux-sd-page-head.png")" = 0 ] && { echo "FAIL $size: Emulator settings opened SuperDrastic's page with BananaDS chosen"; fail=1; }
 sed -i '/^nds_emulator = /d' "$UXFX/data/settings.conf"
+
+# Look & sound > Games artworks > Systems: a row each system artworks come for (Fetch or Skip); Right on the first sets
+# it to Skip (settings.conf's art.<id> = off, which the fetch leaves out)
+ux_run artsys "home nds; press start; row Games artworks art_systems; press a; shot ux-artsys; press right; press b; press b; press b"
+grep -q '^art\.[a-z0-9-]* = off' "$UXFX/data/settings.conf" || { echo "FAIL $size: Games artworks > Systems: Skip wasn't saved: $(grep '^art\.' "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
+sed -i '/^art\./d' "$UXFX/data/settings.conf"

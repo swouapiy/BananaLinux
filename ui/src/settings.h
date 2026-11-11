@@ -46,8 +46,11 @@ namespace banana
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
 		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
-		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
+		// the systems for Shown systems (id, name); withGames: the ids with games on the card (Games artworks > Systems
+		// lists those, and any set to Skip)
+		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems, const std::set<std::string>& withGames = {});
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
+		std::set<std::string> gameSystems;	// (setSystems' withGames)
 		void addShelfRows();
 		void close();
 		// the shelf's Files tile: the cards' folders and files, copied, moved, renamed and deleted (settings_files.cpp)
