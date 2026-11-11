@@ -113,7 +113,9 @@ echo "3. A starts the GBA game: B is asked and joins; their netplay connects"
 # (QEMU's virtual GPU has no GBM device for RetroArch's video, which then quits after a few seconds: here it runs
 # without a picture, the netplay the same; only the cards' copies changed)
 # (the file made as run-retroarch makes it when there's none yet: a card new from the boot test has none)
-for v in A B; do vm $v "C=/data/retroarch/retroarch.cfg; [ -f \$C ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg \$C; }; sed -i '/^video_driver *=/d' \$C; echo 'video_driver = \"null\"' >> \$C"; done
+# gpSP without its recompiler too: under QEMU the code it writes crashes the game after some 13 s (the handhelds run it)
+for v in A B; do vm $v "C=/data/retroarch/retroarch.cfg; [ -f \$C ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg \$C; }; sed -i '/^video_driver *=/d' \$C; echo 'video_driver = \"null\"' >> \$C
+    O=/data/retroarch/config/gpSP/gpSP.opt; mkdir -p \${O%/*}; touch \$O; sed -i '/^gpsp_drc *=/d' \$O; echo 'gpsp_drc = \"disabled\"' >> \$O"; done
 key A backspace; sleep 1
 vm A "echo '/data/roms/gba/Boot Test Advance.gba' > /run/banana/launch"
 wait_for A "play together: hosting" 30 "hosting the game (START sent)"
@@ -131,6 +133,10 @@ vm A "netstat -tn 2>/dev/null | grep ':55435'" > "$OUT/A-netstat.txt" 2>&1 || tr
 vm B "netstat -tn 2>/dev/null | grep ':55435'" > "$OUT/B-netstat.txt" 2>&1 || true
 grep -q ESTABLISHED "$OUT/A-netstat.txt" && grep -q ESTABLISHED "$OUT/B-netstat.txt" && ok "the netplay connection is up between them" ||
     bad "no netplay connection: A $(tr '\n' ' ' < "$OUT/A-netstat.txt"), B $(tr '\n' ' ' < "$OUT/B-netstat.txt")"
+# (the connection open isn't the game shared: B's RetroArch saying it's in, as player 2, is)
+for i in $(seq 30); do vm B "grep -qi 'joined as player 2' /run/banana/retroarch.log" 2>/dev/null && break; sleep 1; done
+vm B "grep -qi 'joined as player 2' /run/banana/retroarch.log" 2>/dev/null && ok "B is in A's game as player 2 (RetroArch's own word)" ||
+    bad "B's RetroArch never said it joined as player 2"
 sleep 5; shot A game; shot B game
 for v in A B; do
     vm $v "cat /run/banana/retroarch.log" > "$OUT/$v-retroarch.log" 2>&1 || true
