@@ -290,9 +290,9 @@ add_update() { mkdir -p "$DATA/banana/updates"; make_update "$DATA/banana/update
 with_data add_update
 boot third
 grep -q "rcS: slot a booted" "$OUT/serial.log" && ok "the third boot ran slot a" || bad "the third boot didn't say it ran slot a"
-# Start > System (L from the first group) > Updates (its first row) > Update (that page's first) > the package (under
-# Check for updates and Beta channel) > A again to confirm
-key s pgup ret ret ret; sleep 1; shot third-updates; key down down ret ret
+# Start > System (L from the first group) > Updates (its third row: Language, Time zone, Updates; no Second SD card in
+# QEMU) > Update (that page's first) > the package (under Check for updates and Beta channel) > A again to confirm
+key s pgup ret down down ret ret; sleep 1; shot third-updates; key down down ret ret
 wait_for "written to slot b" 300 "the update was written to slot b and checked"
 sleep 2; shot third-updated
 key ret            # Restart
@@ -309,7 +309,7 @@ wait_for "boot-guard: slot b started: kept" 30 "the update kept once its menu wa
 shot fourth-menu
 # Start > System > Updates > Previous version (three rows down: Test versions, Update check, Previous version;
 # checked headless) > A twice: back to slot a from the next boot
-key s pgup ret ret down down down ret ret
+key s pgup ret down down ret down down down ret ret
 for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || break; sleep 0.5; done
 kill -0 $QEMU 2>/dev/null && { bad "no restart from Previous version"; kill $QEMU; } || ok "restarted from Previous version"
 wait $QEMU 2>/dev/null || true
