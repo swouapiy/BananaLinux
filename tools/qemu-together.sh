@@ -114,7 +114,7 @@ echo "3. A starts the GBA game: B is asked and joins; their netplay connects"
 # without a picture, the netplay the same; only the cards' copies changed)
 # (the file made as run-retroarch makes it when there's none yet: a card new from the boot test has none)
 # gpSP without its recompiler too: under QEMU the code it writes crashes the game after some 13 s (the handhelds run it)
-for v in A B; do vm $v "C=/data/retroarch/retroarch.cfg; [ -f \$C ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg \$C; }; sed -i '/^video_driver *=/d' \$C; echo 'video_driver = \"null\"' >> \$C
+for v in A B; do vm $v "C=/data/retroarch/retroarch.cfg; [ -f \$C ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg \$C; }; sed -i '/^video_driver *=/d; /^frontend_log_level *=/d' \$C; printf 'video_driver = \"null\"\\nfrontend_log_level = \"0\"\\n' >> \$C
     O=/data/retroarch/config/gpSP/gpSP.opt; mkdir -p \${O%/*}; touch \$O; sed -i '/^gpsp_drc *=/d' \$O; echo 'gpsp_drc = \"disabled\"' >> \$O"; done
 key A backspace; sleep 1
 vm A "echo '/data/roms/gba/Boot Test Advance.gba' > /run/banana/launch"
@@ -124,6 +124,8 @@ sleep 2; shot B asked
 key B ret
 wait_for B "play together: joining" 20 "joining (Join)"
 wait_for A "run-retroarch: netplay --host" 60 "RetroArch started as the netplay host"
+wait_for A "run-retroarch: netplay: taking players" 60 "A's RetroArch takes players (listening; its HELLOs say hosting)"
+wait_for B "play together: the friend's game takes players" 30 "B waited for it"
 wait_for B "run-retroarch: netplay --connect=10.9.0.1" 60 "RetroArch started connected to A"
 for i in $(seq 60); do
     vm A "netstat -tn 2>/dev/null | grep -q ':55435 .*ESTABLISHED'" 2>/dev/null && vm B "netstat -tn 2>/dev/null | grep -q ':55435 .*ESTABLISHED'" 2>/dev/null && break
@@ -137,6 +139,11 @@ grep -q ESTABLISHED "$OUT/A-netstat.txt" && grep -q ESTABLISHED "$OUT/B-netstat.
 for i in $(seq 30); do vm B "grep -qi 'joined as player 2' /run/banana/retroarch.log" 2>/dev/null && break; sleep 1; done
 vm B "grep -qi 'joined as player 2' /run/banana/retroarch.log" 2>/dev/null && ok "B is in A's game as player 2 (RetroArch's own word)" ||
     bad "B's RetroArch never said it joined as player 2"
+# (each RetroArch's CPU time, 3 s apart: still running its frames, or stuck)
+for v in A B; do
+    vm $v 'p=$(pidof retroarch); [ -n "$p" ] || { echo "no retroarch"; exit; }; a=$(cut -d" " -f14 /proc/$p/stat); sleep 3; b=$(cut -d" " -f14 /proc/$p/stat); echo "retroarch $p: $((b - a)) ticks in 3 s, $(cat /proc/$p/wchan)"' > "$OUT/$v-cpu.txt" 2>&1 || true
+    echo "--- $v: $(cat "$OUT/$v-cpu.txt")"
+done
 sleep 5; shot A game; shot B game
 for v in A B; do
     vm $v "cat /run/banana/retroarch.log" > "$OUT/$v-retroarch.log" 2>&1 || true

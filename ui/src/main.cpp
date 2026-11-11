@@ -3055,8 +3055,8 @@ int main(int argc, char** argv)
 		{
 			// what the others on the Wi-Fi see this one doing (banana-together's HELLOs), while the game runs
 			std::string p = getenv("TOGETHER_RUN") ? std::string(getenv("TOGETHER_RUN")) : "/run/banana";
-			// ("hosting": a Play together game, the friend can join it late from the page)
-			std::ofstream(p + "/together-state") << (np.mode == "host" ? "hosting" : "game") << "\t" << lib.gameAt(game).title << "\n";
+			// (a Play together game: run-retroarch makes it "hosting" once RetroArch takes players)
+			std::ofstream(p + "/together-state") << "game\t" << lib.gameAt(game).title << "\n";
 		}
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
@@ -3247,26 +3247,49 @@ int main(int argc, char** argv)
 				setenv("BANANA_NETPLAY", np.mode.c_str(), 1);
 				setenv("BANANA_NETPLAY_NICK", settingsView.playerName().c_str(), 1);
 				if (np.mode == "connect") { setenv("BANANA_NETPLAY_ADDR", np.addr.c_str(), 1); setenv("BANANA_NETPLAY_CORE", np.core.c_str(), 1); }
-				// RetroArch tries the friend's game once: until it's taking players (its game loaded there too, port 55435),
-				// for up to 20 s, this one waits (here, the menu already let go)
-				in_addr host{};
-				if (np.mode == "connect" && inet_pton(AF_INET, np.addr.c_str(), &host) == 1)
+				// RetroArch tries the friend's game once: until it takes players (its HELLOs say "hosting", run-retroarch's
+				// word once RetroArch listens), for up to 20 s, this one waits (here, the menu already let go). The friend's
+				// line read plainly, without stdio (the child of a threaded program)
+				if (np.mode == "connect")
+				{
+					std::string peersPath = (getenv("TOGETHER_RUN") ? std::string(getenv("TOGETHER_RUN")) : "/run/banana") + "/together-peers";
+					std::string want = "\t" + np.addr + "\t";
+					static char buf[8192];
 					for (int i = 0; i < 40; i++)
 					{
-						int s = socket(AF_INET, SOCK_STREAM, 0);
-						sockaddr_in a{};
-						a.sin_family = AF_INET; a.sin_port = htons(55435); a.sin_addr = host;
-						bool up = s >= 0 && connect(s, (sockaddr*)&a, sizeof a) == 0;
-						if (s >= 0) ::close(s);
+						int fd = ::open(peersPath.c_str(), O_RDONLY);
+						ssize_t n = fd >= 0 ? read(fd, buf, sizeof buf - 1) : -1;
+						if (fd >= 0) ::close(fd);
+						bool up = false;
+						if (n > 0)
+						{
+							buf[n] = 0;
+							// a line: id, address, name, version, state, game...: the friend's, with "hosting" for its state
+							for (char* l = buf; l && *l && !up; )
+							{
+								char* e = strchr(l, '\n');
+								if (e) *e = 0;
+								char* a = strstr(l, want.c_str());
+								if (a && a == strchr(l, '\t'))
+								{
+									int tabs = 0;
+									char* f = l;
+									while (f && tabs < 4) { f = strchr(f, '\t'); if (f) { f++; tabs++; } }
+									up = f && strncmp(f, "hosting\t", 8) == 0;
+								}
+								l = e ? e + 1 : nullptr;
+							}
+						}
 						if (up)
 						{
-							char m[96];	// (no stdio after the fork: another thread may have held its lock)
-							int n = snprintf(m, sizeof m, "play together: the friend's game takes players after %.1f s\n", i * 0.5);
-							if (write(2, m, n) < 0) {}
+							char m[96];
+							int k = snprintf(m, sizeof m, "play together: the friend's game takes players after %.1f s\n", i * 0.5);
+							if (write(2, m, k) < 0) {}
 							break;
 						}
 						usleep(500000);
 					}
+				}
 			}
 			if (panel)
 			{

@@ -408,6 +408,19 @@ else
     retroarch --config $CFG --appendconfig "$L|$RA$BA$RBA" $NP1 ${NP2:+"$NP2"} -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
+# Play together's host: the friend told its game takes players (the HELLOs' "hosting", together-state's first word)
+# once RetroArch listens on its port, 55435 (D88B), and not before: a join tried earlier is refused, and RetroArch
+# doesn't try again
+if [ "$BANANA_NETPLAY" = host ]; then
+    TS=${TOGETHER_RUN:-/run/banana}/together-state; T=$(printf '\t')
+    ( i=0
+      while [ $i -lt 60 ] && kill -0 $P 2>/dev/null; do
+          if grep -qi ':D88B [0-9A-F]*:0000 0A' /proc/net/tcp /proc/net/tcp6 2>/dev/null; then
+              sed -i "1s/^game$T/hosting$T/" $TS; echo "run-retroarch: netplay: taking players after $i s" >&2; break
+          fi
+          sleep 1; i=$((i + 1))
+      done ) &
+fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
 wait $P; S=$?
 while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
