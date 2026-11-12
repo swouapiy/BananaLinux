@@ -39,7 +39,8 @@
     "pico-8": "glass/icons/pico-8.png", "recently-played": "glass/icons/recently-played.png",
     "favorites": "glass/icons/favorites.png", "downloads": "glass/icons/downloads.png",
     "bshare": "glass/icons/bshare.png", "together": "glass/icons/together.png", "rocknixdsstore": "glass/icons/rocknixdsstore.png",
-    "storeapps": "glass/icons/storeapps.png", "rocknixdsbank": "glass/icons/rocknixdsbank.png"
+    "storeapps": "glass/icons/storeapps.png", "rocknixdsbank": "glass/icons/rocknixdsbank.png",
+    "ereaderds": "glass/icons/ereaderds.png"
   },
 
   "vars": {
