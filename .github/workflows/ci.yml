@@ -69,7 +69,7 @@ jobs:
     timeout-minutes: 360
     strategy:
       matrix:
-        board: [rgds, rgds-plus]
+        board: [rgds-plus]
     env:
       BR2_DL_DIR: ${{ github.workspace }}/dl
     steps:
@@ -127,7 +127,7 @@ jobs:
     timeout-minutes: 45
     strategy:
       matrix:
-        board: [rgds, rgds-plus]
+        board: [rgds-plus]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
