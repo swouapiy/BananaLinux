@@ -107,6 +107,8 @@ static double lid_sleep_at;	/* the lid shut: the sleep a moment later (lid_closi
 static pid_t lid_paused;	/* the game's group stopped by the lid closing, 0 none (lid_closing) */
 static double lid_pause_at;	/* a DS game: its pause a moment after the close, once it has seen it */
 static double lid_delay = 3;	/* seconds from the close to the sleep (the sleep test's BANANAD_TEST_LID_DELAY) */
+#define BACK_TWICE 0.5	/* seconds: Back pressed again within this is "twice" */
+static double back_once_at;	/* Back pressed once in PICO-8: Splore again then, unless a second press came first */
 static double menu_sleep_at;	/* the menu's Sleep (banana-ui wrote /run/banana/sleep-now and sent SIGHUP): a moment later,
 				 * once the button that chose it is let go */
 static double power_since, last_input, ignore_power_until;
@@ -2586,6 +2588,22 @@ static void handle(const struct input_event *e)
 	case BTN_TR2: if (e->value == 1 && !fn_held) ra_button("r2"); break;
 	case BTN_THUMBL: if (e->value == 1 && !fn_held) ra_button("l3"); break;
 	case BTN_THUMBR: if (e->value == 1 && !fn_held) ra_button("r3"); break;
+	case BTN_Z:
+		/* Back twice within half a second, in a port (run-port's, PortMaster's menu too) or in PICO-8: it quits, as a
+		 * shutdown ends it (game_save_quit's SIGTERM; run-port stops what the port started). Neither has a quit of
+		 * its own that works the same everywhere. Once, in PICO-8's Splore: back to Splore (back_once_at, below) */
+		if (e->value == 1) {
+			static double back_at;
+			pid_t g = pid_of("/run/banana/game.pid"), pg = g ? getpgid(g) : 0;
+			int port = g && pg > 0 && pgrp_member(pg, "run-port"), pico8 = g && pg > 0 && pgrp_member(pg, "pico8_64");
+			if (!port && !pico8) { back_at = back_once_at = 0; break; }
+			if (now - back_at > BACK_TWICE) { back_at = now; if (pico8) back_once_at = now + BACK_TWICE; break; }
+			back_at = back_once_at = 0;
+			double wait;
+			sleep_log("back twice: %s quits", port ? "the port" : "PICO-8");
+			game_save_quit(g, pg, &wait);
+		}
+		break;
 	case KEY_POWER:
 		if (now < ignore_power_until) break;
 		if (e->value) { power_down = 1; power_since = now; }
@@ -2849,6 +2867,7 @@ int main(int argc, char **argv)
 		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (lid_pause_at > 0) { double d = lid_pause_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (menu_sleep_at > 0) { double d = menu_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
+		if (back_once_at > 0) { double d = back_once_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (wait > 1 && night_test_every() > 0) wait = 1;	/* (the night test's request for the next sleep looked for) */
 		if (pt_due >= 0 && pt_due < wait) wait = pt_due;	/* Parental controls: a game's time counted, its warnings, its end */
 		if (recst.on && sel_down && !sel_marked && wait > 0.1) wait = 0.1;	/* (Select held: the marker at 2 s) */
@@ -2941,6 +2960,18 @@ int main(int argc, char **argv)
 			if (lid_closed) suspend_now("lid closed");
 		}
 		if (menu_sleep_at > 0 && now >= menu_sleep_at) { menu_sleep_at = 0; suspend_now("the menu's Sleep"); }
+		/* Back once in PICO-8 started on Splore (run-pico8's pico8-splore): PICO-8 has no key back to Splore from a cart
+		 * on every version, so it is ended and run-pico8 starts Splore again (pico8-back). A cart started on its own:
+		 * nothing (twice quits) */
+		if (back_once_at > 0 && now >= back_once_at) {
+			back_once_at = 0;
+			pid_t g = pid_of("/run/banana/game.pid"), pg = g ? getpgid(g) : 0, p;
+			if (pg > 0 && (p = pgrp_member(pg, "pico8_64")) && access("/run/banana/pico8-splore", F_OK) == 0) {
+				close(open("/run/banana/pico8-back", O_WRONLY | O_CREAT, 0644));
+				sleep_log("back: PICO-8 back to Splore");
+				kill(p, SIGTERM);
+			}
+		}
 		/* never sleeping (autosleep_minutes 0): off after poweroff_minutes without input, as a held power button does
 		 * (the game saves first); not on the charger */
 		if (cfg.poweroff_min > 0 && cfg.autosleep_min <= 0 && idle && now - last_input >= cfg.poweroff_min * 60.0 &&
