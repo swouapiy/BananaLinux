@@ -189,8 +189,9 @@ ux_head() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 
 for s in sd-page hotkeys-sd-back ds-row sd-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
 [ "$(ux_diff "$OUT/$size-ux-sd-page-head.png" "$OUT/$size-ux-hotkeys-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic's hotkeys wasn't back on its Hotkeys row"; fail=1; }
 [ "$(ux_diff "$OUT/$size-ux-ds-row-head.png" "$OUT/$size-ux-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic wasn't back on its row in Nintendo DS"; fail=1; }
-# Other systems > Picture & sound (its fifth row) opens its page (Shader first), B back on its row
-ux_run ra-picture "home 0; press start; press r; press a; press down; wait 400; shot ux-ra-row; press a; wait 400; shot ux-ra-picture; press b; wait 400; shot ux-ra-back"
+# Other systems > Picture & sound (its fourth row: Frontend, Screen, Second screen first) opens its page (Shader first),
+# B back on its row
+ux_run ra-picture "home 0; press start; press r; press a; press down; press down; press down; wait 400; shot ux-ra-row; press a; wait 400; shot ux-ra-picture; press b; wait 400; shot ux-ra-back"
 for s in ra-row ra-picture ra-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-ra-row-bot.png" "$OUT/$size-ux-ra-picture-bot.png")" || { echo "FAIL $size: Other systems > Picture & sound didn't open"; fail=1; }
 [ "$(ux_diff "$OUT/$size-ux-ra-row-head.png" "$OUT/$size-ux-ra-back-head.png")" = 0 ] || { echo "FAIL $size: B from Picture & sound wasn't back on its row in Other systems"; fail=1; }

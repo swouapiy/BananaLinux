@@ -985,6 +985,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			recordView(ui, lib);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
+		else if (op == "row")
+		{
+			// row <section> <key>: Settings open on that row of that list ("row Other systems ra_systems"; the section may
+			// have spaces: the key is the last word)
+			std::string rest, sec, key;
+			std::getline(cs >> std::ws, rest);
+			size_t sp = rest.find_last_of(' ');
+			if (sp != std::string::npos) { sec = rest.substr(0, sp); key = rest.substr(sp + 1); } else sec = rest;
+			if (!settings.isOpen()) settings.open();
+			settings.openSection(sec);
+			settings.toRow(key);
+			logf("row %s %s", sec.c_str(), key.c_str());
+		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
 		else if (op == "setupneeded") logf("setupneeded: %d", Settings::setupNeeded(o.data) ? 1 : 0);
@@ -2763,7 +2776,15 @@ int main(int argc, char** argv)
 		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
 			sd.run.find("run-bananafront") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
-		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
+		// a system's own value (Settings > Other systems > the system: <key>.<system>), else the general one
+		auto own = [&](const std::string& key) -> std::string
+		{
+			auto i = settings.find(key + "." + sd.id);
+			if (i != settings.end() && !i->second.empty()) return i->second;
+			i = settings.find(key);
+			return i == settings.end() ? "" : i->second;
+		};
+		bool panel = ra && own("retroarch_panel") != "off" && disp.isOpen();
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1, outFd = -1;
 		const char* OUT = "/run/banana/retroarch.out";	// RetroArch's stdout, for the Pokémon companion
 		if (panel)
@@ -2771,6 +2792,9 @@ int main(int argc, char** argv)
 			// the panel RetroArch is set to use (Settings > Other systems > Screen: video_monitor_index 2 the top, 1 the
 			// bottom)
 			gameScreen = getConfValue("/data/retroarch/retroarch.cfg", "video_monitor_index", "2") == "1" ? 1 : 0;
+			// (or the system's own screen: ra_screen.<system>, top or bottom)
+			const std::string screen = own("ra_screen");
+			if (screen == "top") gameScreen = 0; else if (screen == "bottom") gameScreen = 1;
 			leaseFd = disp.lease(gameScreen);
 			unlink(FIFO);
 			unlink("/run/banana/retroarch.log");	// (the last game's: the panel must not read it as this one's)

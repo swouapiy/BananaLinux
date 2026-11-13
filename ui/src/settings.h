@@ -50,10 +50,12 @@ namespace banana
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
+		void toRow(const std::string& key);		// the cursor on that row, in its group's list (the tests' row)
 		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
 		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
 		void addShelfRows();
+		void addSystemRows();	// Other systems > Per system configurations: a row each system, by manufacturer then system
 		void close();
 		// the shelf's Files tile: the cards' folders and files, copied, moved, renamed and deleted (settings_files.cpp)
 		void openFiles();
@@ -210,6 +212,8 @@ namespace banana
 		{
 			std::string section, icon, label, help;
 			std::string mirror;						// a hotkeys page's L2 to R3 (INFO): the row whose value it shows
+			std::string inherit;					// a system's own (Other systems > the system): the general row's key,
+													// whose value its first choice, "Same as all", follows (no line kept)
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
 			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
