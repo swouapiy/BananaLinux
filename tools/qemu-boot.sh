@@ -284,9 +284,9 @@ add_update() { mkdir -p "$DATA/banana/updates"; make_update "$DATA/banana/update
 with_data add_update
 boot third
 grep -q "rcS: slot a booted" "$OUT/serial.log" && ok "the third boot ran slot a" || bad "the third boot didn't say it ran slot a"
-# Start > System (the last tile) > Updates (its first row) > Update (the Updates page's first row) > the package > A again
-# to confirm
-key s pgup ret ret ret; sleep 1; shot third-updates; key ret ret
+# Start > System (the last tile) > Updates (its first row) > Update (the Updates page's first row) > the package (under
+# Check for updates and Beta channel) > A again to confirm
+key s pgup ret ret ret; sleep 1; shot third-updates; key down down ret ret
 wait_for "written to slot b" 300 "the update was written to slot b and checked"
 sleep 2; shot third-updated
 key ret            # Restart
