@@ -498,6 +498,7 @@ namespace banana
 			{ "wonderswan", { "Bandai", "WonderSwan" } }, { "wonderswancolor", { "Bandai", "WonderSwan Color" } },
 			{ "cps1", { "Capcom", "CPS-1" } }, { "cps2", { "Capcom", "CPS-2" } }, { "cps3", { "Capcom", "CPS-3" } },
 			{ "colecovision", { "Coleco", "ColecoVision" } }, { "vectrex", { "GCE", "Vectrex" } },
+			{ "c64", { "Commodore", "64" } }, { "zxspectrum", { "Sinclair", "ZX Spectrum" } },
 			{ "odyssey2", { "Magnavox", "Odyssey 2" } }, { "intellivision", { "Mattel", "Intellivision" } },
 			{ "pcengine", { "NEC", "PC Engine" } }, { "pcenginecd", { "NEC", "PC Engine CD" } },
 			{ "fds", { "Nintendo", "Famicom Disk System" } }, { "gameandwatch", { "Nintendo", "Game & Watch" } },
