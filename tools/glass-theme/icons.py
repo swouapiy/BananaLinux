@@ -3,6 +3,7 @@
 # fill, a sheen over its top half, a hairline edge, a soft shadow). Drawn at 4x, saved at 192 x 192.
 #   ereaderds.png  the reader (eReaderDS): an open book with a bookmark
 #   ports.png      Ports (PortMaster): a cargo ship, "PM" on its hull
+#   files.png      Files: an amber folder, a page in it
 #
 #   python3 tools/glass-theme/icons.py      (needs Pillow; writes system/rootfs/usr/share/banana/themes/glass/icons/)
 import math, os, sys
@@ -89,7 +90,19 @@ def ports():
     layer(c, ImageChops.multiply(sea, m_rrect((60, 560, N - 60, 700), 60)), (170, 225, 255), (60, 160, 240), (20, 100, 190), sheen=0.3)
     return c
 
-for name, draw in [('ereaderds', reader), ('ports', ports)]:
+AMBER_BACK = ((255, 200, 95), (225, 140, 20), (150, 85, 0))
+AMBER = ((255, 228, 130), (255, 172, 35), (165, 95, 0))
+
+def files():
+    c = Image.new('RGBA', (N, N))
+    back = ImageChops.lighter(m_rrect((90, 170, 678, 610), 44), m_rrect((90, 130, 340, 250), 40))
+    shadow(c, back); layer(c, back, *AMBER_BACK, sheen=0.2)
+    paper = m_rrect((140, 215, 628, 500), 22); shadow(c, paper, 6, 0.25, 8); layer(c, paper, *PAGE, sheen=0)
+    lines(c, [190]*3, [260, 310, 360], [300, 360, 240], INK)
+    front = m_rrect((90, 330, 678, 630), 44); shadow(c, front, 8, 0.3, 12); layer(c, front, *AMBER, sheen=0.45)
+    return c
+
+for name, draw in [('ereaderds', reader), ('ports', ports), ('files', files)]:
     if len(sys.argv) > 1 and name not in sys.argv[1:]: continue
     draw().resize((192, 192), Image.LANCZOS).save(os.path.join(OUT, name + '.png'))
     print('wrote', name + '.png')
