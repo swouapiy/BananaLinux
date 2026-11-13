@@ -489,6 +489,30 @@ namespace banana
 		{ "psx", "PlayStation", { { "pcsx_rearmed", "PCSX ReARMed" }, { "swanstation", "SwanStation" }, { "mednafen_psx", "Beetle PSX" } } },
 		{ "n64", "Nintendo 64", { { "mupen64plus_next", "Mupen64Plus-Next" }, { "parallel_n64", "ParaLLEl N64" } } },
 	};
+	// Per system configurations' rows: "Manufacturer - System", listed by manufacturer then system (arcade boards with no
+	// one maker: the name alone)
+	static std::string systemRowLabel(const std::string& id)
+	{
+		static const std::map<std::string, std::pair<const char*, const char*>> MAKER = {
+			{ "atari2600", { "Atari", "2600" } }, { "atari7800", { "Atari", "7800" } }, { "atarilynx", { "Atari", "Lynx" } },
+			{ "wonderswan", { "Bandai", "WonderSwan" } }, { "wonderswancolor", { "Bandai", "WonderSwan Color" } },
+			{ "cps1", { "Capcom", "CPS-1" } }, { "cps2", { "Capcom", "CPS-2" } }, { "cps3", { "Capcom", "CPS-3" } },
+			{ "colecovision", { "Coleco", "ColecoVision" } }, { "vectrex", { "GCE", "Vectrex" } },
+			{ "odyssey2", { "Magnavox", "Odyssey 2" } }, { "intellivision", { "Mattel", "Intellivision" } },
+			{ "pcengine", { "NEC", "PC Engine" } }, { "pcenginecd", { "NEC", "PC Engine CD" } },
+			{ "fds", { "Nintendo", "Famicom Disk System" } }, { "gameandwatch", { "Nintendo", "Game & Watch" } },
+			{ "gb", { "Nintendo", "Game Boy" } }, { "gba", { "Nintendo", "Game Boy Advance" } }, { "gbc", { "Nintendo", "Game Boy Color" } },
+			{ "nes", { "Nintendo", "NES" } }, { "n64", { "Nintendo", "Nintendo 64" } }, { "pokemini", { "Nintendo", "Pokémon mini" } },
+			{ "snes", { "Nintendo", "Super Nintendo" } }, { "virtualboy", { "Nintendo", "Virtual Boy" } },
+			{ "sega32x", { "Sega", "32X" } }, { "gamegear", { "Sega", "Game Gear" } }, { "mastersystem", { "Sega", "Master System" } },
+			{ "megacd", { "Sega", "Mega CD" } }, { "megadrive", { "Sega", "Mega Drive" } }, { "sg-1000", { "Sega", "SG-1000" } },
+			{ "neogeo", { "SNK", "Neo Geo" } }, { "ngp", { "SNK", "Neo Geo Pocket" } }, { "ngpc", { "SNK", "Neo Geo Pocket Color" } },
+			{ "psx", { "Sony", "PlayStation" } },
+		};
+		auto it = MAKER.find(id);
+		if (it == MAKER.end()) return "";
+		return std::string(it->second.first) + " - " + it->second.second;
+	}
 	static bool coreInstalled(const std::string& core)
 	{
 		return access(("/usr/lib/libretro/" + core + "_libretro.so").c_str(), F_OK) == 0
@@ -772,7 +796,7 @@ namespace banana
 			items.back().hints = { "Nothing tears.", "Games run as fast as they can. The screen can show a half-drawn frame." };
 		}
 		// each system's page (Other systems > Per system configurations > the system; its row: addSystemRows): its emulator, then its own screen, second
-		// screen, shader, border and quick resume, each "Same as all" at first (no line in settings.conf: the general
+		// screen, shader and border, each "Same as all" at first (no line in settings.conf: the general
 		// value, which the choice shows in brackets), then its buttons. Read by run-retroarch, run-bananafront and the
 		// game's start in banana-ui (the screen and the second screen)
 		{
@@ -815,9 +839,6 @@ namespace banana
 				own("picture", "Screen border", "What fills the space around this system's picture.", "ra_border", "ra_border",
 					{ "Off", "On" }, { "off", "on" },
 					{ "Black around the picture.", "A quiet border in the menu's colours, the picture at a sharp size." });
-				own("gamepad", "Quick resume", "What quitting one of this system's games does.", "ra_resume", "savestate_auto_save",
-					{ "Off", "On" }, { "off", "on" },
-					{ "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place. Next time the game carries on from there (not in Hardcore)." });
 				// L2, R2, L3 and R3 alone, and A/B and X/Y swapped (ra_btn_l2.<system>... ra_swap_ab.<system>; run-retroarch).
 				// No line: the image's template (R2 fast-forwards in the 2D systems' games), else the game's own
 				buttonRows(S, "gamepad", btnHelp, menu, "ra_btn_", "." + id, btnNames, btnValues);
@@ -825,7 +846,7 @@ namespace banana
 					menu, ("ra_swap_ab." + id).c_str(), { "Off", "On" }, { "off", "on" });
 			}
 		}
-		add(O, "gamepad", "Per system configurations", "Each system's own settings: its emulator, screen, look, quick resume and buttons.",
+		add(O, "gamepad", "Per system configurations", "Each system's own settings: its emulator, screen, look and buttons.",
 			"", "ra_systems", {}, {}, Item::PAGE);
 		add(O, "gamepad", "Reset RetroArch", "Restores RetroArch's settings. Saves, states and your account stay. Press A twice.",
 			"", "ra_reset", { "" }, { "" }, Item::ACTION);
@@ -1945,21 +1966,23 @@ namespace banana
 	}
 	void Settings::addSystemRows()
 	{
-		// Other systems > Per system configurations: a row for each system (A opens its page), those with games on the
-		// card first, then the rest, each part in RA_SYSTEMS' order
+		// Other systems > Per system configurations: a row for each system (A opens its page), "Manufacturer - System"
+		// (systemRowLabel) in alphabetical order, manufacturer first
 		items.erase(std::remove_if(items.begin(), items.end(), [](const Item& it) { return it.key.rfind("ra_sys.", 0) == 0; }),
 			items.end());
-		std::vector<Item> rows, rest;
+		std::vector<Item> rows;
 		for (const auto& sys : RA_SYSTEMS)
 		{
 			Item it;
+			const std::string label = systemRowLabel(sys.id);
 			it.section = "Per system configurations";
-			it.icon = "gamepad"; it.label = sys.label; it.key = std::string("ra_sys.") + sys.id; it.kind = Item::PAGE;
-			it.help = gameSystems.count(sys.id) ? "This system's own settings: its emulator, screen, look, quick resume and buttons."
-				: "This system's own settings: its emulator, screen, look, quick resume and buttons. No games on the card yet.";
-			(gameSystems.count(sys.id) ? rows : rest).push_back(it);
+			it.icon = "gamepad"; it.label = label.empty() ? sys.label : label; it.key = std::string("ra_sys.") + sys.id; it.kind = Item::PAGE;
+			it.help = gameSystems.count(sys.id) ? "This system's own settings: its emulator, screen, look and buttons."
+				: "This system's own settings: its emulator, screen, look and buttons. No games on the card yet.";
+			rows.push_back(it);
 		}
-		rows.insert(rows.end(), rest.begin(), rest.end());
+		auto key = [](const std::string& l) { std::string k = l; for (auto& c : k) c = (char)std::tolower((unsigned char)c); return k; };
+		std::stable_sort(rows.begin(), rows.end(), [&](const Item& a, const Item& b) { return key(a.label) < key(b.label); });
 		items.insert(items.end(), rows.begin(), rows.end());
 	}
 	void Settings::addShelfRows()

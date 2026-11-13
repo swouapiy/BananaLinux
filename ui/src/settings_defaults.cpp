@@ -79,13 +79,12 @@ namespace banana
 			{ "ra_frontend", "auto", ENUM, FRONTEND, 0, 0, true },
 			{ "bananafront_cpugov", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "bananafront_lowlat", "on", ENUM, ON_OFF, 0, 0, true },
-			// (these four for each system too, Other systems > the system: ra_shader.gba... No line: the general value)
+			// (these two for each system too, Other systems > the system: ra_shader.gba... No line: the general value)
 			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true, true },
 			{ "ra_border", "off", ENUM, ON_OFF, 0, 0, true, true },
-			// only a system's own, no general line (the general ones are RetroArch's video_monitor_index and
-			// savestate_auto_save): ra_screen.<system> top or bottom, ra_resume.<system> on or off
+			// only a system's own, no general line (the general one is RetroArch's video_monitor_index):
+			// ra_screen.<system> top or bottom
 			{ "ra_screen", "", ENUM, TOP_BOTTOM, 0, 0, true, true },
-			{ "ra_resume", "", ENUM, ON_OFF, 0, 0, true, true },
 			{ "ra_audio_latency", "64", ENUM, LATENCY, 0, 0, true },
 			{ "ra_vsync", "on", ENUM, ON_OFF, 0, 0, true },
 			// (only as <key>.<system>, a system's own: these are their values; the template has R2's fast-forward)

@@ -52,7 +52,7 @@ namespace banana
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
 		std::set<std::string> gameSystems;	// (setSystems' withGames)
 		void addShelfRows();
-		void addSystemRows();	// Other systems > Per system configurations: a row each system, those with games first
+		void addSystemRows();	// Other systems > Per system configurations: a row each system, by manufacturer then system
 		void close();
 		// the shelf's Files tile: the cards' folders and files, copied, moved, renamed and deleted (settings_files.cpp)
 		void openFiles();

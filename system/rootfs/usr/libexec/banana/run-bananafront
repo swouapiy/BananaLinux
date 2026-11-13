@@ -53,11 +53,9 @@ fi
 # Settings > Other systems > Audio latency (RetroArch's setting, the same buffer)
 lat=$(setting ra_audio_latency)
 case $lat in 32|64|128) set -- --audio-latency $lat "$@" ;; esac
-# Quick resume: RetroArch's savestate_auto_save (what the setting writes), or the system's own (ra_resume.<system>);
-# after Power off after sleeping, the automatic state loaded this once whatever the setting
-q=$(ra_cfg savestate_auto_save)
-case $BANANA_SYSTEM in ?*) case $(setting "ra_resume.$BANANA_SYSTEM") in on) q=true ;; off) q=false ;; esac ;; esac
-[ "$q" = true ] && set -- --resume-save --resume-load "$@"
+# Quick resume: RetroArch's savestate_auto_save (what the setting writes); after Power off after sleeping, the
+# automatic state loaded this once whatever the setting
+[ "$(ra_cfg savestate_auto_save)" = true ] && set -- --resume-save --resume-load "$@"
 if [ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$ROM}" ]; then
     rm -f /run/banana/resume-once; set -- --resume-load "$@"
     echo "run-bananafront: resuming after Power off after sleeping" >&2

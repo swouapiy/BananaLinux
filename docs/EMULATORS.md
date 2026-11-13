@@ -108,14 +108,14 @@ Load and Quick resume (`buildroot/patches/superdrastic/0001-*`). Those lines of 
 at every start; the rest of DraStic's buttons stay its own menu's.
 
 Settings > Other systems starts with what every system's games share (Frontend, Screen, Second screen, Picture &
-sound, Quick resume, RetroAchievements), then **Per system configurations**: every system, those with games on the
-card first, each opening its own page. A system's page has its **Emulator** (`core.<system>`), then its own **Screen**, **Second screen**,
-**Shader**, **Screen border** and **Quick resume** (`ra_screen.<system>`, `retroarch_panel.<system>`,
-`ra_shader.<system>`, `ra_border.<system>`, `ra_resume.<system>` in `banana/settings.conf`), each **Same as all** at
+sound, Quick resume, RetroAchievements), then **Per system configurations**: every system as "Manufacturer - System"
+(Atari - 2600 ... Sony - PlayStation, by manufacturer then system), each opening its own page. A system's page has its **Emulator** (`core.<system>`), then its own **Screen**, **Second screen**,
+**Shader** and **Screen border** (`ra_screen.<system>`, `retroarch_panel.<system>`, `ra_shader.<system>`,
+`ra_border.<system>` in `banana/settings.conf`; Quick resume stays one setting for all), each **Same as all** at
 first: no line, and the general value is used (the choice shows it in brackets). `run-retroarch` and `run-bananafront`
 read a system's own value first (`own`); banana-ui does for the screen it lends the game and the game panel. A
-system's own screen or quick resume goes into RetroArch's appended config for that game only, and `retroarch.cfg`
-keeps the general one.
+system's own screen goes into RetroArch's appended config for that game only, and `retroarch.cfg` keeps the
+general one.
 
 The other systems have their buttons too, on each system's page (Settings > Other systems > the system; `ra_btn_l2.<system>` ... `ra_btn_r3.<system>` and `ra_swap_ab.<system>`): L2,
 R2, L3 or R3 pressed alone does a job of RetroArch's instead of the game's button (fast-forward on and off, save or
