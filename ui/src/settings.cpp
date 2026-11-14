@@ -451,6 +451,9 @@ namespace banana
 	// Settings > Other systems > each RetroArch system's emulator: the cores that can run it, the image's first (the
 	// default), shown when installed: in the image (/usr/lib/libretro) or downloaded with RetroArch's Core Downloader
 	// (/data/retroarch/cores, libretro_directory). run-retroarch looks in the same two places.
+	// Picture size's choices (Other systems > Picture & sound, and each system's page): ra_scale
+	static const std::vector<std::string> SCALE_HINTS = { "As RetroArch has it.", "The game's shape, as large as fits.",
+		"Sharp, even pixels at a whole-number size, with a black margin.", "The whole screen. Some games look stretched." };
 	static const struct RaSystem { const char* id; const char* label; std::vector<std::pair<const char*, const char*>> cores; } RA_SYSTEMS[] = {
 		{ "gba", "Game Boy Advance", { { "gpsp", "gpSP" }, { "mgba", "mGBA" }, { "bananagba", "BananaGBA" }, { "vba_next", "VBA Next" }, { "vbam", "VBA-M" }, { "meteor", "Meteor" } } },
 		{ "gbc", "Game Boy Color", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
@@ -789,6 +792,9 @@ namespace banana
 			add(PS, "picture", "Screen border", "What fills the space around a game's picture.",
 				menu, "ra_border", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "Black around the picture.", "A quiet border in the menu's colours, the picture at a sharp size." };
+			add(PS, "picture", "Picture size", "How big other systems' games are drawn.",
+				menu, "ra_scale", { "Default", "Fit", "Pixel perfect", "Full screen" }, { "default", "fit", "integer", "full" });
+			items.back().hints = SCALE_HINTS;
 			add(PS, "music", "Audio latency", "How soon the sound follows the game.",
 				menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
 			items.back().hints = { "The quickest. A busy game can crackle.", "The usual balance.", "The safest: no crackle, a little more delay." };
@@ -840,6 +846,25 @@ namespace banana
 				own("picture", "Screen border", "What fills the space around this system's picture.", "ra_border", "ra_border",
 					{ "Off", "On" }, { "off", "on" },
 					{ "Black around the picture.", "A quiet border in the menu's colours, the picture at a sharp size." });
+				own("picture", "Picture size", "How big this system's games are drawn.", "ra_scale", "ra_scale",
+					{ "Default", "Fit", "Pixel perfect", "Full screen" }, { "default", "fit", "integer", "full" }, SCALE_HINTS);
+				// the emulator's own options (ra-coreopts writes them into its options file): no line, the emulator's own
+				if (id == "gba" || id == "gbc")
+				{
+					add(S, "picture", "Colour correction", "Colours as the handheld's own screen showed them.",
+						menu, ("ra_colour." + id).c_str(), { "Emulator's own", "On", "Off" }, { "", "on", "off" });
+					items.back().hints = { "As the emulator has it.", "Softer colours, as on the real screen the games were made for.",
+						"The colours as the game stores them: brighter and stronger." };
+				}
+				if (id == "gb")
+				{
+					add(S, "picture", "Game Boy palette", "The colours of Game Boy games.",
+						menu, "ra_gb_palette.gb", { "Emulator's own", "Grey", "Green", "Pocket", "Game Boy Color", "Super Game Boy" },
+						{ "", "grey", "green", "pocket", "gbc", "sgb" });
+					items.back().hints = { "As the emulator has it.", "Shades of grey.", "The original Game Boy's green.",
+						"The Game Boy Pocket's paler screen.", "The colours a Game Boy Color gave the game. Gambatte and mGBA only.",
+						"The colours a Super Game Boy gave the game. Gambatte and mGBA only." };
+				}
 				// L2, R2, L3 and R3 alone, and A/B and X/Y swapped (ra_btn_l2.<system>... ra_swap_ab.<system>; run-retroarch).
 				// No line: the image's template (R2 fast-forwards in the 2D systems' games), else the game's own
 				buttonRows(S, "gamepad", btnHelp, menu, "ra_btn_", "." + id, btnNames, btnValues);
@@ -1128,7 +1153,7 @@ namespace banana
 			{ "System", { "Language", "Time zone", "Updates", "Second SD card", "Parental controls", "Hotkeys", "First-time setup", "Reset options", "About", "Credits", "Developer options" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
-			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency" } },
+			{ "Picture & sound", { "Shader", "Screen border", "Picture size", "VSync", "Audio latency" } },
 			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
 		auto place = [&](const std::string& section, const std::string& name)
@@ -5751,7 +5776,7 @@ namespace banana
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
 	void Settings::openGame(const std::string& title, const std::string& romName, bool nds, const std::string& key,
-		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped)
+		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped, const std::string& system)
 	{
 		open();
 		pgScraped = scraped.empty() ? (name.empty() ? title : "") : scraped;
@@ -5767,6 +5792,46 @@ namespace banana
 			for (int i = 1; i < 3; i++) if (v == GAME_3D_VALUES[i]) pg3d = i;
 			for (int i = 1; i < 5; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
 			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
+		}
+		// another system's game: its system page's rows, for this game only (a row its page hasn't, it hasn't either)
+		pgRa.clear();
+		pgRaKey = system + "/" + romName;
+		if (!nds && !system.empty() && itemByKey("ra_screen." + system))
+		{
+			struct Spec { const char* label; const char* head; const char* help; const char* file; std::string key; };
+			const Spec specs[] = {
+				{ "Emulator", "This game's emulator", "The emulator for this game.", "core", "core." + system },
+				{ "Screen", "This game's screen", "Which screen this game plays on.", "screen", "ra_screen." + system },
+				{ "Second screen", "This game's second screen", "What the other screen shows while this game plays.", "panel", "retroarch_panel." + system },
+				{ "Shader", "This game's shader", "A look for this game.", "shader", "ra_shader." + system },
+				{ "Screen border", "This game's screen border", "What fills the space around this game's picture.", "border", "ra_border." + system },
+				{ "Picture size", "This game's picture size", "How big this game is drawn.", "scale", "ra_scale." + system },
+				{ "Colour correction", "This game's colours", "Colours as the handheld's own screen showed them.", "colour", "ra_colour." + system },
+				{ "Game Boy palette", "This game's palette", "The colours of this Game Boy game.", "gb_palette", "ra_gb_palette." + system },
+			};
+			for (const Spec& sp : specs)
+			{
+				const Item* si = itemByKey(sp.key);
+				if (!si) continue;
+				PgRa r;
+				r.label = sp.label; r.head = sp.head; r.file = std::string("ra-per-game-") + sp.file + ".conf";
+				r.help = joinTr(sp.help, "Same as system: as on its page in Other systems > Per system configurations.");
+				// what the system has now: its own choice, else (Same as all) the general one
+				Item c = *si;
+				load(c);
+				std::string now = c.at >= 0 && c.at < (int)c.names.size() ? c.names[c.at] : "";
+				if (c.at >= 0 && c.at < (int)c.values.size() && c.values[c.at].empty() && !c.inherit.empty())
+					if (const Item* g = itemByKey(c.inherit)) { Item gc = *g; load(gc); if (gc.at >= 0 && gc.at < (int)gc.names.size()) now = gc.names[gc.at]; }
+				// (made of translated parts, as "Same as all" is)
+				r.names = { lang::tr("Same as system") + (now.empty() ? "" : " (" + lang::tr(now) + ")") }; r.values = { "" };
+				for (size_t i = 0; i < si->values.size() && i < si->names.size(); i++)
+					if (!si->values[i].empty()) { r.names.push_back(si->names[i]); r.values.push_back(si->values[i]); }
+				const std::string cur = perGame(r.file, pgRaKey);
+				for (size_t i = 1; i < r.values.size(); i++) if (r.values[i] == cur) r.at = (int)i;
+				if (!cur.empty() && r.at == 0) { r.names.push_back(cur); r.values.push_back(cur); r.at = (int)r.values.size() - 1; }
+				pgRows.push_back((PgRow)(PG_RA + (int)pgRa.size()));
+				pgRa.push_back(r);
+			}
 		}
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
@@ -5824,6 +5889,16 @@ namespace banana
 		case Key::LEFT: case Key::RIGHT:
 		{
 			int d = k == Key::LEFT ? -1 : 1;
+			if (row >= PG_RA && row - PG_RA < (int)pgRa.size())
+			{
+				// kept at once, in the game's line of its row's file
+				PgRa& r = pgRa[row - PG_RA];
+				const int nv = (int)r.values.size();
+				r.at = (r.at + d + nv) % nv;
+				setPerGame(r.file, pgRaKey, r.values[r.at]);
+				pgChanged = true;
+				return MOVED;
+			}
 			if (row == PG_EMU) pgEmu = (pgEmu + d + 3) % 3;
 			else if (row == PG_3D) pg3d = (pg3d + d + 3) % 3;
 			else if (row == PG_RES)
@@ -5907,6 +5982,7 @@ namespace banana
 	std::string Settings::gameHelpOf(int row)
 	{
 		const bool plus = board_() == "rgds-plus";
+		if (row >= PG_RA && row - PG_RA < (int)pgRa.size()) return pgRa[row - PG_RA].help;
 		return row == PG_EMU
 				? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
 				  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
@@ -5971,9 +6047,9 @@ namespace banana
 		const int n = (int)pgRows.size();
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
-		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing"
+		auto label = [&](PgRow r) -> std::string { if (r >= PG_RA) return pgRa[r - PG_RA].label; return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing"
 			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
-		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming
+		auto value = [&](PgRow r) -> std::string { if (r >= PG_RA) return pgRa[r - PG_RA].names[pgRa[r - PG_RA].at]; return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming
 			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
@@ -5982,7 +6058,7 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
+		text(row >= PG_RA ? pgRa[row - PG_RA].head : row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true);
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);

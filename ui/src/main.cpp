@@ -1245,7 +1245,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				std::string key = lib.gameKey(ui.gameIndex());
 				auto t = lib.gameTitles(key);
-				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped, lib.systemOf(ui.gameIndex()).id);
 				logf("press x: game page for %s", path.c_str());
 				continue;
 			}
@@ -2752,7 +2752,7 @@ int main(int argc, char** argv)
 				auto t = lib.gameTitles(key);
 				ui->touchCancel();
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped);
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped, lib.systemOf(g).id);
 				rep.key = Key::NONE;
 				sound.play("select");
 				dirty = true;
@@ -3085,9 +3085,18 @@ int main(int argc, char** argv)
 		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
 			sd.run.find("run-bananafront") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
-		// a system's own value (Settings > Other systems > the system: <key>.<system>), else the general one
+		// this game's own value (X on it: banana/ra-per-game-<name>.conf, "<system>/<ROM file name> = <value>", as
+		// run-retroarch's pg), else the system's (Settings > Other systems > the system: <key>.<system>), else the general one
 		auto own = [&](const std::string& key) -> std::string
 		{
+			{
+				const std::string name = key == "retroarch_panel" ? "panel" : key.rfind("ra_", 0) == 0 ? key.substr(3) : key;
+				const std::string want = sd.id + "/" + rom.substr(rom.rfind('/') + 1) + " = ";
+				std::ifstream f(o.data + "/ra-per-game-" + name + ".conf");
+				std::string ln, v;
+				while (std::getline(f, ln)) if (ln.compare(0, want.size(), want) == 0) v = ln.substr(want.size());
+				if (!v.empty()) return v;
+			}
 			auto i = settings.find(key + "." + sd.id);
 			if (i != settings.end() && !i->second.empty()) return i->second;
 			i = settings.find(key);

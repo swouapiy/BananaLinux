@@ -164,7 +164,7 @@ namespace banana
 		// TITLES when one of those was typed, with them in gameName / gameSort for gameKey ("" each: as scraped)
 		void openGame(const std::string& title, const std::string& romName, bool nds = true,
 			const std::string& key = "", const std::string& name = "", const std::string& sort = "", const std::string& path = "",
-			const std::string& scraped = "");
+			const std::string& scraped = "", const std::string& system = "");
 		std::string gameKey, gameName, gameSort;
 		// the display's colour table (main: Display::setColors), for Screen colours: off while its page is up, the saved
 		// values when it closes
@@ -321,7 +321,12 @@ namespace banana
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0;	// (pg3d, pgMic, pgRes, pgTiming: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_RA = 32 };
+		// another system's game (X on it): its system page's rows for this game only (PG_RA + the index), each "Same as
+		// system" first: banana/ra-per-game-<name>.conf, "<system>/<ROM file name> = <value>" (run-retroarch's pg)
+		struct PgRa { std::string label, head, help, file; std::vector<std::string> names, values; int at = 0; };
+		std::vector<PgRa> pgRa;
+		std::string pgRaKey;
 		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)
