@@ -19,6 +19,9 @@ marlupatrocinio = Dev
 Majirefy = 简体中文 translation (Simplified Chinese)
 Vladislav (LVD) = Русский translation (Russian)
 Ruslan (Nestrahoff) = Русский translation (Russian)
+Olympicus = Italiano translation (Italian)
+HANHITSI = Suomi translation (Finnish)
+Pixelado Dev = Español translation (Spanish)
 
 [Testing]
 Duncan = QA

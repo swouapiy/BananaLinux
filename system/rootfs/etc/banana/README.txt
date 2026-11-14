@@ -42,6 +42,10 @@ folder, archives unpacked. Its servers are kept in banana/nas.conf (a remembered
 handheld: another one, or a computer, can't open it), its jobs in banana/downloads, its log in
 banana/logs/downloads.log. Options there: banana/settings.conf's downloads_* lines. A systems.conf of your own
 made before Downloads came needs its [downloads] section (from banana/systems.conf.default) for the tile.
+Speaker EQ: Settings > Display & sound > Speaker EQ evens out the speakers (never the headphones): a profile
+measured for this handheld, or one of your own, and seven sliders to adjust it by ear. Your own: a .txt in banana/speaker-eq in
+Equalizer APO's parametric format (what AutoEq and REW export: "Preamp: -3 dB", "Filter 1: ON PK Fc 1000 Hz Gain -4 dB
+Q 1.2"), picked in Profile.
 
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > Network > File sharing > SSH, then ssh root@<address>. Keys only, no passwords.
@@ -52,6 +56,14 @@ settings are in saves/ppsspp/PSP.
 A button bound away in RetroArch's
 menu (an A that stopped working): Settings > Other systems > Reset RetroArch puts its settings back to Banana's,
 the old ones moved to retroarch/backup-<date>; saves, states and the RetroAchievements account stay.
+
+Game & Watch (MAME): the games' MAME ROM zips in roms/gameandwatch (gnw_dkong2.zip...), and their MAME artwork zips,
+as you downloaded them, in roms/gameandwatch/artwork (the same names: gnw_dkong2.zip). On the second SD card the same
+folders. Without artwork a game still plays, its plain LCD. Names and covers fill in by themselves (the covers drawn
+from the artwork). Start = Game A, Select = Game B, L = Time, R = Alarm; F opens the menu (views, controls, Quit),
+F + Start quits, L2 swaps the panels, F + L2 saves a screenshot (in screenshots). From a RomM server: its Game & Watch
+platform, the artwork in its artwork folder (not its covers: "covers =" under [gameandwatch] in banana/systems.conf
+brings them instead of the drawn ones).
 
 Settings: banana/settings.conf (menu), banana/bananad.conf (sleep, power), banana/systems.conf (the systems
 list, to add or change emulators: only what you change, e.g. "[psx]" and a "run = ..." line under it; it is merged over

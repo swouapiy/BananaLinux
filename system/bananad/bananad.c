@@ -26,6 +26,8 @@
  *     Bluetooth headphones or speakers, while connected, come before both: the bluetooth script writes the one
  *     playing to /run/banana/bt/audio (from bluez-alsa's events), bananad watches that folder and plays through
  *     bluez-alsa's ALSA plugin, and back to the speakers or the jack when the file goes.
+ *     On the speakers (only: never the headphones or Bluetooth) the sound goes through the speaker EQ, banana-ui's
+ *     ALSA plugin banana_eq, which follows the profile Settings writes to /run/banana/speaker-eq (none: untouched).
  *
  * The menu's Sleep: banana-ui writes /run/banana/sleep-now and sends SIGHUP; the power button's sleep follows.
  * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
@@ -308,10 +310,30 @@ static void hooks_run(const char *when)
 	free(list);
 }
 
+/* the pid in a pid file, when that process is still the one the file names: the file may hold "<pid> <starttime>"
+ * (banana-ui's game.pid), and a pid whose process started at another time is a reused one; without it, the pid */
 static pid_t pid_of(const char *pidfile)
 {
-	int p = read_int(pidfile, 0);
-	return p > 0 && kill(p, 0) == 0 ? p : 0;
+	FILE *f = fopen(pidfile, "r");
+	if (!f) return 0;
+	int p = 0;
+	unsigned long long started = 0;
+	int got = fscanf(f, "%d %llu", &p, &started);
+	fclose(f);
+	if (got < 1 || p <= 0 || kill(p, 0) != 0) return 0;
+	/* (no file-time test: /proc/<pid>'s times are when its inode was first looked up, not the process's start, so a
+	 * live game looked "newer" than its pid file; only the start time in the file can tell a reused pid) */
+	if (!started) return p;
+	char path[32], buf[1024];
+	snprintf(path, sizeof path, "/proc/%d/stat", p);
+	f = fopen(path, "r");
+	if (!f || !fgets(buf, sizeof buf, f)) { if (f) fclose(f); return 0; }
+	fclose(f);
+	char *q = strrchr(buf, ')');
+	if (!q) return 0;
+	q += 2;
+	for (int i = 0; i < 19 && *q; i++) { while (*q && *q != ' ') q++; while (*q == ' ') q++; }
+	return strtoull(q, NULL, 10) == started ? p : 0;
 }
 
 /* banana-ui's pid, by its name in /proc */
@@ -873,13 +895,26 @@ static void resume_state_path(const char *emu, const char *rom, char *out, size_
 	snprintf(out, n, "%s/%.*s%s", dir, len, b, ext);
 }
 
-/* a command for RetroArch on its stdin (run-retroarch's pipe, or banana-ui's for the game panel) */
-static void ra_command(const char *c)
+/* a command for RetroArch on its stdin (run-retroarch's pipe, or banana-ui's for the game panel); 0: the pipe is
+ * gone (the game exited) or full for 100 ms */
+static int ra_command(const char *c)
 {
 	int fd = open("/run/banana/retroarch.cmd", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
-	if (fd < 0) return;
-	if (write(fd, c, strlen(c)) < 0) {}
+	if (fd < 0) return 0;
+	size_t n = strlen(c), at = 0;
+	while (at < n) {
+		ssize_t w = write(fd, c + at, n - at);
+		if (w > 0) { at += (size_t)w; continue; }
+		if (w < 0 && errno == EINTR) continue;
+		if (w < 0 && errno == EAGAIN) {
+			struct pollfd p = { fd, POLLOUT, 0 };
+			if (poll(&p, 1, 100) > 0) continue;
+		}
+		close(fd);
+		return 0;
+	}
 	close(fd);
+	return 1;
 }
 
 /* L2, R2, L3 or R3 pressed alone in a RetroArch game: its job's command (Settings > Other systems > the system;
@@ -951,10 +986,16 @@ static const char *game_save_quit(pid_t game, pid_t pg, double *wait)
 		}
 		if (slot < 0) slot = 0;
 		if (slot > 997) slot = 997;
-		for (int i = 0; i < slot + 2; i++) { ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
-		ra_command("SAVE_STATE\n");
-		usleep(500000);
-		ra_command("QUIT\n");
+		int ok = 1;
+		for (int i = 0; i < slot + 2 && ok; i++) { ok = ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
+		if (ok) { ok = ra_command("SAVE_STATE\n"); usleep(500000); }
+		if (ok) ra_command("QUIT\n");
+		else {
+			/* no state asked for (RetroArch gone, or not reading its pipe): nothing of this save to come back to,
+			 * and a resume-boot would load an older automatic state once at the next boot as if it were this one */
+			sleep_log("RetroArch's command pipe closed: no resume state saved");
+			emu = NULL;
+		}
 	} else {
 		/* the rest (PortMaster ports, PICO-8): SIGTERM, as a shutdown; no resume state to come back to */
 		kill(grp, SIGCONT);
@@ -1161,6 +1202,9 @@ static void suspend_now(const char *why)
 	double asleep_bat = 0;	/* the part of it on the battery: what turning off counts (a charger's time doesn't drain) */
 	const char *woke = "?";
 	int charger0 = charger_online();
+	/* the lid's sleeps ("lid closed", "lid still closed", "lid closed, the download done"): the lid looked at again
+	 * before each suspend, below */
+	int by_lid = !strncmp(why, "lid", 3);
 	for (;;) {
 		/* asked to stop (rcK, a shutdown over SSH) between two sleeps: awake, so the main loop goes (not asleep again) */
 		if (stopping) { woke = "asked to stop"; break; }
@@ -1178,6 +1222,18 @@ static void suspend_now(const char *why)
 				woke = early & WAKE_LID || (lid_was && !lid_closed) ? "lid opened" : "power button";
 				sleep_log("sleep (%s) called off: %s before it suspended", why,
 					early & WAKE_LID ? "the lid opened" : "the power button pressed");
+				break;
+			}
+		}
+		/* a sleep the lid started: the lid as it is now, just before the suspend. Opened again while the hooks took
+		 * Wi-Fi down (a second or more), its edge has gone by when the SoC suspends, and nothing but the power button
+		 * would wake it, the panels going dark under the user's eyes; its event is drained after the wake, so it is
+		 * read here. Open: awake as from a sleep (the game goes on, the post hooks bring Wi-Fi back) */
+		if (by_lid) {
+			read_lid();
+			if (!lid_closed) {
+				sleep_log("lid opened again before the suspend (%s): awake", why);
+				woke = "lid opened before the suspend";
 				break;
 			}
 		}
@@ -1436,11 +1492,23 @@ static void audio_route(void)
 	 * capture never started whatever bananad set the gains to (a standalone arecord, with no playback running, was
 	 * fine). Pinning the capture's slave to 48 kHz makes the emulator's 44.1 kHz capture run at the playback's
 	 * rate, ALSA's plug resampling it, and the two streams agree. */
-	char play[192], cap[160];
+	char play[256], cap[160];
+	/* the speakers, through the speaker EQ (banana-ui's ALSA plugin, ui/src/eq): a tiny speaker's peaks and dips
+	 * evened out, in each program's own audio thread, after plug has made the sound S16 stereo 48 kHz. It reads
+	 * /run/banana/speaker-eq, which Settings writes, every 10 ms: a change is heard at once, and no
+	 * file passes the sound through untouched. Never the headphones or Bluetooth: the profile is the speakers'.
+	 * (A build without the plugin, or one missing from the image: the plain route, no EQ.) The plugin is named by its
+	 * path in the config, so a program with its own libasound (a port's, whose plugin folder may be elsewhere) finds
+	 * it too instead of failing to open the speakers. */
+	static const char eq_lib[] = "/usr/lib/alsa-lib/libasound_module_pcm_banana_eq.so";
+	const int speakers = !bt && !hold && card_play >= 0 && (card_play == card_speaker || (card_speaker < 0 && !headphones));
+	const int eq = speakers && access(eq_lib, R_OK) == 0;
 	/* Bluetooth headphones first: bluez-alsa's PCM plugin (A2DP), plug converting the rest; the microphone stays the
 	 * rk817's */
 	if (bt)
 		snprintf(play, sizeof play, "{ type plug slave.pcm { type bluealsa device \"%s\" profile \"a2dp\" } }", bt_mac);
+	else if (eq)
+		snprintf(play, sizeof play, "{ type plug slave { pcm { type banana_eq slave.pcm \"hw:%d\" } format S16_LE channels 2 rate 48000 } }", card_play);
 	else if (card_play >= 0)
 		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
 	else
@@ -1450,12 +1518,13 @@ static void audio_route(void)
 	else
 		snprintf(cap, sizeof cap, "\"null\"");
 	const char *where = bt ? "Bluetooth headphones" : hold ? "nowhere: Bluetooth headphones being called back"
-		: card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
+		: eq ? "speakers, through the speaker EQ" : card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
 	char conf[768];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
+		"%s%s%s"
 		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n",
-		where, play, cap);
+		where, eq ? "pcm_type.banana_eq { lib \"" : "", eq ? eq_lib : "", eq ? "\" }\n" : "", play, cap);
 	/* no card yet (the codec probed late, QEMU): "null" keeps the alias valid instead of a "plughw:-1" that would
 	 * fail every later open; the ctl defaults to one, so its line goes only with a real card */
 	if (card_play >= 0 && n > 0 && (size_t)n < sizeof conf)
@@ -2779,6 +2848,7 @@ int main(int argc, char **argv)
 	rec_apply();
 	rec("bananad", "started");
 	signal(SIGCHLD, SIG_DFL);
+	signal(SIGPIPE, SIG_IGN);	/* a game's pipe that closed must not take the daemon with it */
 	struct sigaction sa = { 0 };
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
@@ -2857,8 +2927,9 @@ int main(int argc, char **argv)
 			if (dimmed && nquiet && wait > 1) wait = 1;	/* dimmed: a touch brings the panels back within a second */
 		}
 		/* recording: the touchscreen read every 0.2 s, before its buffer of motion can overflow (a touch's own time is
-		 * in its event, so it's recorded when it happened) */
-		if (recst.on && nquiet && wait > 0.2) wait = 0.2;
+		 * in its event, so it's recorded when it happened). Dimmed: the same, so a touch lights the panels again at
+		 * once and not at the next minute's look (only while dimmed in the menu: nothing else wakes bananad for it) */
+		if ((recst.on || dimmed) && nquiet && wait > 0.2) wait = 0.2;
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;

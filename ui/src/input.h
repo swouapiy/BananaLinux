@@ -8,12 +8,13 @@
 
 namespace banana
 {
-	enum class Key { NONE, LEFT, RIGHT, UP, DOWN, A, B, X, Y, L, R, START, SELECT, MENU };
+	enum class Key { NONE, LEFT, RIGHT, UP, DOWN, A, B, X, Y, L, R, START, SELECT, MENU, OTHER };	// (OTHER: back, L3, R3 - the menu's no use; the game panel's by code)
 
 	struct InputEvent
 	{
 		enum Type { PRESS, RELEASE, TOUCH_DOWN, TOUCH_MOVE, TOUCH_UP } type;
 		Key key = Key::NONE;
+		int code = 0;			// the evdev code of a button (L2 and L, back: the game panel's Companion button)
 		int screen = 1;
 		float x = 0, y = 0;		// panel px
 		double t = 0;			// when the kernel had it: CLOCK_MONOTONIC ms (BANANA_FRAME_STATS's press-to-panel delay)
@@ -33,7 +34,7 @@ namespace banana
 		void close();
 		// a device came or went in /dev/input (watched with inotify): open() again to take it
 		bool rescanDue() { bool r = rescan; rescan = false; return r; }
-		std::vector<int> fds() const;
+		int fds(int* out, int max) const;	// the device and watch fds, up to max: no allocation in the frame loop
 		// a touchscreen on that screen (0 top, 1 bottom): the RG DS has one on each, the RG DS Plus only the bottom one
 		bool hasTouch(int screen) const;
 		// read what is waiting on fd; events go to sink

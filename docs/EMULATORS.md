@@ -1,7 +1,7 @@
 # What Banana gives an emulator, and what it expects back
 
 This is the contract between the menu and any program that plays a game: DraStic (through SuperDrastic),
-RetroArch and BananaDS. Keep to it and the rest of Banana (sleep, the volume keys, the logs,
+RetroArch, BananaDS and MAME (Game & Watch). Keep to it and the rest of Banana (sleep, the volume keys, the logs,
 the settings) works around the emulator without knowing it.
 
 ## Starting
@@ -123,6 +123,10 @@ load a state, the menu, pause, a screenshot, nothing; R2 fast-forwards by defaul
 with F held, so `run-retroarch` lists the jobs in `/run/banana/ra-buttons` and moves those buttons' RetroPad binds to
 joystick buttons no pad has (30-33; put back after the game), and bananad sends the job's command down RetroArch's
 stdin pipe when the button is pressed without F. PlayStation and N64 games keep the four buttons, which they use.
+The Game Boy Advance's page has a fifth row, **Back** (the button beside F, `ra_btn_back.gba`: Companion, the
+template's, or Nothing - it is no RetroPad button, so RetroArch's jobs aren't offered), and a job of its own for all
+five, **Companion**: banana-ui switches the second screen between its menu and the Pokémon or Game companion;
+`run-retroarch` takes an L2/R2/L3/R3 with that job off the game as it does for Nothing.
 The left stick works as the d-pad in every system but N64 (RetroArch's `input_player1_analog_dpad_mode = "1"`, for the
 run only); a PlayStation game with the core's DualShock pad keeps its analog stick.
 
@@ -207,8 +211,8 @@ nothing more, in the same files, so a game goes on in either:
   Archives: a zip's member (stored or deflate) is read in memory; a .7z, or a zip compressed with bzip2, LZMA,
   Deflate64 and the like, is unpacked with 7zz into `/run/banana/rom-cache/<pid>/` (removed when the game ends).
 - **Buttons:** F + START quit, F + X (or F alone) the menu, F + R / F + L save / load state, F + R2 fast-forward,
-  F + SELECT screenshot, F + Y FPS counter, F + UP / DOWN the slot; L2/R2/L3/R3 alone as Settings > Other systems >
-  Buttons (`ra_btn_*`) says.
+  F + SELECT screenshot, F + Y FPS counter, F + B the on-screen keyboard (the computers), F + UP / DOWN the slot;
+  L2/R2/L3/R3 alone as Settings > Other systems > Buttons (`ra_btn_*`) says.
 - **Game panel and bananad:** RetroArch's command words on stdin (`SAVE_STATE`, `LOAD_STATE`, `MENU_TOGGLE`,
   `FAST_FORWARD`, `QUIT`, `READ_CORE_MEMORY`, `AUDIO_REINIT`... + `SAVE_STATE_SLOT n` / `LOAD_STATE_SLOT n`),
   replies on stdout; RetroAchievements' `[RCHEEVOS]` lines in `/run/banana/retroarch.log` for the panel; SIGUSR1 =
@@ -223,6 +227,35 @@ nothing more, in the same files, so a game goes on in either:
 - **Slow frames:** a frame that misses its refresh is caught up (run with its picture not shown) in the same refresh
   when two fit, else while the next flip waits, so the sound never loses a frame to it.
 - Logs: `/data/banana/logs/bananafront.log` (a stats line every 10 s with `BANANAFRONT_STATS=<file>`).
+
+## Commodore 64 and ZX Spectrum
+
+The two 8-bit computers, in BananaFront or RetroArch (Settings > Other systems > Frontend; RetroArch is the
+fallback, as for the rest):
+
+- **Commodore 64** (`vice_x64sc`, package `buildroot/package/libretro-vice`): VICE's cycle-exact C64 emulator.
+  `[c64]` in `systems.conf` takes `.d64`, `.d71`, `.d81` disks, `.tap` and `.t64` tapes, `.prg` programs, `.crt`
+  cartridges, and zip/7z archives. VICE wants keys for most things (autostart, `LOAD"*",8,1`, a trainer's menu):
+  BananaFront gives it the handheld's on-screen keyboard (F + B, below) or a USB/Bluetooth one. Saves are
+  `/data/saves/VICE x64sc/<game>.srm` (VICE's own save format) and states `/data/states/VICE x64sc/`, the folders
+  RetroArch's VICE core uses too.
+- **ZX Spectrum** (`fuse`, package `buildroot/package/libretro-fuse`): Fuse. `[zxspectrum]` takes `.tap` and `.tzx`
+  tapes, `.z80`, `.sna` and `.szx` snapshots, `.dsk` and `.trd` disks, and zip/7z archives. Fuse has libretro's
+  on-screen keyboard (SELECT opens it); BananaFront's F + B keyboard works there too, and either is what keyword
+  entry and a loader that asks for a key need.
+- **50 Hz:** both are PAL machines. BananaFront paces them by time on the 60 Hz panel and matches the sound's rate
+  (the path a 50 Hz game already took); RetroArch has its own VSync switch. Neither needs a BIOS or ROM files from
+  the card: VICE's and Fuse's own are in the cores.
+- **Keyboard:** a USB or Bluetooth keyboard is read as the core's keyboard (`RETRO_DEVICE_KEYBOARD` and
+  `RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK`), not as a second pad. Without one, the bottom screen's game panel (the
+  other screen while the game runs on the top one) has a **Keys** tile for these two systems: the panel becomes a
+  keyboard with a finger, pages for letters, symbols and the keys a game uses (F1-F12, RUN/STOP, Return, Shift, the
+  arrows), and every tap is a key of a virtual USB keyboard on `/dev/uinput` that the emulator reads, so it works the
+  same in RetroArch and BananaFront; the game keeps running on its own screen. BananaFront also has a quicker one over
+  its game picture: F + B (the pad moves and types: A a key, X delete, Y or L/R the page, START Return, SELECT Escape,
+  B closes). The panel's keyboard needs the panel to be the bottom screen (the one with the touchscreen: on the RG DS
+  Plus the top screen has none, so put the game on the top — Settings > Other systems > Screen > Top).
+
 ## BananaNES
 
 BananaNES is the NES / Famicom core: a fork of libretro-fceumm (github.com/libretro/libretro-fceumm, by CaH4e3 and the
@@ -262,3 +295,36 @@ too; the credit for the emulation is the Snes9x authors' (`LICENSE` in the repo)
   clock governor the stock core needs a 1156 MHz mean for the same smoothness, BananaSNES holds 805 MHz. Against RetroArch + Snes9x the whole process uses
   25-37% less CPU. EarthBound (owner's game, Plus): identical picture and sound for 3600 frames, about -5% on top of the lazy timers (the profile is from the
   stress ROM and homebrew). Details, every attempt and the exactness gates: the repo's BANANA.md and tools/stress-roms/snes/CALIBRATION.md.
+
+## Game & Watch (MAME)
+
+Nintendo's Game & Watch through MAME's own driver (`hh_sm510`), with the user's MAME ROM zips and MAME artwork zips
+as they are downloaded: nothing per game in BananaOS, no layouts of its own.
+
+- **The package** (`buildroot/package/mame-gnw`): MAME's 0.289 release built with only that driver
+  (`SUBTARGET=gnw SOURCES=src/mame/handheld/hh_sm510.cpp`), SDL2 and its GLES renderer, at most 6 compilers (some
+  of MAME's files take 1–2 GB each to compile). `/usr/bin/mame-gnw`, 41 MB. Patches in
+  `buildroot/patches/mame-gnw`, each saying what and why: no fontconfig (fonts by path, SDL_ttf), quitting on
+  `SIGTERM`, the menu on `SIGUSR1`, the LCD drawn at panel width (`BANANA_SVG_MAXW`), the SDL renderer on the two
+  panels (GPU cropping, `BANANA_TARGET_HEIGHT`, the panel swap on `SIGUSR2`), no warning screens, a short menu,
+  the menu on the top panel and its text size.
+- **The display**: one SDL window over both panels (`SDL_VIDEODRIVER=offscreen`, `SDL_BANANA_PANELS=stack`: SDL's
+  zero-copy path), the artwork's "Background(s) Only" view. By MAME's own description of the game (`-listxml`): one
+  screen on the top panel; two side by side (`screen_left`/`screen_right`) both on the top panel; two one above the
+  other on a panel each. Full speed on the Plus with a core to spare (the main thread at 25–75% of one).
+- **Input**: SDL's game controller (the pad's line from SDL's database), `/usr/share/banana/mame-gnw/banana.cfg`:
+  Start = Game A, Select = Game B, L = Time, R = Alarm, a right-hand pair (Mario Bros.) on X/B. MAME doesn't see F:
+  `gw-hotkeys` (in the package) reads the pad beside it: F + Start quits (`SIGTERM`, `SIGKILL` after 5 s), F alone
+  opens the menu (`SIGUSR1`; the game paused), L2 swaps the panels (`SIGUSR2`), F + L2 saves a
+  screenshot of the view on the panels (`SIGWINCH`, patch 0009) as `/data/screenshots/<game>-<n>.png`.
+- **The launcher** (`run-gw`): ROMs in `roms/gameandwatch` on either card, the artwork beside them in `artwork/`;
+  MAME's settings in `/data/mame-gnw`, the games' memory (high scores) in `saves/gameandwatch`, the log of the
+  last game in `banana/logs/mame-gnw/last.log`.
+- **Names and covers** (`gw-meta`, at the menu's start and when a Game & Watch folder changes, in the background,
+  waiting while a game plays; it runs MAME only when a game has no name or no cover): names, years and makers from MAME's game list into the folder's `gamelist.xml` (entries already
+  there are left alone), covers drawn by MAME from the artwork's "Unit Only" view into `media/box` (none without
+  artwork).
+- **RomM**: the `g-and-w` platform syncs to `gameandwatch`; its `artwork` folder, which RomM lists as one ROM of
+  several files, comes as each game's artwork zip, checked by size (RomM's hashes of those files aren't theirs).
+  RomM's covers aren't downloaded (`covers = own` in systems.conf): every game's cover is gw-meta's, synced or copied
+  by hand alike. `covers =` in the card's `banana/systems.conf` brings RomM's (box art from its scraper) instead.
