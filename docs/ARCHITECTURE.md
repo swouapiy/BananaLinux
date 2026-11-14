@@ -118,7 +118,7 @@ hands the RetroAchievements one to SuperDrastic (`DSFLIP_RA_*`) and run-retroarc
 `cheevos_*`. The end writes `setup 2` into setup-done, shows "Welcome" and opens the menu through the iris; Settings >
 System > First-time setup runs the same slides (no arrival) and ends back in Settings.
 
-**Wi-Fi** (Settings > Network): the networks around from `wifi scan` (wpa_cli's scan results, one row per name,
+**Wi-Fi** (Settings > Network > Wi-Fi: the switch, and Networks): the networks around from `wifi scan` (wpa_cli's scan results, one row per name,
 strongest first, with its signal, a lock, *Saved* or *Connected*), run on a thread so the menu never waits. A on a
 network with a password opens a keyboard: four rows of ten keys in three layers and a row of wide keys, driven by
 the d-pad (A types, B deletes, X capitals, Y space, START joins) or by touch on the bottom panel. Joining writes the

@@ -33,7 +33,7 @@ found to write the card incorrectly, and the handheld then fails to boot.
 - **Sound**: the menu's clicks; the volume keys; headphones (on the RG DS Plus the speakers should go quiet).
 - **Sleep**: close the lid in a game, wait, open it. The game should carry on where it was within a moment.
   Close it in the menu; leave it closed overnight and see what the battery says in the morning.
-- **Wi-Fi**: Settings > Network, choose your network, type the password.
+- **Wi-Fi**: Settings > Network > Wi-Fi > Networks, choose your network, type the password.
 - **A DS game**, and a game for another system (GBA, SNES...).
 
 ## Updating later
