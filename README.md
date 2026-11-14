@@ -79,7 +79,7 @@ The full list: the [0.5.3.4 release notes](https://github.com/JorreFog/BananaLin
 
 - **Three new languages:** Spanish (Español) by Pixelado Dev, Italian (Italiano) by Olympicus and Finnish (Suomi) by HANHITSI. Thank you! The language is picked from a list (Settings › System › Language), and the Pokémon companions read the Spanish releases.
 - **GBA Pokémon companion:** the DS companion's pages (Battle, Party, Team, Here, Map, Guide, Pokédex, journey log) for Ruby, Sapphire, Emerald, FireRed, LeafGreen and the hacks Glazed, Gaia, Heart & Soul, Lazarus, Seaglass, SoulGold and Unbound, with a Nuzlocke-style **Challenge mode**: Settings › Other systems › Second screen.
-- **Speaker EQ:** a tuned profile for the RG DS Plus speakers, seven sliders, or your own Equalizer APO profile (Settings › Display & sound). Speakers only.
+- **Speaker EQ:** a tuned profile for the RG DS Plus speakers, seven sliders, or your own Equalizer APO profile (Settings › Look & sound). Speakers only.
 - **Game & Watch** on both screens, through MAME, and **Commodore 64** and **ZX Spectrum** (basic support).
 - **Activity** on the home row: play time, a timeline and trends, and what to play next.
 - **Clearer Settings:** one plain sentence per row, and a line under each choice saying what it does.

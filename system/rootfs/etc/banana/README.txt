@@ -42,7 +42,7 @@ folder, archives unpacked. Its servers are kept in banana/nas.conf (a remembered
 handheld: another one, or a computer, can't open it), its jobs in banana/downloads, its log in
 banana/logs/downloads.log. Options there: banana/settings.conf's downloads_* lines. A systems.conf of your own
 made before Downloads came needs its [downloads] section (from banana/systems.conf.default) for the tile.
-Speaker EQ: Settings > Display & sound > Speaker EQ evens out the speakers (never the headphones): a profile
+Speaker EQ: Settings > Look & sound > Speaker EQ evens out the speakers (never the headphones): a profile
 measured for this handheld, or one of your own, and seven sliders to adjust it by ear. Your own: a .txt in banana/speaker-eq in
 Equalizer APO's parametric format (what AutoEq and REW export: "Preamp: -3 dB", "Filter 1: ON PK Fc 1000 Hz Gain -4 dB
 Q 1.2"), picked in Profile.

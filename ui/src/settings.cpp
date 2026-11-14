@@ -4672,7 +4672,7 @@ namespace banana
 	}
 
 	// ---- Speaker EQ ------------------------------------------------------------------------------------------------
-	// Display & sound > Speaker EQ: on or off, the profile, and seven sliders that adjust it. Each slider shows the
+	// Look & sound > Speaker EQ: on or off, the profile, and seven sliders that adjust it. Each slider shows the
 	// curve's level at its frequency, the profile's to begin with (Tuned's 1 kHz starts at -10 dB), and a step moves
 	// the curve there by 1 dB: what is kept is the change (settings.conf's speaker_eq_bands, a peak filter an octave
 	// wide at each slider's frequency, after the profile's own filters), so a profile's narrow cuts stay as they are.
