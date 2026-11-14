@@ -1986,3 +1986,9 @@ settings		What fills the space around this game's picture.	此游戏画面周围
 settings		How big this game is drawn.	此游戏的画面大小。
 settings		The colours of this Game Boy game.	此 Game Boy 游戏的色彩。
 settings		Same as system: as on its page in Other systems > Per system configurations.	与系统相同：按“其他系统 > 各系统配置”中该系统页面的设置。
+settings		Emulator configurations	模拟器配置
+settings		Each DS emulator's own settings: picture, speed, sound and hotkeys.	每个 DS 模拟器自己的设置：画面、速度、声音和快捷键。
+settings		DraStic's settings: picture, speed, sound and hotkeys.	DraStic 的设置：画面、速度、声音和快捷键。
+settings		BananaDS's settings: picture, speed, sound and hotkeys.	BananaDS 的设置：画面、速度、声音和快捷键。
+settings		DraStic: the fastest. Its own settings are in Emulator configurations.	DraStic：最快。它的设置在“模拟器配置”中。
+settings		Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator configurations.	Banana 自己的模拟器，基于 melonDS：最准确。它的设置在“模拟器配置”中。

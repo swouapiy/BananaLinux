@@ -650,15 +650,13 @@ namespace banana
 		hint({ "Full brightness.", "Softer lights.", "No lights." });
 		add(P, "moon", "LED while asleep", "The power light while the handheld sleeps.", power, "led_sleep", { "On", "Off" }, { "on", "off" });
 		hint({ "The light stays on, so you can tell it's asleep, not off.", "The light goes out while it sleeps." });
-		// Nintendo DS: what both emulators share (the emulator, quick resume, the DS's language and name, the buttons),
-		// then a page for each emulator's own settings, in that emulator's files, both whichever is chosen (to set one up
-		// before switching to it). Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
+		// Nintendo DS: what both emulators share first (the emulator, the buttons, quick resume, the DS's language and
+		// name), then Emulator configurations: a page for each emulator's own settings, in that emulator's files, both
+		// whichever is chosen (to set one up before switching to it), as Other systems' Per system configurations. Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
 		const char* N = "Nintendo DS";
 		add(N, "nds", "Emulator", "Which emulator plays DS games. X on a game picks one for that game only.",
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
-		items.back().hints = { "DraStic: the fastest. Its own settings are in Emulator settings.", "Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator settings." };
-		// the chosen emulator's own page (SuperDrastic's or BananaDS's: change(), by nds_emulator)
-		add(N, "nds", "Emulator settings", "The chosen emulator's own settings: picture, speed, sound and its hotkeys.", "", "nds_emu", {}, {}, Item::PAGE);
+		items.back().hints = { "DraStic: the fastest. Its own settings are in Emulator configurations.", "Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator configurations." };
 		add(N, "nds", "Quick resume", "What quitting a game does.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
 		hint({ "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place, even through a shutdown. Next time the game carries on from there." });
@@ -670,6 +668,13 @@ namespace banana
 		// the DS's own name (its firmware's user name), in both emulators at once: what a game calls you (#30)
 		add(N, "nds", "DS name", "What DS games call you. Up to 10 characters.",
 			"", "ds_name", {}, {}, Item::PAGE);
+		// each emulator's own page, the one in use marked
+		add(N, "nds", "Emulator configurations", "Each DS emulator's own settings: picture, speed, sound and hotkeys.", "", "nds_emus", {}, {}, Item::PAGE);
+		{
+			const char* EC = "Emulator configurations";
+			add(EC, "nds", "SuperDrastic", "DraStic's settings: picture, speed, sound and hotkeys.", "", "nds_emu_sd", {}, {}, Item::PAGE);
+			add(EC, "nds", "BananaDS", "BananaDS's settings: picture, speed, sound and hotkeys.", "", "nds_emu_bds", {}, {}, Item::PAGE);
+		}
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
 		std::string shaderHelpS = "The look of the DS screens. Your own go in banana/shaders.";
@@ -1144,7 +1149,8 @@ namespace banana
 		static const std::vector<std::pair<std::string, std::vector<std::string>>> ORDER = {
 			{ "", { "Nintendo DS", "Other systems", "Look & sound", "Network", "Sleep & power", "System" } },	// the tiles
 			// (what runs the games first, as in Other systems)
-			{ "Nintendo DS", { "Emulator", "Emulator settings", "Buttons", "Quick resume", "DS language", "DS name" } },
+			{ "Nintendo DS", { "Emulator", "Buttons", "Quick resume", "DS language", "DS name", "Emulator configurations" } },
+			{ "Emulator configurations", { "SuperDrastic", "BananaDS" } },
 			{ "Other systems", { "Frontend", "Screen", "Second screen", "Picture & sound", "Quick resume", "RetroAchievements", "Per system configurations", "Reset RetroArch" } },
 			// (the menu's own look first, then the screens and the sound)
 			{ "Look & sound", { "Shown systems", "Theme", "Accent colour", "Text on accent", "Menu look", "Games artworks", "Top brightness", "Bottom brightness", "Screen colours", "Volume", "Menu sounds" } },
@@ -1577,8 +1583,9 @@ namespace banana
 			std::vector<Subpage> v = {
 				{ "shelves", "Shown systems" },
 				{ "hotkeys", "Hotkeys" },
-				{ "nds_emu", "SuperDrastic" },	// (both from Emulator settings: the one chosen; B back on that row)
-				{ "nds_emu", "BananaDS" },
+				{ "nds_emus", "Emulator configurations" },
+				{ "nds_emu_sd", "SuperDrastic" },
+				{ "nds_emu_bds", "BananaDS" },
 				{ "hotkeys_sd", "SuperDrastic hotkeys" },
 				{ "hotkeys_bds", "BananaDS hotkeys" },
 					{ "ra_second", "Second screen", "retroarch_panel" },
@@ -1641,12 +1648,6 @@ namespace banana
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
-			if (it.key == "nds_emu")
-			{
-				const Item* e = itemByKey("nds_emulator");
-				bool bds = e && e->at < (int)e->values.size() && e->values[e->at] == "bananads";
-				message.clear(); openSection(bds ? "BananaDS" : "SuperDrastic"); return MOVED;
-			}
 			if (const Subpage* s = subpageFrom(it.key)) { message.clear(); openSection(s->section); return MOVED; }
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
 			if (it.key == "hs_sync") { if (syncing()) stopSync(); else startSync(); return MOVED; }
@@ -3153,10 +3154,16 @@ namespace banana
 				for (const Item& s : items) if (s.section == "Artwork systems") { all++; if (s.at == 0) on++; }
 				v = on == all ? "All" : std::to_string(on) + " of " + std::to_string(all);
 			}
-			else if (it.kind == Item::PAGE && it.key == "nds_emu")	// the DS emulator chosen, whose page it opens
+			else if (it.kind == Item::PAGE && it.key == "nds_emus")	// the DS emulator in use
 			{
 				const Item* e = itemByKey("nds_emulator");
 				if (e && e->at < (int)e->names.size()) v = e->names[e->at];
+			}
+			else if (it.kind == Item::PAGE && (it.key == "nds_emu_sd" || it.key == "nds_emu_bds"))	// the one in use
+			{
+				const Item* e = itemByKey("nds_emulator");
+				bool bds = e && e->at < (int)e->values.size() && e->values[e->at] == "bananads";
+				if (bds == (it.key == "nds_emu_bds")) v = "In use";
 			}
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "bt_devices") v = btRow();
