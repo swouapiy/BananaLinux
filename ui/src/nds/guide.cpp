@@ -16,6 +16,16 @@ namespace banana::nds
 			{ GameId::SOULSILVER, "soulsilver", "IPGE", 493 }, { GameId::BLACK, "black", "IRBO", 649 },
 			{ GameId::WHITE, "white", "IRAO", 649 }, { GameId::BLACK2, "black2", "IREO", 649 },
 			{ GameId::WHITE2, "white2", "IRDO", 649 },
+			// the GBA games (2026-11-03: the same pages through ui/src/gba/; their files in gba-pokemon/)
+			{ GameId::RUBY, "ruby", "AXVE", 386 }, { GameId::SAPPHIRE, "sapphire", "AXPE", 386 },
+			{ GameId::EMERALD, "emerald", "BPEE", 386 }, { GameId::FIRERED, "firered", "BPRE", 386 },
+			{ GameId::LEAFGREEN, "leafgreen", "BPGE", 386 },
+			// the GBA ROM hacks (gba/hacks.h: the key is the file's name and its "game"; their Pokédex can be far bigger)
+			{ GameId::HACK, "glazed", "BPEE", 1500 }, { GameId::HACK, "golden-glazed", "BPEE", 1500 },
+			{ GameId::HACK, "glazed-unofficial", "BPEE", 1500 }, { GameId::HACK, "gaia", "BPRE", 1500 },
+			{ GameId::HACK, "heart-and-soul", "BPEE", 1500 }, { GameId::HACK, "lazarus", "BPEE", 1500 },
+			{ GameId::HACK, "seaglass", "BPEE", 1500 }, { GameId::HACK, "soulgold", "BPEE", 1500 },
+			{ GameId::HACK, "unbound", "BPRE", 1500 },
 		};
 		const GameRow* rowFor(GameId id)
 		{
@@ -116,10 +126,16 @@ namespace banana::nds
 		return e && *e ? e : "/usr/share/banana/companions/nds-pokemon";
 	}
 
+	const char* gbaGuideDir()
+	{
+		const char* e = getenv("BANANA_GBA_GUIDE");
+		return e && *e ? e : "/usr/share/banana/companions/gba-pokemon";
+	}
+
 	Type typeFromName(const std::string& n)
 	{
 		static const char* names[NUM_TYPES] = { "normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel",
-			"fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark" };
+			"fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark", "fairy" };
 		for (int i = 0; i < NUM_TYPES; i++) if (n == names[i]) return (Type)i;
 		return NO_TYPE;
 	}
@@ -137,12 +153,14 @@ namespace banana::nds
 		};
 		r.trainers = [rd](const std::string& name, const std::string& cls, int ace) {
 			std::vector<uint16_t> o;
+			// (a name of no letters - "???", a rival the player names in some hacks - as it is)
 			std::string fn = fold(name), fc = fold(cls);
-			if (fn.empty()) return o;
+			const bool raw = fn.empty();
+			if (raw && name.empty()) return o;
 			for (auto& kv : rd->trainers)
 			{
 				const Trainer& t = kv.second;
-				if (fold(t.name) != fn || t.team.empty()) continue;
+				if ((raw ? t.name != name : fold(t.name) != fn) || t.team.empty()) continue;
 				if (!fc.empty() && fold(t.cls).find(fc) == std::string::npos) continue;
 				int top = 0;
 				for (const TrainerMon& m : t.team) top = std::max<int>(top, m.level);
@@ -279,8 +297,18 @@ namespace banana::nds
 
 	bool loadGuide(const Game& game, GuideData& out, std::string* why, const GuideResolver* resolver)
 	{
+		if (game.id == GameId::HACK)	// (a ROM hack: its key is its file's name and the file's "game")
+		{
+			if (game.hack.empty()) { if (why) *why = "a ROM hack without a key"; return false; }
+			if (!loadGuideFile(std::string(gbaGuideDir()) + "/" + game.hack + ".json", out, GameId::NONE, why, resolver)) return false;
+			if (out.game != game.hack) { if (why) *why = game.hack + ".json is the guide of another game"; out = GuideData(); return false; }
+			return true;
+		}
+		// (a DS ROM hack - an hg-engine build, game.id its base release's -: the base game's guide names its trainers and
+		// places, which the hack changed; none until one is written for it)
+		if (!game.hack.empty()) { if (why) *why = "no guide for the ROM hack " + game.hack; return false; }
 		std::string f = guideFileName(game.id);
 		if (f.empty()) { if (why) *why = "not one of the nine games"; return false; }
-		return loadGuideFile(std::string(guideDir()) + "/" + f, out, game.id, why, resolver);
+		return loadGuideFile(std::string(game.gen == Gen::III ? gbaGuideDir() : guideDir()) + "/" + f, out, game.id, why, resolver);
 	}
 }

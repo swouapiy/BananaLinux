@@ -103,11 +103,14 @@ ux_lt "$(ux_std "$OUT/$size-ux-noise-bot.png" 200 18 220 124)" 0.03 || { echo "F
 ux_lt "$(ux_std "$OUT/$size-ux-noise-bot.png" 50 3 566 400)" 0.12 || { echo "FAIL $size: a count beside the home rail"; fail=1; }
 
 # Settings said on the home screen (START), and Power from the groups (Y): Sleep asks bananad with its file (and
-# closes the settings); Shut down needs A twice
+# closes the settings) after A twice, as Shut down does; an accidental touch on the row only arms it
 ux_run settings-hint "home nds; wait 2400; shot ux-home-hints"
 ux_lt 0.02 "$(ux_std "$OUT/$size-ux-home-hints-bot.png" 120 30 250 428)" || { echo "FAIL $size: no START hint on the home screen"; fail=1; }
 rm -f "$OUT/sleep-now"
-ux_run power "home nds; press start; press y; shot ux-power; press a" BANANA_SLEEP_REQUEST="$OUT/sleep-now"
+ux_run power-arm "home nds; press start; press y; press a" BANANA_SLEEP_REQUEST="$OUT/sleep-now"
+ux_check power-arm "press a: settings result"
+[ ! -s "$OUT/sleep-now" ] || { echo "FAIL $size: one press on Sleep slept the handheld"; fail=1; }
+ux_run power "home nds; press start; press y; shot ux-power; press a; shot ux-power-armed; press a" BANANA_SLEEP_REQUEST="$OUT/sleep-now"
 ux_check power "press a: settings closed"
 [ -s "$OUT/sleep-now" ] || { echo "FAIL $size: Sleep didn't ask bananad"; fail=1; }
 ux_run poweroff "home nds; press start; press y; press down; press down; press a; press a"
@@ -119,7 +122,7 @@ ux_run poweroff "home nds; press start; press y; press down; press down; press a
 # DS games); the library is read again without it
 mkdir -p "$UXFX/saves/nds" "$UXFX/states/nds" "$UXFX/drastic/backup" "$UXFX/bios"
 for f in "saves/nds/Peel Quest.sav" "states/nds/Peel Quest.ml1" "drastic/backup/Peel Quest.dsv" "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "saves/nds/Split Racers (USA).sav"; do echo x > "$UXFX/$f"; done
-D7="press down; press down; press down; press down; press down; press down; press down; press down; press down;"  # (9 rows: + 3D resolution, + Timing)
+D7="press down; press down; press down; press down; press down; press down; press down; press down; press down; press down;"  # (10 rows: + 3D resolution, + Timing, + DS CPU speed)
 ux_run delete-keep "lib nds 3; press x; $D7 press a; press b; press b; lib nds 3; press x; $D7 press a; shot ux-delete-ask; press a; wait 300; shot ux-delete-done"
 [ ! -e "$UXFX/roms/nds/Split Racers (USA).nds" ] && [ -e "$UXFX/saves/nds/Split Racers (USA).sav" ] && [ -e "$UXFX/roms/nds/media/box/Split Racers (USA).png" ] \
     || { echo "FAIL $size: Delete game (the game only): $(ls "$UXFX/roms/nds" "$UXFX/saves/nds" | tr '\n' ' ')"; fail=1; }
@@ -162,13 +165,13 @@ first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-
     || { echo "FAIL $size: the home row after Shown systems (left at first: $first): $(grep 'shown systems' "$OUT/$size-shelves.log" | tr '\n' ' ')"; fail=1; }
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
-# System > Language (its first row) asks before switching, No first: right then A keeps English; right, down, A
-# switches (the menu starts again: settings result 9, LANGUAGE) to the first language after English, ru
-ux_run langask "home nds; press start; press r; press r; press r; press r; press r; press a; press right; shot ux-langask; press a"
+# System > Language (its first row) opens the list of languages; down twice and A on fi (after es) asks before
+# switching, No first: A keeps English; Yes (down, A) switches (the menu starts again: settings result 9, LANGUAGE)
+ux_run langask "home nds; press start; press r; press r; press r; press r; press r; press a; press right; shot ux-langlist; press down; press down; press a; shot ux-langask; press a"
 grep -q '^language = ' "$UXFX/data/settings.conf" && { echo "FAIL $size: the language switched without a Yes"; fail=1; }
 ux_check langask "press a: settings result 1"
-ux_run langyes "home nds; press start; press r; press r; press r; press r; press r; press a; press right; press down; press a"
-grep -q '^language = ru' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
+ux_run langyes "home nds; press start; press r; press r; press r; press r; press r; press a; press right; press down; press down; press a; press down; press a"
+grep -q '^language = fi' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 
 # System > Credits (after About) opens the credits from credits.txt; with no names in it, no row
@@ -211,7 +214,7 @@ ux_run splash-b "splash ux-boot-word 700"
 # (the RG DS Plus adds a note to the Shader rows); "helpcheck" lays each out as the panel does
 HCFX=$OUT/ux-help-fixture-$size
 rm -rf "$HCFX"; "$HERE/tests/fixture.sh" "$HCFX" >/dev/null
-for hl in en zh-cn ru; do
+for hl in en zh-cn ru it fi; do
     for he in superdrastic bananads; do
         for hb in rgds rgds-plus; do
             touch "$HCFX/data/settings.conf"; sed -i '/^language\b/d; /^nds_emulator\b/d' "$HCFX/data/settings.conf"

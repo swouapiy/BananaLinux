@@ -7,6 +7,9 @@ downloads	folder	/usr/share/banana/apps/downloads
 downloads	maker	Banana
 downloads	name	Downloads
 downloads	run	banana:downloads
+gameandwatch	ext	mgw zip 7z
+gameandwatch	perf	powersave
+gameandwatch	run	/usr/libexec/banana/run-retroarch gw %ROM%
 gb	ext	gb zip
 gba	ext	gba zip
 gbc	ext	gbc gb zip
