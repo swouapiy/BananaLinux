@@ -1586,3 +1586,18 @@ settings		The original Game Boy's green.	Зелёный, как у первог�
 settings		The Game Boy Pocket's paler screen.	Более светлый экран Game Boy Pocket.
 settings		The colours a Game Boy Color gave the game. Gambatte and mGBA only.	Цвета, которые игре давал Game Boy Color. Только Gambatte и mGBA.
 settings		The colours a Super Game Boy gave the game. Gambatte and mGBA only.	Цвета, которые игре давал Super Game Boy. Только Gambatte и mGBA.
+settings		Same as system	Как для системы
+settings		This game's screen	Экран этой игры
+settings		This game's second screen	Второй экран этой игры
+settings		This game's screen border	Рамка этой игры
+settings		This game's picture size	Размер изображения этой игры
+settings		This game's colours	Цвета этой игры
+settings		This game's palette	Палитра этой игры
+settings		The emulator for this game.	Эмулятор для этой игры.
+settings		Which screen this game plays on.	На каком экране идёт эта игра.
+settings		What the other screen shows while this game plays.	Что показывает другой экран во время этой игры.
+settings		A look for this game.	Вид этой игры.
+settings		What fills the space around this game's picture.	Чем заполнено место вокруг изображения этой игры.
+settings		How big this game is drawn.	Насколько крупно показывается эта игра.
+settings		The colours of this Game Boy game.	Цвета этой игры Game Boy.
+settings		Same as system: as on its page in Other systems > Per system configurations.	«Как для системы»: как на странице системы в «Другие системы > Настройки систем».
