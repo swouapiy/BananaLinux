@@ -852,9 +852,14 @@ namespace banana
 		add(O, "gamepad", "Reset RetroArch", "Restores RetroArch's settings. Saves, states and your account stay. Press A twice.",
 			"", "ra_reset", { "" }, { "" }, Item::ACTION);
 		const char* W = "Network";
-		add(W, "phone", "Wi-Fi", "The wireless network.", menu, "wifi", { "On", "Off" }, { "on", "off" });
-		items.back().hints = { "Wi-Fi on. A on Networks joins one.", "Wi-Fi off. Saves battery." };
-		add(W, "phone", "Network", "Networks nearby. A on one joins it.", "", "network", {}, {}, Item::PAGE);
+		// Wi-Fi's page (as Bluetooth's): the switch, then the networks nearby
+		add(W, "phone", "Wi-Fi", "The wireless network and the networks nearby.", "", "net_wifi", {}, {}, Item::PAGE);
+		{
+			const char* WF = "Wi-Fi";
+			add(WF, "phone", "Wi-Fi", "The wireless network.", menu, "wifi", { "On", "Off" }, { "on", "off" });
+			items.back().hints = { "Wi-Fi on. A on Networks joins one.", "Wi-Fi off. Saves battery." };
+			add(WF, "phone", "Networks", "Networks nearby. A on one joins it.", "", "network", {}, {}, Item::PAGE);
+		}
 		add(W, "phone", "Bluetooth", "Controllers, headphones and speakers.", "", "net_bt", {}, {}, Item::PAGE);
 		add(W, "phone", "File sharing", "Share the card on your network: on or off, login, password and SSH.", "", "net_share", {}, {}, Item::PAGE);
 		// the Bluetooth page (Network > Bluetooth)
@@ -1123,7 +1128,8 @@ namespace banana
 			{ "Other systems", { "Frontend", "Screen", "Second screen", "Picture & sound", "Quick resume", "RetroAchievements", "Per system configurations", "Reset RetroArch" } },
 			// (the menu's own look first, then the screens and the sound)
 			{ "Look & sound", { "Shown systems", "Theme", "Accent colour", "Text on accent", "Menu look", "Games artworks", "Top brightness", "Bottom brightness", "Screen colours", "Volume", "Menu sounds" } },
-			{ "Network", { "Wi-Fi", "Bluetooth", "File sharing", "Home server", "Network" } },
+			{ "Network", { "Wi-Fi", "Bluetooth", "File sharing", "Home server" } },
+			{ "Wi-Fi", { "Wi-Fi", "Networks" } },
 			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power-off after sleep", "Idle timers", "Waking up", "LEDs", "LED while asleep" } },
 			{ "System", { "Language", "Time zone", "Updates", "Second SD card", "Parental controls", "Hotkeys", "First-time setup", "Reset options", "About", "Credits", "Developer options" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
@@ -1559,6 +1565,7 @@ namespace banana
 					{ "ra_second", "Second screen", "retroarch_panel" },
 				{ "ra_picture", "Picture & sound", "ra_shader" },
 				{ "ra_systems", "Per system configurations" },
+				{ "net_wifi", "Wi-Fi" },
 				{ "net_bt", "Bluetooth", "bluetooth" },
 				{ "net_share", "File sharing", "share" },
 				{ "sys_updates", "Updates" },
@@ -3134,6 +3141,7 @@ namespace banana
 				if (e && e->at < (int)e->names.size()) v = e->names[e->at];
 			}
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
+			else if (it.kind == Item::PAGE && it.key == "net_wifi") v = !wifiOn() ? "Off" : wstat.connected ? fit(wstat.ssid, true, 19, 300) : "Not connected";
 			else if (it.kind == Item::PAGE && it.key == "bt_devices") v = btRow();
 			else if (it.kind == Item::PAGE && (it.key == "update" || it.key == "sys_updates")) v = updatesWaiting(updatesDir, runDir, version);	// (and on its page's row)
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
