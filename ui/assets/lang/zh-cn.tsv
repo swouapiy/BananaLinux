@@ -1944,3 +1944,9 @@ settings		Swap A/B and X/Y	交换 A/B 和 X/Y
 settings		Per system configurations	各系统配置
 settings		Each system's own settings: its emulator, screen, look and buttons.	每个系统自己的设置：模拟器、屏幕、画面和按键。
 settings		This system's own settings: its emulator, screen, look and buttons. No games on the card yet.	此系统自己的设置：模拟器、屏幕、画面和按键。卡上还没有游戏。
+settings		Emulator configurations	模拟器配置
+settings		Each DS emulator's own settings: picture, speed, sound and hotkeys.	每个 DS 模拟器自己的设置：画面、速度、声音和快捷键。
+settings		DraStic's settings: picture, speed, sound and hotkeys.	DraStic 的设置：画面、速度、声音和快捷键。
+settings		BananaDS's settings: picture, speed, sound and hotkeys.	BananaDS 的设置：画面、速度、声音和快捷键。
+settings		DraStic: the fastest. Its own settings are in Emulator configurations.	DraStic：最快。它的设置在“模拟器配置”中。
+settings		Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator configurations.	Banana 自己的模拟器，基于 melonDS：最准确。它的设置在“模拟器配置”中。

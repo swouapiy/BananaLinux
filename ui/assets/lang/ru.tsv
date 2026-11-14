@@ -1559,3 +1559,9 @@ settings		Swap A/B and X/Y	Поменять A/B и X/Y
 settings		Per system configurations	Настройки систем
 settings		Each system's own settings: its emulator, screen, look and buttons.	Собственные настройки каждой системы: эмулятор, экран, вид и кнопки.
 settings		This system's own settings: its emulator, screen, look and buttons. No games on the card yet.	Собственные настройки системы: эмулятор, экран, вид и кнопки. Игр на карте пока нет.
+settings		Emulator configurations	Настройки эмуляторов
+settings		Each DS emulator's own settings: picture, speed, sound and hotkeys.	Собственные настройки каждого эмулятора DS: изображение, скорость, звук и горячие клавиши.
+settings		DraStic's settings: picture, speed, sound and hotkeys.	Настройки DraStic: изображение, скорость, звук и горячие клавиши.
+settings		BananaDS's settings: picture, speed, sound and hotkeys.	Настройки BananaDS: изображение, скорость, звук и горячие клавиши.
+settings		DraStic: the fastest. Its own settings are in Emulator configurations.	DraStic: самый быстрый. Его настройки — в «Настройках эмуляторов».
+settings		Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator configurations.	Собственный эмулятор Banana на основе melonDS: самый точный. Его настройки — в «Настройках эмуляторов».

@@ -179,16 +179,16 @@ grep -q 'Majirefy = ' "$HERE/../system/rootfs/etc/banana/credits.txt" || { echo 
 # System > Hotkeys opens the list of hotkeys, B back to System on its row
 ux_run hotkeys "home nds; press start; row System hotkeys; press a; wait 400; shot ux-hotkeys; press b; wait 400; shot ux-hotkeys-back"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-hotkeys-bot.png" "$OUT/$size-ux-hotkeys-back-bot.png")" || { echo "FAIL $size: Hotkeys didn't open"; fail=1; }
-# Nintendo DS > Emulator settings (its second row) opens the chosen emulator's own page (SuperDrastic, the default), and
-# Hotkeys there (third from its end) its hotkeys; B back on that row, B again back on Emulator settings in Nintendo DS
-ux_run hotkeys-sd "home nds; press start; press a; press down; wait 400; shot ux-ds-row; press a; press up; press up; press up; wait 400; shot ux-sd-page; press a; wait 400; shot ux-hotkeys-sd; press b; wait 400; shot ux-hotkeys-sd-back; press b; wait 400; shot ux-sd-back"
-ux_lt 1000 "$(ux_diff "$OUT/$size-ux-ds-row-bot.png" "$OUT/$size-ux-sd-page-bot.png")" || { echo "FAIL $size: Nintendo DS > SuperDrastic didn't open"; fail=1; }
+# Nintendo DS > Emulator configurations > SuperDrastic (its first row) opens SuperDrastic's own page, and Hotkeys there
+# (third from its end) its hotkeys; B back on that row, B again back on SuperDrastic in Emulator configurations
+ux_run hotkeys-sd "home nds; press start; row Emulator configurations nds_emu_sd; wait 400; shot ux-ds-row; press a; press up; press up; press up; wait 400; shot ux-sd-page; press a; wait 400; shot ux-hotkeys-sd; press b; wait 400; shot ux-hotkeys-sd-back; press b; wait 400; shot ux-sd-back"
+ux_lt 1000 "$(ux_diff "$OUT/$size-ux-ds-row-bot.png" "$OUT/$size-ux-sd-page-bot.png")" || { echo "FAIL $size: Emulator configurations > SuperDrastic didn't open"; fail=1; }
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-hotkeys-sd-bot.png" "$OUT/$size-ux-hotkeys-sd-back-bot.png")" || { echo "FAIL $size: SuperDrastic > Hotkeys didn't open"; fail=1; }
 # (the list's header, its title and "row / rows" (x 18-622, y 16-66), the same: the same page and row, wherever it scrolled)
 ux_head() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 604 * k, 50 * k, 18 * k, 16 * k }')" +repage "$2"; }
 for s in sd-page hotkeys-sd-back ds-row sd-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
 [ "$(ux_diff "$OUT/$size-ux-sd-page-head.png" "$OUT/$size-ux-hotkeys-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic's hotkeys wasn't back on its Hotkeys row"; fail=1; }
-[ "$(ux_diff "$OUT/$size-ux-ds-row-head.png" "$OUT/$size-ux-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic wasn't back on its row in Nintendo DS"; fail=1; }
+[ "$(ux_diff "$OUT/$size-ux-ds-row-head.png" "$OUT/$size-ux-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic wasn't back on its row in Emulator configurations"; fail=1; }
 # Other systems > Picture & sound opens its page (Shader first), B back on its row
 ux_run ra-picture "home nds; press start; row Other systems ra_picture; wait 400; shot ux-ra-row; press a; wait 400; shot ux-ra-picture; press b; wait 400; shot ux-ra-back"
 for s in ra-row ra-picture ra-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
@@ -384,11 +384,11 @@ for s in about-0 about-1; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$
 [ "$(ux_diff "$OUT/$size-ux-about-0-head.png" "$OUT/$size-ux-about-1-head.png")" = 0 ] || { echo "FAIL $size: A on About opened something"; fail=1; }
 grep -q '^developer = on' "$UXFX/data/settings.conf" || { echo "FAIL $size: seven A's on About didn't turn the developer options on"; fail=1; }
 sed -i '/^developer = /d' "$UXFX/data/settings.conf"
-# with BananaDS chosen, Nintendo DS > Emulator settings opens BananaDS's page (its header isn't SuperDrastic's)
+# Emulator configurations > BananaDS opens BananaDS's page (its header isn't SuperDrastic's), BananaDS chosen or not
 echo "nds_emulator = bananads" >> "$UXFX/data/settings.conf"
-ux_run emu-bds "home nds; press start; press a; press down; press a; wait 400; shot ux-emu-bds"
+ux_run emu-bds "home nds; press start; row Emulator configurations nds_emu_bds; press a; wait 400; shot ux-emu-bds"
 ux_head "$OUT/$size-ux-emu-bds-bot.png" "$OUT/$size-ux-emu-bds-head.png"
-[ "$(ux_diff "$OUT/$size-ux-emu-bds-head.png" "$OUT/$size-ux-sd-page-head.png")" = 0 ] && { echo "FAIL $size: Emulator settings opened SuperDrastic's page with BananaDS chosen"; fail=1; }
+[ "$(ux_diff "$OUT/$size-ux-emu-bds-head.png" "$OUT/$size-ux-sd-page-head.png")" = 0 ] && { echo "FAIL $size: Emulator configurations > BananaDS opened SuperDrastic's page"; fail=1; }
 sed -i '/^nds_emulator = /d' "$UXFX/data/settings.conf"
 
 # Look & sound > Games artworks > Systems: a row each system artworks come for (Fetch or Skip); Right on the first sets
