@@ -380,6 +380,11 @@ UXFX=$UXFX_SAVE
 [ "$(convert "$OUT/$size-ux-splore-own-top.png" -fx '(r > 0.9 && g < 0.1 && b > 0.9) ? 1 : 0' -format '%[fx:mean > 0.02]' info: 2>/dev/null)" = 1 ] ||
     { echo "FAIL $size: Splore doesn't show PICO-8's own icon"; fail=1; }
 
+# Other systems > Open RetroArch: one A closes the Settings and starts RetroArch's entry (its menu, no game)
+ux_run raopen "home nds; press start; row Other systems ra_open; press a"
+grep -q "launch: /usr/share/banana/apps/retroarch/RetroArch.app" "$OUT/$size-raopen.log" ||
+    { echo "FAIL $size: Open RetroArch didn't start RetroArch's entry"; fail=1; }
+
 # System > About opens nothing (its facts are on the top screen while it's picked): A leaves the list's header as it was;
 # A seven times on it turns the developer options on
 ux_run about "home nds; press start; row System about; shot ux-about-0; press a; shot ux-about-1; press a; press a; press a; press a; press a; press a"
