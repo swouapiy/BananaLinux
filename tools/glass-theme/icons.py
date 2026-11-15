@@ -4,6 +4,7 @@
 #   ereaderds.png  the reader (eReaderDS): an open book with a bookmark
 #   ports.png      Ports (PortMaster): a cargo ship, "PM" on its hull
 #   files.png      Files: an amber folder, a page in it
+#   activity.png   Activity: your play time, green bars rising beside an orange clock
 #
 #   python3 tools/glass-theme/icons.py      (needs Pillow; writes system/rootfs/usr/share/banana/themes/glass/icons/)
 import math, os, sys
@@ -102,7 +103,22 @@ def files():
     front = m_rrect((90, 330, 678, 630), 44); shadow(c, front, 8, 0.3, 12); layer(c, front, *AMBER, sheen=0.45)
     return c
 
-for name, draw in [('ereaderds', reader), ('ports', ports), ('files', files)]:
+def activity():
+    c = Image.new('RGBA', (N, N))
+    # the bars: a week's play time, rising; the last one lit (today)
+    for i, (h, col) in enumerate([(250, GREEN), (360, GREEN), (300, GREEN), (500, ORANGE)]):
+        x = 105 + i * 145
+        m = m_rrect((x, 670 - h, x + 120, 670), 36); shadow(c, m, 8, 0.3, 10); layer(c, m, *col, sheen=0.45)
+    # the clock: how long, at the top left over the shorter bars
+    face = Image.new('L', (N, N), 0); ImageDraw.Draw(face).ellipse((80, 80, 340, 340), fill=255)
+    shadow(c, face); layer(c, face, *PAGE, sheen=0.3)
+    d = ImageDraw.Draw(c)
+    d.line([(210, 210), (210, 130)], fill=(40, 60, 90, 255), width=22)
+    d.line([(210, 210), (270, 240)], fill=(40, 60, 90, 255), width=22)
+    d.ellipse((192, 192, 228, 228), fill=(225, 60, 50, 255))
+    return c
+
+for name, draw in [('ereaderds', reader), ('ports', ports), ('files', files), ('activity', activity)]:
     if len(sys.argv) > 1 and name not in sys.argv[1:]: continue
     draw().resize((192, 192), Image.LANCZOS).save(os.path.join(OUT, name + '.png'))
     print('wrote', name + '.png')
