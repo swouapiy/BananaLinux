@@ -908,6 +908,9 @@ namespace banana
 		}
 		add(O, "gamepad", "Per system configurations", "Each system's own settings: its emulator, screen, look and buttons.",
 			"", "ra_systems", {}, {}, Item::PAGE);
+		// RetroArch itself, on its own menu (run-ra-menu: the Apps shelf's RetroArch entry)
+		add(O, "gamepad", "Open RetroArch", "RetroArch's own menu: cores, playlists and its updater. F + Start comes back.",
+			"", "ra_open", { "" }, { "" }, Item::ACTION);
 		add(O, "gamepad", "Reset RetroArch", "Restores RetroArch's settings. Saves, states and your account stay. Press A twice.",
 			"", "ra_reset", { "" }, { "" }, Item::ACTION);
 		const char* W = "Network";
@@ -1185,7 +1188,7 @@ namespace banana
 			// (what runs the games first, as in Other systems)
 			{ "Nintendo DS", { "Emulator", "Buttons", "Quick resume", "DS language", "DS name", "Emulator configurations" } },
 			{ "Emulator configurations", { "SuperDrastic", "BananaDS" } },
-			{ "Other systems", { "Frontend", "Screen", "Second screen", "Picture & sound", "Quick resume", "RetroAchievements", "Per system configurations", "Reset RetroArch" } },
+			{ "Other systems", { "Frontend", "Screen", "Second screen", "Picture & sound", "Quick resume", "RetroAchievements", "Per system configurations", "Open RetroArch", "Reset RetroArch" } },
 			// (the menu's own look first, then the screens and the sound)
 			{ "Look & sound", { "Shown systems", "Theme", "Accent colour", "Text on accent", "Menu look", "Games artworks", "Top brightness", "Bottom brightness", "Screen colours", "Volume", "Speaker EQ", "Menu sounds" } },
 			{ "Network", { "Wi-Fi", "Bluetooth", "File sharing", "Home server" } },
@@ -1708,6 +1711,15 @@ namespace banana
 				top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
 				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
 				return MOVED;
+			}
+			if (it.key == "ra_open")
+			{
+				// (one press: it changes nothing) the menu starts RetroArch's entry as a game, the Settings closed first
+				armed = -1;
+				launchPath = RA_MENU_ENTRY;
+				recordEvent("settings", "open RetroArch");
+				close();
+				return LAUNCH;
 			}
 			if (it.key == "sleep")
 			{

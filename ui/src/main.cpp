@@ -1303,6 +1303,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				if (r == Settings::SHELVES) afterShelves(lib, ui);
 				// (Play together's Join: the game the menu would start, and how)
 				if (r == Settings::JOIN) logf("join: %s, connected to %s, core %s", settings.joinPath.c_str(), settings.joinAddr.c_str(), settings.joinCore.c_str());
+				// (Other systems > Open RetroArch: the entry the menu would start)
+				if (r == Settings::LAUNCH) logf("launch: %s", settings.launchPath.c_str());
 				if (r == Settings::SEARCH)
 				{
 					lib.setSearch(settings.searchText);
@@ -2739,6 +2741,11 @@ int main(int argc, char** argv)
 			logf("play together: joining %s's game at %s (core %s)", settingsView.joinPath.c_str(), netplay.addr.c_str(), netplay.core.c_str());
 			recordEvent("together", "join %s", settingsView.joinPath.c_str());
 			if (!launchPath(lib, settingsView.joinPath)) { logf("play together: %s isn't in the library", settingsView.joinPath.c_str()); netplay = Netplay(); }
+			break;
+		case Settings::LAUNCH:
+			// Other systems > Open RetroArch: its entry on the Apps shelf, started as a game (the main loop: runGame)
+			sound.play("select");
+			if (!launchPath(lib, settingsView.launchPath)) logf("launch: %s isn't in the library", settingsView.launchPath.c_str());
 			break;
 		case Settings::MOVED: sound.play("scroll"); break;
 		case Settings::LANGUAGE:

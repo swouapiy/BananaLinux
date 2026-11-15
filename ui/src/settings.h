@@ -175,7 +175,10 @@ namespace banana
 
 		// what the host has to do after an input (ACTED: a page did something that changes no setting, as Files' copy or
 		// rename: the select sound alone, not CHANGED's settings.conf read again and the menu's texts made again)
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES, ACTED, JOIN };
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES, ACTED, JOIN, LAUNCH };
+		// LAUNCH: an entry of the library to start (launchPath: Other systems > Open RetroArch; the Settings already closed)
+		std::string launchPath;
+		static constexpr const char* RA_MENU_ENTRY = "/usr/share/banana/apps/retroarch/RetroArch.app";
 		// JOIN: Play together's friend started a game and the player joins: joinPath started as player 2, connected to
 		// joinAddr's netplay with its core, joinCore (the Settings already closed)
 		std::string joinPath, joinAddr, joinCore;
