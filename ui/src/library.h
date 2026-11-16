@@ -92,6 +92,7 @@ namespace banana
 		void recordPlay(int game, long seconds, int achA = -1, int achB = 0);
 		std::function<void(const std::string&)> onCue;
 		bool twelveHour = false;
+		std::string dateFormat = "md";	// Settings > Look & sound > Date (lang::date's formats)
 
 		// the battery: percent (-1 unknown) and whether it is charging (or full on the charger)
 		struct Power { int percent = -1; bool charging = false; };
@@ -145,7 +146,7 @@ namespace banana
 		// Parental controls (parental.h): on as of the last scan, and every game for the Allowed games page
 		bool parentalOn() const { return kids; }
 		const std::vector<parental::GameRef>& allGames() const { return everything; }
-		// Settings > Look & sound > Menu look > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
+		// Settings > Look & sound > Theme options > Game pictures: "box" (the scraped box art, the game's own icon without one) or
 		// "icon" (the DS game's own icon on every cartridge, as the DSi menu shows it)
 		bool dsCartIcons = false;
 

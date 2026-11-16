@@ -6,6 +6,7 @@
 // aw88166 amplifiers' stop), which then runs during the launch animation's last frames instead of after them.
 // A launch's cue plays over the sound before it (the "ready" chime A starts the launch with) instead of cutting it off;
 // any other new sound cuts the one playing.
+#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <map>
@@ -26,6 +27,7 @@ namespace banana
 		// (a game opening the device meanwhile waits in the kernel for it, while everything before its open goes on)
 		void release(bool wait = true);
 		bool enabled = true;
+		std::atomic<float> gain{ 1.0f };	// Settings > Look & sound > Sound > Menu sounds: 1 Normal, less Quiet
 
 	private:
 		struct Clip { std::vector<int16_t> pcm; int rate = 44100, channels = 2; };
