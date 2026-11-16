@@ -50,6 +50,10 @@ has newer state=newer; has newer latest=0.4.3; has newer file=banana-rgds-0.4.3.
 has newer 'notes=BananaOS 0.4.3 (alpha) for the RG DS and RG DS Plus: "updates over Wi-Fi" (#69), a faster "tag_name": "v99.0.0" menu.'
 # the other handheld: the Plus gets 0.5.0, which the RG DS skipped
 B=rgds-plus u plus check; has plus state=newer; has plus latest=0.5.0; has plus file=banana-rgds-plus-0.5.0.update.tar
+# a build of our own (VERSION 0.5.0+sw1: "+" names the build, it isn't a test version): the same 0.5.0 is not offered
+# over it, a later one is
+B=rgds-plus V=0.5.0+sw1 u ours check; has ours state=current; has ours current=0.5.0+sw1
+V=0.4.2+sw1 u ours check; has ours state=newer; has ours latest=0.4.3
 # test versions left out: only 0.4.2 counts
 mkdir -p "$OUT/stable/data"; echo "update_prerelease = off" > "$OUT/stable/data/settings.conf"
 V=0.4.1 u stable check; has stable state=newer; has stable latest=0.4.2; has stable prerelease=0; has stable skipped_prerelease=2
