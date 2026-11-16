@@ -2738,7 +2738,9 @@ namespace banana
 			it = put("battery", c, b);
 		}
 		keep(it);
-		int k = std::max(1, (int)std::lround(3 * s));
+		// as big as fits in the banner's 48-unit square with a margin, in whole pixels (it's pixel art): 3x at 640x480
+		// was 78 units wide, out of the square and over the title
+		int k = it->second.tex ? std::max(1, (int)std::floor(X(42) / it->second.tex->w)) : 1;
 		if (it->second.tex)
 		{
 			float w = (float)it->second.tex->w * k, h = (float)it->second.tex->h * k;
