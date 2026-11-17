@@ -133,6 +133,9 @@ namespace banana
 		// the game's file (before gameOpen): its save states' names (RetroArch's: <name>.state, .state1 ... in
 		// /data/states, thumbnails <state>.png) for the panel's States view (a tap on the achievements box)
 		void gameRom(const std::string& rom, const std::string& stateDir = "/data/states");
+		// PPSSPP's game (before gameOpen, after gameRom): its log for the achievements (run-psp's --log), the account
+		// from the setup, its own hotkeys' names on the tiles, and no States view (its states aren't RetroArch's)
+		void gamePpsspp(bool on) { gPsp = on; }
 		int gameSlot() const { return gSlotPick; }	// G_LOADSLOT's slot
 		void gameClose();
 		bool gameUpdate(double nowMs);		// true: the panel changed (a log line, a reply, a badge, a flash ending)
@@ -767,6 +770,7 @@ namespace banana
 		void tick(float x, float y, const rnds::Color& c);	// a mark on a 2 px grid (a chosen file)
 		void meter(float x, float y, float w, double fraction);	// a progress bar
 		std::string gTitle, gSystem;
+		bool gPsp = false;	// (gamePpsspp)
 		int gScreen = 1, gFlash = -1, gDown = -1;
 		// the States view (universal companion tier 0): slots 0-9 with their thumbnails; a slot tapped twice loads it
 		bool gStates = false;

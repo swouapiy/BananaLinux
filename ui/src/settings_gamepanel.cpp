@@ -192,6 +192,7 @@ namespace banana
 		long long pos = 0;
 		std::string part;
 		double since = 0;
+		std::string log = "/run/banana/retroarch.log", emu = "RetroArch";	// (PPSSPP's: run-psp's --log)
 		// the badge's file, fetched on a thread when it isn't cached yet
 		void wantBadge(const std::shared_ptr<RaWatch>& self, const std::string& name)
 		{
@@ -288,7 +289,7 @@ namespace banana
 		// RetroArch's log since the last look
 		void poll(const std::shared_ptr<RaWatch>& self, double nowMs)
 		{
-			FILE* f = fopen("/run/banana/retroarch.log", "r");
+			FILE* f = fopen(log.c_str(), "r");
 			if (!f) return;
 			// a new log (shorter than what was read): from its start
 			if (fseek(f, 0, SEEK_END) == 0 && ftell(f) < (long)pos) { pos = 0; part.clear(); }
@@ -302,7 +303,8 @@ namespace banana
 			{
 				std::string ln = part.substr(0, nl);
 				part.erase(0, nl + 1);
-				if (ln.find("[RCHEEVOS]") == std::string::npos) continue;
+				// (RetroArch's lines "[RCHEEVOS] ...", PPSSPP's "RetroAchievements: ...": rcheevos' own words, both)
+				if (ln.find("[RCHEEVOS]") == std::string::npos && ln.find("RetroAchievements: ") == std::string::npos) continue;
 				std::lock_guard<std::mutex> l(mu);
 				size_t at;
 				if ((at = ln.find("Generated hash ")) != std::string::npos) hash = ln.substr(at + 15, 32);
@@ -312,7 +314,7 @@ namespace banana
 					size_t q0 = ln.find('"', at), q1 = ln.rfind('"');
 					if (q0 != std::string::npos && q1 > q0) game = ln.substr(q0 + 1, q1 - q0 - 1);
 					if (!gameId) { state = 3; gen++; continue; }
-					fprintf(stderr, "game panel: RetroArch identified game %u (%s)\n", gameId, game.c_str());
+					fprintf(stderr, "game panel: %s identified game %u (%s)\n", emu.c_str(), gameId, game.c_str());
 					state = 1; gen++;
 					std::thread(fetch, self).detach();
 				}
@@ -327,7 +329,7 @@ namespace banana
 				}
 			}
 			std::lock_guard<std::mutex> l(mu);
-			if (state == 0 && since > 0 && nowMs - since > 30000) { state = 5; gen++; fprintf(stderr, "game panel: no game from RetroArch's log in 30 s\n"); }	// RetroArch's client never got the game
+			if (state == 0 && since > 0 && nowMs - since > 30000) { state = 5; gen++; fprintf(stderr, "game panel: no game from %s's log in 30 s\n", emu.c_str()); }	// RetroArch's client never got the game
 		}
 	};
 
@@ -376,6 +378,16 @@ namespace banana
 		// and the panel showed no achievements
 		if (raw->token.empty() && !raw->user.empty() && account("ra_user") == raw->user) raw->token = account("ra_retroarch_token");
 		if (cfgValue(cfg, "cheevos_enable") != "true" || raw->user.empty()) raw->state = 4;
+		if (gPsp)
+		{
+			// PPSSPP: the setup's account, as run-psp gives it (its token, else RetroArch's); no States view
+			raw->log = "/run/banana/ppsspp.log"; raw->emu = "PPSSPP";
+			raw->user = account("ra_user");
+			raw->token = account("ra_ppsspp_token");
+			if (raw->token.empty()) raw->token = account("ra_retroarch_token");
+			raw->state = raw->user.empty() ? 4 : 0;
+			gStateBase.clear();
+		}
 	}
 
 	void Settings::gameRom(const std::string& rom, const std::string& stateDir)
@@ -483,6 +495,7 @@ namespace banana
 	void Settings::gameClose()
 	{
 		raw.reset();
+		gPsp = false;
 		gStates = false; gSlotSel = gSlotPick = -1;
 		for (auto& f : gStateFiles) f = StateFile();
 		gStateBase.clear();
@@ -589,7 +602,7 @@ namespace banana
 			// a token RetroArch wrote while the game started (a first login): looked for when the file changes, not on
 			// every pass (the whole retroarch.cfg ten times a second, beside the game, for as long as it had none)
 			struct stat st;
-			if (raw->token.empty() && raw->state != 4 && stat("/data/retroarch/retroarch.cfg", &st) == 0 && st.st_mtime != raw->cfgSeen)
+			if (raw->token.empty() && raw->state != 4 && !gPsp && stat("/data/retroarch/retroarch.cfg", &st) == 0 && st.st_mtime != raw->cfgSeen)
 			{
 				raw->cfgSeen = st.st_mtime;
 				raw->token = cfgValue("/data/retroarch/retroarch.cfg", "cheevos_token");
@@ -940,7 +953,7 @@ namespace banana
 		}
 		if (!(state == 2 && total) && nearList.empty())
 		{
-			const char* msg = state == 0 ? (raw->fromBlock ? "Waiting for the emulator..." : "Waiting for RetroArch...") : state == 1 ? "Looking the game up..." :
+			const char* msg = state == 0 ? (raw->fromBlock ? "Waiting for the emulator..." : gPsp ? "Waiting for PPSSPP..." : "Waiting for RetroArch...") : state == 1 ? "Looking the game up..." :
 				state == 3 ? "This game has no achievements." :
 				state == 4 ? "RetroAchievements is off, or its login failed: check the account in Settings > System > First-time setup." :
 				"No connection to RetroAchievements: check Wi-Fi.";
@@ -965,7 +978,7 @@ namespace banana
 			std::string lb = lang::tr("Second screen (RetroArch games)", GTILES[i].label);
 			float lw = text(lb, true, 19, 0, 0, fg, false, 0, true);
 			text(lb, true, 19, x + tw / 2 - lw / 2, y + 60, fg);
-			std::string kk = GTILES[i].keys;
+			std::string kk = gPsp && i == 3 ? "R2" : GTILES[i].keys;	// (PPSSPP fast-forwards while R2 is held)
 			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
 			text(kk, false, 14, x + tw / 2 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
 		}
