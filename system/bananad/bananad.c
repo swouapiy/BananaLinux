@@ -66,7 +66,7 @@ static struct {
 	char mixer[64];			/* ALSA simple control the volume keys change; "auto": the playing card's own */
 	int volume_step;		/* percent */
 	int brightness_step;	/* percent of max */
-	double autosleep_min;	/* idle minutes before sleeping (0: never); in the menu, or everywhere (idle_in_games) */
+	double autosleep_min;	/* idle minutes before sleeping (0: never), in the menu and in games */
 	int lid_sleep;			/* closing the lid sleeps */
 	int power_long_ms;		/* holding power this long shuts down */
 	int battery_off_pct;	/* at or under this, discharging: shut down (0, a phone's: the gauge's 0% is 3.4 V, the cell's
@@ -83,10 +83,9 @@ static struct {
 	int mic_gain;			/* the rk817's microphone preamp, 0..15 (-1: left as it is) */
 	double poweroff_min;	/* asleep this long (any sleep), or idle this long when it never sleeps: off, the game saved
 							 * first for the next boot (0: never) */
-	int idle_in_games;		/* the idle timers (dim, sleep, off) in games too, not only in the menu */
 	int recorder;			/* the flight recorder (below): everything bananad sees, written to banana/logs/sessions */
 	int lid_start;			/* the power button (or reset) starts it with the lid shut too; no: off again at once */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 0, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 12, 60, 0, 0, 0 };
+} cfg = { "auto", 5, 8, 10, 1, 2000, 0, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 12, 60, 0, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
@@ -181,7 +180,8 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "poweroff_minutes")) cfg.poweroff_min = atof(v);
 		/* (0.5.0's "Power off after sleeping": the same turn-off, one setting for both; a card that set it keeps it) */
 		else if (!strcmp(k, "poweroff_after_sleep_minutes")) { if (atof(v) > 0) cfg.poweroff_min = atof(v); }
-		else if (!strcmp(k, "idle_in_games")) cfg.idle_in_games = !strcmp(v, "yes") || !strcmp(v, "1");
+		/* (idle_in_games: gone, the idle timers are everywhere now; an older card's line is left alone) */
+		else if (!strcmp(k, "idle_in_games")) ;
 		else if (!strcmp(k, "recorder")) cfg.recorder = !strcmp(v, "on") || !strcmp(v, "yes") || !strcmp(v, "1");
 	}
 	fclose(f);
@@ -2684,6 +2684,56 @@ static void handle(const struct input_event *e)
 }
 
 /* percent, or -1 when there is no battery or it is charging */
+/* a game of netplay (Play together, run-retroarch's netplay.pid: RetroArch's pid) with the other handheld connected:
+ * a TCP connection on RetroArch's netplay port, 55435 (D88B), established (01), from either end (the host's local
+ * port, the joiner's remote one). Waiting for a friend who never came is idle as any game */
+static int netplay_connected(void)
+{
+	if (!pid_of("/run/banana/netplay.pid")) return 0;
+	static const char *tabs[] = { "/proc/net/tcp", "/proc/net/tcp6" };
+	for (int t = 0; t < 2; t++) {
+		FILE *f = fopen(tabs[t], "r");
+		if (!f) continue;
+		char line[256], loc[64], rem[64];
+		unsigned st;
+		int hit = 0;
+		while (!hit && fgets(line, sizeof line, f))
+			if (sscanf(line, " %*s %63s %63s %x", loc, rem, &st) == 3 && st == 1) {
+				const char *lp = strrchr(loc, ':'), *rp = strrchr(rem, ':');
+				hit = (lp && !strcmp(lp, ":D88B")) || (rp && !strcmp(rp, ":D88B"));
+			}
+		fclose(f);
+		if (hit) return 1;
+	}
+	return 0;
+}
+
+/* charge cycles (Settings > Sleep & power > Battery): the gauge has no count of its own, so the percent used on the
+ * battery is added up here, from the minute's look (pct: discharging, else -1), 100 of it a cycle, as a phone counts
+ * them. banana/battery-cycles: "<percent used> <since, epoch seconds>", written each 5% (a few lost at a power cut) */
+static void cycles_step(int pct)
+{
+	static const char *path = "/data/banana/battery-cycles";
+	static int last = -1, loaded;
+	static double used, unsaved;
+	static long long since;
+	if (!loaded) {
+		loaded = 1;
+		FILE *f = fopen(path, "r");
+		if (!f || fscanf(f, "%lf %lld", &used, &since) != 2 || used < 0) { used = 0; since = time(NULL); }
+		if (f) fclose(f);
+	}
+	if (pct < 0) { last = -1; return; }	/* on the charger: counted again from where it is unplugged */
+	if (last >= 0 && pct < last) unsaved += last - pct;
+	last = pct;
+	if (unsaved < 5) return;
+	used += unsaved; unsaved = 0;
+	FILE *f = fopen("/data/banana/battery-cycles.new", "w");
+	if (!f) return;
+	fprintf(f, "%.0f %lld\n", used, since);
+	if (fclose(f) == 0) rename("/data/banana/battery-cycles.new", path);
+}
+
 static int battery_discharging_pct(void)
 {
 	/* (the rk817's gauge says "Discharging" while a charger charges it, see charger_online: plugged in at 2% must not
@@ -2885,8 +2935,8 @@ int main(int argc, char **argv)
 	last_input = mono();
 	double next_battery = 0, pt_due = -1;	/* pt_due: when Parental controls' play time wants a look (playtime_step) */
 	int low_count = 0;
-	say("running: lid %s, auto-sleep %g min, off after %g min, idle timers %s, %s", cfg.lid_sleep ? "sleeps" : "ignored",
-		cfg.autosleep_min, cfg.poweroff_min, cfg.idle_in_games ? "everywhere" : "in the menu", cfg.mem_sleep);
+	say("running: lid %s, auto-sleep %g min, off after %g min, %s", cfg.lid_sleep ? "sleeps" : "ignored",
+		cfg.autosleep_min, cfg.poweroff_min, cfg.mem_sleep);
 	/* the power and volume keys heard from here: rcS waits for this before the menu (and its boot animation) starts */
 	boot_mark("bananad: buttons live");
 	FILE *rf = fopen("/run/banana/bananad-ready", "w");
@@ -2908,18 +2958,18 @@ int main(int argc, char **argv)
 		/* sleep until something is due: the battery look (a minute), the dim or the auto-sleep deadline, the lid
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
-		int game = pid_of("/run/banana/game.pid") != 0;
 		/* a job that must not be slept through (banana-scrape's downloads: its pid in /run/banana/awake.pid; a Files
 		 * job's: banana-ui's in /run/banana/files.pid; a download of Files': transfer_hold); looked at again every 5 s,
 		 * so the idle sleep, or the lid's, comes once it is over */
 		int awake = pid_of("/run/banana/awake.pid") != 0 || pid_of("/run/banana/files.pid") != 0 || transfer_hold();
 		if (awake && wait > 5) wait = 5;
+		/* a game of netplay (Play together): looked at every 5 s, connected counting as input (netplay_connected) */
+		if (pid_of("/run/banana/netplay.pid") && wait > 5) wait = 5;
 		/* (only deadlines still ahead: one already passed was acted on after the last poll, or is held back by what
 		 * the action checks (the charger, the lid, no backlight) and a uevent or an input event brings it back; counted
 		 * here it spun this loop every 20 ms, on the charger for as long as the menu sat idle) */
-		/* the idle timers: in the menu, or in games too (idle_in_games) */
-		int idle_ok = !game || cfg.idle_in_games;
-		if (idle_ok) {
+		/* the idle timers: in the menu and in games alike */
+		{
 			if (cfg.autosleep_min > 0 && !awake) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 			/* never sleeping: turning off counts from the last input instead */
@@ -3006,16 +3056,16 @@ int main(int argc, char **argv)
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }
 		if (recst.on && sel_down && !sel_marked && now - sel_since >= 2.0) { sel_marked = 1; rec_mark(); }
 
-		/* idle (in the menu, or in a game too with idle_in_games): the panels dim, then it sleeps, then it turns off
-		 * (suspend_now counts the time asleep). A touch or a stick since the last look counts as input */
-		game = pid_of("/run/banana/game.pid") != 0;
-		int idle = !game || cfg.idle_in_games;
-		if ((idle || recst.on) && quiet_scan() && idle) undim();	/* (recording: the touches read in games too) */
+		/* idle, in the menu and in games: the panels dim, then it sleeps, then it turns off (suspend_now counts the
+		 * time asleep). A touch or a stick since the last look counts as input, and so does a game of netplay while
+		 * the other handheld is connected: the friend playing on keeps this one awake, its screens lit */
+		if (quiet_scan()) undim();
+		if (netplay_connected()) { last_input = now; undim(); }
 		if (recst.on && now >= recst.flush_at) { rec_flush(); recst.flush_at = now + 30; }
-		if (cfg.dim_min > 0 && !dimmed && idle && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
+		if (cfg.dim_min > 0 && !dimmed && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
 		/* on the charger too, as a phone sleeps on it (the charging light stays on); only turning off waits for the
 		 * cable to come out */
-		if (cfg.autosleep_min > 0 && idle && now - last_input >= cfg.autosleep_min * 60.0 &&
+		if (cfg.autosleep_min > 0 && now - last_input >= cfg.autosleep_min * 60.0 &&
 		    !pid_of("/run/banana/awake.pid") && !pid_of("/run/banana/files.pid") && !transfer_hold())
 			suspend_now("idle");
 		if (lid_pause_at > 0 && now >= lid_pause_at && lid_closed) {
@@ -3045,7 +3095,7 @@ int main(int argc, char **argv)
 		}
 		/* never sleeping (autosleep_minutes 0): off after poweroff_minutes without input, as a held power button does
 		 * (the game saves first); not on the charger */
-		if (cfg.poweroff_min > 0 && cfg.autosleep_min <= 0 && idle && now - last_input >= cfg.poweroff_min * 60.0 &&
+		if (cfg.poweroff_min > 0 && cfg.autosleep_min <= 0 && now - last_input >= cfg.poweroff_min * 60.0 &&
 		    !charger_online() && !pid_of("/run/banana/awake.pid") && !pid_of("/run/banana/files.pid")) {
 			sleep_log("idle %.0f min: turning off", (now - last_input) / 60);
 			shutdown_now("idle");
@@ -3062,6 +3112,7 @@ int main(int argc, char **argv)
 			leds_update();	/* a capacity change has no uevent on every gauge */
 			rec_minute();
 			int pct = battery_discharging_pct();
+			cycles_step(pct);
 			low_count = pct >= 0 && pct <= cfg.battery_off_pct ? low_count + 1 : 0;
 			if (low_count >= 2) shutdown_now("battery empty");	/* two readings in a row: not a load spike */
 		}

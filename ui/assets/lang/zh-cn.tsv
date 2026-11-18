@@ -2001,3 +2001,30 @@ settings		BananaDS's settings: picture, speed, sound and hotkeys.	BananaDS 的�
 settings		DraStic: the fastest. Its own settings are in Emulator configurations.	DraStic：最快。它的设置在“模拟器配置”中。
 settings		Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator configurations.	Banana 自己的模拟器，基于 melonDS：最准确。它的设置在“模拟器配置”中。
 settings		The wireless network and the networks nearby.	无线网络及附近的网络。
+settings		When you close the lid	合上翻盖时
+settings		Whether closing the lid puts the handheld to sleep.	合上翻盖时掌机是否休眠。
+settings		Screens off	仅关屏幕
+settings		It sleeps, the game paused. Open the lid to carry on where you were.	进入休眠，游戏暂停。打开翻盖即可从原处继续。
+settings		Only the screens go dark: the game keeps running, its sound too.	只关闭屏幕：游戏继续运行，声音也继续。
+settings		LED brightness	指示灯亮度
+settings		How bright the lights are: green when on, red when the battery is low, amber while charging.	指示灯的亮度：开机时绿色，电量低时红色，充电时琥珀色。
+settings		How full it is, the time left, the power used and the battery's health.	电量、剩余时间、功耗和电池健康状况。
+settings		Charge	电量
+settings		Time left	剩余时间
+settings		About how long it lasts at the power it uses now (or, charging, until it is full).	按当前功耗大约还能使用多久（充电时：到充满还要多久）。
+settings		Power used	功耗
+settings		What the handheld uses now: more with a game, brighter screens and Wi-Fi.	掌机当前的功耗：运行游戏、屏幕更亮和开启 Wi-Fi 时更高。
+settings		Voltage	电压
+settings		The battery's voltage: about 4.2 V full, 3.4 V empty.	电池电压：充满约 4.2 V，耗尽约 3.4 V。
+settings		Capacity	容量
+settings		How much the battery holds, as the gauge has measured it, of what it was made to hold.	电量计测得的电池容量，以及出厂设计容量。
+settings		Charge cycles	充电循环
+settings		A full battery's worth used, counted by Banana. A battery keeps most of its capacity for hundreds.	每用掉一整块电池的电量算一次，由 Banana 计数。电池在数百次循环内仍能保持大部分容量。
+settings		When the handheld dims, sleeps and turns off, the lid, the LEDs and the battery.	掌机何时变暗、休眠和关机，以及翻盖、指示灯和电池。
+settings		Charging	充电中
+settings		Full	已充满
+settings		On the battery	使用电池
+settings		Until full	距充满
+settings		Not measured yet	尚未测得
+settings		As made	出厂容量
+settings		Counting	计数中

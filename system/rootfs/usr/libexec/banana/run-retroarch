@@ -482,6 +482,10 @@ else
     ra --config $CFG --appendconfig "$L|$RA$BA$SA$RBA" $NP1 ${NP2:+"$NP2"} < $FIFO &
     P=$!
 fi
+# a game of netplay: bananad keeps the handheld awake, its screens lit, while the friend's is connected (its
+# netplay_connected); gone with the game below
+NPID=
+[ -n "$NP1" ] && NPID=/run/banana/netplay.pid && echo $P > $NPID 2>/dev/null
 # Play together's host: the friend told its game takes players (the HELLOs' "hosting", together-state's first word)
 # once RetroArch listens on its port, 55435 (D88B), and not before: a join tried earlier is refused, and RetroArch
 # doesn't try again
@@ -498,7 +502,7 @@ fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
 wait $P; S=$?
 while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
-/usr/libexec/banana/ra-secrets scrub; rm -f $RA
+/usr/libexec/banana/ra-secrets scrub; rm -f $RA ${NPID:+$NPID}
 # the lines put back after the game, all in one rewrite of retroarch.cfg (RetroArch has just rewritten it on its exit
 # anyway): each set_cfg was a read and a rewrite of the ~110 KB file, ~10 ms each, while the menu waited
 fix_d=; fix_l=

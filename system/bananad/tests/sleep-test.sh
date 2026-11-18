@@ -219,7 +219,7 @@ echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0; sleep 0.3
 [ "$(cat /sys/class/backlight/backlight1/bl_power)" = 0 ] && ok "backlights on again" || bad "still off"
 stop
 
-echo "7. idle in the menu: the panels dim, and come back at the first press"
+echo "7. idle, in the menu and in a game: the panels dim, and come back at the first press"
 rm -f /run/banana/game.pid
 echo 200 > /sys/class/backlight/backlight0/brightness; echo 200 > /sys/class/backlight/backlight1/brightness
 start "dim_minutes = 0.02" "dim_percent = 30"      # 1.2 s
@@ -228,7 +228,8 @@ sleep 2.5
 ev $EV_KEY 304 1; ev $EV_KEY 304 0; sleep 0.3         # BTN_SOUTH: any button
 [ "$(cat /sys/class/backlight/backlight1/brightness)" = 200 ] && ok "back to 200 at the press" || bad "still dim: $(cat /sys/class/backlight/backlight1/brightness)"
 echo $GAME > /run/banana/game.pid; sleep 2
-[ "$(cat /sys/class/backlight/backlight1/brightness)" = 200 ] && ok "never dimmed while a game runs" || bad "dimmed during a game"
+[ "$(cat /sys/class/backlight/backlight1/brightness)" = 60 ] && ok "dimmed in an idle game too" || bad "not dimmed during an idle game: $(cat /sys/class/backlight/backlight1/brightness)"
+ev $EV_KEY 304 1; ev $EV_KEY 304 0; sleep 0.3
 rm -f /run/banana/game.pid
 stop
 
@@ -400,7 +401,7 @@ rm -rf /sys/class/power_supply/charger
 stop
 POWEROFF=0
 
-echo "19. sleep at never: off after the idle time awake; in a game only with the timers everywhere"
+echo "19. sleep at never: off after the idle time awake, in the menu and in a game"
 rm -f /run/banana/game.pid
 start "poweroff_minutes = 0.02"     # (start's autosleep_minutes = 0)
 sleep 2.5
@@ -408,20 +409,16 @@ sleep 2.5
 grep -q 'idle .* min: turning off' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
 stop; POWEROFF=0
 echo $GAME > /run/banana/game.pid
-start "poweroff_minutes = 0.02"
-sleep 2.5
-[ $POWEROFF = 0 ] && ok "not during a game (the timers in the menu)" || bad "turned off during a game"
-stop
-start "poweroff_minutes = 0.02" "idle_in_games = yes"
+start "poweroff_minutes = 0.02" "idle_in_games = no"     # (an older card's line: ignored, the timers are everywhere)
 for i in $(seq 30); do [ $POWEROFF = 1 ] && break; sleep 0.1; done
-[ $POWEROFF = 1 ] && ok "off during an idle game with the timers everywhere" || bad "not turned off during a game"
+[ $POWEROFF = 1 ] && ok "off during an idle game" || bad "not turned off during a game"
 kill -0 $GAME 2>/dev/null && bad "the game wasn't told to quit and save" || ok "the game was told to quit and save first"
 stop; POWEROFF=0
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
 
-echo "20. the timers everywhere: a touch is input in a game (the stylus alone isn't idle)"
+echo "20. a touch is input in a game (the stylus alone isn't idle)"
 echo 200 > /sys/class/backlight/backlight0/brightness; echo 200 > /sys/class/backlight/backlight1/brightness
-start "idle_in_games = yes" "dim_minutes = 0.03"     # 1.8 s
+start "dim_minutes = 0.03"     # 1.8 s
 for i in 1 2 3 4 5 6 7; do touch; sleep 0.5; done
 [ "$(cat /sys/class/backlight/backlight1/brightness)" = 200 ] && ok "touching kept the panels bright (3.5 s)" || bad "dimmed while touching: $(cat /sys/class/backlight/backlight1/brightness)"
 sleep 2.5
@@ -430,15 +427,35 @@ touch; sleep 1.5
 [ "$(cat /sys/class/backlight/backlight1/brightness)" = 200 ] && ok "a touch brought them back" || bad "still dim after a touch: $(cat /sys/class/backlight/backlight1/brightness)"
 stop
 
-echo "21. the timers everywhere: an idle game sleeps, paused, and carries on after the wake"
-start "idle_in_games = yes" "autosleep_minutes = 0.02"
+echo "21. an idle game sleeps, paused, and carries on after the wake"
+start "autosleep_minutes = 0.02"
 asleep && ok "asleep in a game" || bad "no sleep in a game"
 [ "$(gstate)" = T ] && ok "the game paused" || bad "the game ran on ($(gstate))"
 wake
 [ "$(gstate)" != T ] && ok "the game carries on after the wake" || bad "the game still paused"
 stop
 kill -CONT -$GAME 2>/dev/null || true
-rm -f /run/banana/game.pid
+
+echo "21b. netplay: the friend's handheld connected is use (no dim, no sleep); waiting for one that never came isn't"
+echo $GAME > /run/banana/netplay.pid
+echo 200 > /sys/class/backlight/backlight1/brightness
+# (RetroArch's netplay port, 55435, connected on the loopback: the host's end and the friend's)
+python3 -c "
+import socket, time
+s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); s.bind(('127.0.0.1', 55435)); s.listen(1)
+c = socket.create_connection(('127.0.0.1', 55435)); a, _ = s.accept(); time.sleep(6)" & NP=$!
+sleep 0.3
+start "dim_minutes = 0.03" "autosleep_minutes = 0.05"     # 1.8 s, 3 s
+sleep 4.5
+[ "$(cat /sys/class/backlight/backlight1/brightness)" = 200 ] && ok "connected: not dimmed (4.5 s)" || bad "dimmed during netplay: $(cat /sys/class/backlight/backlight1/brightness)"
+[ -e /run/test/wake.asleep ] && bad "asleep during netplay" || ok "connected: not asleep"
+wait $NP 2>/dev/null || true     # (the friend gone)
+for i in $(seq 80); do [ -e /run/test/wake.asleep ] && break; sleep 0.1; done
+[ -e /run/test/wake.asleep ] && ok "the friend gone: asleep once idle" || bad "no sleep after the netplay ended"
+wake
+stop
+kill -CONT -$GAME 2>/dev/null || true
+rm -f /run/banana/netplay.pid /run/banana/game.pid
 
 echo "22. the upper LED lit while asleep (led_sleep on: full, the kernel keeps it), back at its level after; off: dark"
 G=/sys/class/leds/green:power/brightness
