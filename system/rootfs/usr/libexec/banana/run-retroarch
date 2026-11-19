@@ -440,6 +440,7 @@ esac
 # is RetroArch itself (PRE: a library it starts with, the lease's shim)
 PRE=
 ra() {
+    /usr/libexec/banana/sound-check run-retroarch
     if [ $MENU = 1 ]; then exec ${PRE:+env LD_PRELOAD=$PRE} retroarch "$@" --menu
     else exec ${PRE:+env LD_PRELOAD=$PRE} retroarch "$@" -L "$CORE" "$ROM"; fi
 }

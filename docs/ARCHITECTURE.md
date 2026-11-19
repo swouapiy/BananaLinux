@@ -232,7 +232,11 @@ settings too and costs nothing while it doesn't change.
 
 Starting a game: banana-ui writes the game's pid to `/run/banana/game.pid`, closes the display, the input
 devices and the sound device, sets the system's clock profile, and runs its `run` command. When the game exits it
-takes the panels back, records the play, and shows the game's library again.
+takes the panels back, records the play, and shows the game's library again. The sound device isn't waited for: the
+launch's chime plays out under the game's start and the menu's sound thread closes the device after it (an emulator
+opening it first waits in the kernel; `logs/sound-check.log`, written by each launcher as its emulator starts, says
+whether one ever found it held). On the RG DS Plus the amplifiers' DSP reload after a stop is the kernel's background
+work (linux-patches 0032), so the close itself is quick.
 
 ## Files' servers: banana-fetch
 

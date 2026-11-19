@@ -202,4 +202,5 @@ case "$ROM" in
     ROM=$N ;;
 esac
 cd $D
+/usr/libexec/banana/sound-check run-bananads
 exec /usr/bin/bananads "$ROM"

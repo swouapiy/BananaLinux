@@ -131,6 +131,7 @@ export BANANAFRONT_DATA=/data/bananafront
 L=/data/banana/logs; mkdir -p $L
 [ -f $L/bananafront.log ] && mv -f $L/bananafront.log $L/bananafront.1.log
 [ -n "$BANANAFRONT_STATS" ] && set -- --stats "$BANANAFRONT_STATS" "$@"
+/usr/libexec/banana/sound-check run-bananafront
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the game panel (banana-ui keeps the other): its tiles' commands on stdin, the companions' replies on stdout
     if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>/dev/null; fi

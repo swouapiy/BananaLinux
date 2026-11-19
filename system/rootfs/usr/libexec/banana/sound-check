@@ -1,0 +1,19 @@
+#!/bin/sh
+# sound-check <launcher>: one line in logs/sound-check.log as an emulator starts: the playback devices free, or one
+# still held (and by which pid). banana-ui starts a game without waiting for its launch chime: the menu's sound thread
+# lets go of the device once the chime has played, while the game starts. An emulator that opens the device before
+# that waits in the kernel for it; this log says whether that ever happens, and for which emulator. It never waits.
+held=
+for s in /proc/asound/card*/pcm*p/sub*/status; do
+    [ -r "$s" ] || continue
+    read -r first < "$s" || continue
+    [ "$first" = closed ] && continue
+    pid=$(sed -n 's/^owner_pid *: *//p' "$s")
+    s=${s#/proc/asound/}
+    held="$held ${s%/status} (pid ${pid:-?})"
+done
+read -r up _ < /proc/uptime
+L=/data/banana/logs/sound-check.log
+[ -f $L ] && [ "$(wc -c < $L)" -gt 65536 ] && mv -f $L $L.1
+echo "$(date '+%F %T') $up $1: ${held:+held:}${held:-free}" 2>/dev/null >> $L
+exit 0

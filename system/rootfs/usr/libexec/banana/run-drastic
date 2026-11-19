@@ -173,6 +173,7 @@ h=$(hires_of "$r")
 CH=
 cfg_game threaded_3d "$t" && { echo "run-drastic: ${1##*/} has its own Threaded 3D: $t" >&2; CH=1; }
 cfg_game hires_3d "$h" && { echo "run-drastic: ${1##*/} has its own 3D resolution: ${r}x (hires_3d $h)" >&2; CH=1; }
+/usr/libexec/banana/sound-check run-drastic
 [ -z "$CH" ] && exec $SD/superdrastic-run $D/drastic "$1"
 $SD/superdrastic-run $D/drastic "$1" &
 P=$!

@@ -2551,6 +2551,7 @@ int main(int argc, char** argv)
 		logf("speaker EQ: %s can't be written", speakereq::livePath().c_str());
 
 	Sound sound(o.assets + "/sounds");
+	sound.onLog = [](const std::string& m) { logf("%s", m.c_str()); };
 	FrameStats fstat;
 	ClockBoost boost;
 	sound.enabled = settings["sounds"] != "off"; sound.gain = settings["sounds"] == "quiet" ? 0.4f : 1.0f;
@@ -3298,7 +3299,9 @@ int main(int argc, char** argv)
 		// everything the game wants goes back to the system: the panels, the buttons, the sound device. A RetroArch
 		// game with the game panel on (settings.conf retroarch_panel) gets only its own panel, through a DRM lease
 		// (Display::lease): the menu keeps the other for the game panel (Settings::gameRender) and reads its touch
-		sound.release();
+		// (no wait: the launch's chime plays out under the game's start, and the sound thread closes the device after
+		// it; the amplifiers' stop on the RG DS Plus is the kernel's background work, linux-patches 0032)
+		sound.release(false);
 		const double soundMs = nowMs() - letGo;
 		boost.release();
 		forgetDecoded();
