@@ -1,0 +1,194 @@
+From: swouapiy <swouapiy@gmail.com>
+Subject: [PATCH] ASoC: codecs: aw88166: reload the DSP after a stop in the background
+
+The stop at the playback widget's POST_PMD checks SYSINT after the I2S
+clock is already gone, finds it set every time on the RG DS Plus ("pa stop
+check fail:0x0310"), and writes the DSP's firmware and config again: ~0.3 s
+of I2C per amplifier, one after the other, inside the stream's close. The
+next program to open the device (a game after the menu's last sound) waited
+~0.65 s for it.
+
+The stop is split: the amplifier muted, its I2S and output off in POST_PMD
+as before; the DSP reload and the power-down on a work item. A stream that
+starts before the work has run does the reload first itself (under the same
+lock), as does a profile change; the component's suspend flushes the work,
+so no I2C runs once the bus sleeps.
+---
+--- a/sound/soc/codecs/aw88166.c
++++ b/sound/soc/codecs/aw88166.c
+@@ -37,6 +37,8 @@
+ 	struct delayed_work fw_work;
+ 	unsigned int clk_waits;	/* start_work passes spent waiting for the I2S clock */
+ 	bool playing;		/* between the playback widget's PRE_PMU and POST_PMD */
++	struct work_struct stop_work;	/* a stop's DSP reload and power-down, after POST_PMD */
++	bool reload_pending;	/* stopped with SYSINT set: the DSP reload still to do (under lock) */
+ 	unsigned int fw_retries;
+ 	struct regmap *regmap;
+ 	struct aw_container *aw_cfg;
+@@ -1212,6 +1214,8 @@
+ out:
+ 	mutex_unlock(&aw88166->lock);
+ }
++
++static void aw88166_finish_pending_stop(struct aw88166 *aw88166);
+ 
+ static void aw88166_start(struct aw88166 *aw88166, bool sync_start)
+ {
+@@ -1223,6 +1227,7 @@
+ 	if (aw88166->aw_pa->status == AW88166_DEV_PW_ON)
+ 		return;
+ 
++	aw88166_finish_pending_stop(aw88166);	/* (started again before the stop's work ran) */
+ 	ret = aw88166_dev_fw_update(aw88166, AW88166_DSP_FW_UPDATE_OFF, aw88166->phase_sync);
+ 	if (ret) {
+ 		dev_err(aw88166->aw_pa->dev, "fw update failed\n");
+@@ -1252,17 +1257,40 @@
+ 	return 0;
+ }
+ 
+-static int aw88166_stop(struct aw_device *aw_dev)
++/*
++ * A stop's last part: the DSP's firmware and config written again when the
++ * stop found SYSINT set (it always is on the RG DS Plus: the I2S clock is gone
++ * by POST_PMD), then the power-down. ~0.3 s of I2C per amplifier.
++ */
++static void aw88166_stop_finish(struct aw_device *aw_dev, int int_st)
+ {
+ 	struct aw_sec_data_desc *dsp_cfg =
+ 		&aw_dev->prof_info.prof_desc[aw_dev->prof_cur].sec_desc[AW88395_DATA_TYPE_DSP_CFG];
+ 	struct aw_sec_data_desc *dsp_fw =
+ 		&aw_dev->prof_info.prof_desc[aw_dev->prof_cur].sec_desc[AW88395_DATA_TYPE_DSP_FW];
++
++	if (int_st) {
++		aw_dev_select_memclk(aw_dev, AW88166_DEV_MEMCLK_OSC);
++		aw_dev_dsp_update_fw(aw_dev, dsp_fw->data, dsp_fw->len);
++		aw_dev_dsp_update_cfg(aw_dev, dsp_cfg->data, dsp_cfg->len);
++		aw_dev_select_memclk(aw_dev, AW88166_DEV_MEMCLK_PLL);
++	}
++
++	aw_dev_pwd(aw_dev, true);
++}
++
++/*
++ * A stop's first part, the amplifier silent and its output off: what the
++ * stream's close has to wait for. Returns 1 when it was already off, else
++ * SYSINT's check (non-zero: the DSP to reload) for aw88166_stop_finish.
++ */
++static int aw88166_stop_begin(struct aw_device *aw_dev)
++{
+ 	int int_st;
+ 
+ 	if (aw_dev->status == AW88166_DEV_PW_OFF) {
+ 		dev_dbg(aw_dev->dev, "already power off");
+-		return 0;
++		return 1;
+ 	}
+ 
+ 	aw_dev->status = AW88166_DEV_PW_OFF;
+@@ -1279,18 +1307,36 @@
+ 
+ 	aw_dev_amppd(aw_dev, true);
+ 
+-	if (int_st) {
+-		aw_dev_select_memclk(aw_dev, AW88166_DEV_MEMCLK_OSC);
+-		aw_dev_dsp_update_fw(aw_dev, dsp_fw->data, dsp_fw->len);
+-		aw_dev_dsp_update_cfg(aw_dev, dsp_cfg->data, dsp_cfg->len);
+-		aw_dev_select_memclk(aw_dev, AW88166_DEV_MEMCLK_PLL);
+-	}
++	return int_st ? -EINVAL : 0;
++}
+ 
+-	aw_dev_pwd(aw_dev, true);
++static int aw88166_stop(struct aw_device *aw_dev)
++{
++	int st = aw88166_stop_begin(aw_dev);
+ 
++	if (st != 1)
++		aw88166_stop_finish(aw_dev, st);
+ 	return 0;
++}
++
++/* (under lock) a stop's reload still to do: done now, before anything else */
++static void aw88166_finish_pending_stop(struct aw88166 *aw88166)
++{
++	if (!aw88166->reload_pending)
++		return;
++	aw88166->reload_pending = false;
++	aw88166_stop_finish(aw88166->aw_pa, -EINVAL);
+ }
+ 
++static void aw88166_stop_work(struct work_struct *work)
++{
++	struct aw88166 *aw88166 = container_of(work, struct aw88166, stop_work);
++
++	mutex_lock(&aw88166->lock);
++	aw88166_finish_pending_stop(aw88166);
++	mutex_unlock(&aw88166->lock);
++}
++
+ static struct snd_soc_dai_driver aw88166_dai[] = {
+ 	{
+ 		.name = "aw88166-aif",
+@@ -1459,6 +1505,7 @@
+ 	}
+ 
+ 	if (aw88166->aw_pa->status) {
++		aw88166_finish_pending_stop(aw88166);
+ 		aw88166_stop(aw88166->aw_pa);
+ 		aw88166_start(aw88166, AW88166_SYNC_START);
+ 	}
+@@ -1690,7 +1737,22 @@
+ 	case SND_SOC_DAPM_POST_PMD:
+ 		aw88166->playing = false;	/* (a start still waiting for the clock gives up) */
+ 		cancel_delayed_work(&aw88166->start_work);
+-		aw88166_stop(aw88166->aw_pa);
++		/*
++		 * The amplifier silent and off here; its DSP reload and power-down
++		 * on a workqueue, so the stream's close (and the next program's
++		 * open, waiting for it) don't wait ~0.3 s per amplifier
++		 */
++		switch (aw88166_stop_begin(aw88166->aw_pa)) {
++		case 1:
++			break;
++		case 0:
++			aw88166_stop_finish(aw88166->aw_pa, 0);
++			break;
++		default:
++			aw88166->reload_pending = true;
++			queue_work(system_dfl_wq, &aw88166->stop_work);
++			break;
++		}
+ 		break;
+ 	default:
+ 		break;
+@@ -1743,6 +1805,7 @@
+ 	int ret;
+ 
+ 	INIT_DELAYED_WORK(&aw88166->start_work, aw88166_startup_work);
++	INIT_WORK(&aw88166->stop_work, aw88166_stop_work);
+ 	INIT_DELAYED_WORK(&aw88166->fw_work, aw88166_fw_work);
+ 
+ 	ret = aw88166_request_firmware_file(aw88166);
+@@ -1769,11 +1832,22 @@
+ 
+ 	cancel_delayed_work_sync(&aw88166->fw_work);
+ 	cancel_delayed_work_sync(&aw88166->start_work);
++	flush_work(&aw88166->stop_work);
+ }
+ 
++/* (a stop's work done before the system sleeps: no I2C once the bus is suspended) */
++static int aw88166_codec_suspend(struct snd_soc_component *component)
++{
++	struct aw88166 *aw88166 = snd_soc_component_get_drvdata(component);
++
++	flush_work(&aw88166->stop_work);
++	return 0;
++}
++
+ static const struct snd_soc_component_driver soc_codec_dev_aw88166 = {
+ 	.probe = aw88166_codec_probe,
+ 	.remove = aw88166_codec_remove,
++	.suspend = aw88166_codec_suspend,
+ 	.dapm_widgets = aw88166_dapm_widgets,
+ 	.num_dapm_widgets = ARRAY_SIZE(aw88166_dapm_widgets),
+ 	.dapm_routes = aw88166_audio_map,

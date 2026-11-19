@@ -134,6 +134,7 @@ namespace banana
 			std::lock_guard<std::mutex> l(m);
 			closeNow = true;
 			queued.clear();
+			if (!releaseTimed) { releaseTimed = true; releasedAt = std::chrono::steady_clock::now(); }
 		}
 		cv.notify_all();
 		if (!wait) return;
@@ -145,6 +146,24 @@ namespace banana
 				if (!closeNow) return;
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		}
+	}
+
+	// (the sound thread, the device just closed: how long after the game's start it let go)
+	void Sound::logRelease()
+	{
+		double ms;
+		{
+			std::lock_guard<std::mutex> l(m);
+			if (!releaseTimed) return;
+			releaseTimed = false;
+			ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - releasedAt).count();
+		}
+		if (onLog)
+		{
+			char b[96];
+			snprintf(b, sizeof b, "sound: the device let go %.0f ms after the game's start", ms);
+			onLog(b);
 		}
 	}
 
@@ -193,7 +212,15 @@ namespace banana
 				if (closeNow)	// a game is starting: the device closed, after the sound still playing (the chime)
 				{
 					if (pcm && (cur || under || tail > 0)) closing = true;
-					else { closeDev(); cur = under = nullptr; tail = -1; closeAfter = closing = false; closeNow = false; continue; }
+					else
+					{
+						l.unlock();
+						closeDev();
+						logRelease();
+						l.lock();
+						cur = under = nullptr; tail = -1; closeAfter = closing = false; closeNow = false;
+						continue;
+					}
 				}
 				name = queued;
 				queued.clear();
@@ -207,6 +234,7 @@ namespace banana
 			if (name.empty() && !cur && !under && tail == 0)
 			{
 				closeDev();
+				logRelease();
 				tail = -1;
 				closeAfter = closing = false;
 				std::lock_guard<std::mutex> l(m);

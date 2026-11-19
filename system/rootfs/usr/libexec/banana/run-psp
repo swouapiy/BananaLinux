@@ -95,6 +95,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     controls_key "Fast-forward" 1-139      # F9, held while the tile is on
     controls_key "Exit App" 1-140          # F10
     rm -f /run/banana/ppsspp.log
+    /usr/libexec/banana/sound-check run-psp
     LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so /usr/share/ppsspp/PPSSPPSDL --fullscreen --pause-menu-exit \
         --log=/run/banana/ppsspp.log "$1" &
     P=$!
