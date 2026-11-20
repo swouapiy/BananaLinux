@@ -275,7 +275,7 @@ ux_run splash-b "splash ux-boot-word 700"
 # (the RG DS Plus adds a note to the Shader rows); "helpcheck" lays each out as the panel does
 HCFX=$OUT/ux-help-fixture-$size
 rm -rf "$HCFX"; "$HERE/tests/fixture.sh" "$HCFX" >/dev/null
-for hl in en zh-cn ru it fi; do
+for hl in en zh-cn ru it fi fr; do
     for he in superdrastic bananads; do
         for hb in rgds rgds-plus; do
             touch "$HCFX/data/settings.conf"; sed -i '/^language\b/d; /^nds_emulator\b/d' "$HCFX/data/settings.conf"

@@ -22,6 +22,7 @@ Ruslan (Nestrahoff) = Русский translation (Russian)
 Olympicus = Italiano translation (Italian)
 HANHITSI = Suomi translation (Finnish)
 Pixelado Dev = Español translation (Spanish)
+swouapiy = Français translation (French)
 
 [Testing]
 Duncan = QA
