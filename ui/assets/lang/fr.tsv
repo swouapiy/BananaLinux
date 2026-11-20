@@ -2813,3 +2813,504 @@ systems		Game & Watch	Game & Watch
 systems		Activity	Activité
 settings		that is a package for the {package's handheld}, this is the {board}	c'est un paquet pour la {package's handheld}, cette console est une {board}
 settings		the package's sha256sums doesn't list {file}: download it again	le sha256sums du paquet ne liste pas {file} : téléchargez-le à nouveau
+# Our line's own lines (Plaza, Glass, per-system pages, the Battery page, Parental controls...): they go upstream with those PRs.
+menu		Apps	Applis
+menu		Apps & tools	Applis et outils
+menu		NOT RATED	NON CLASSÉ
+menu		RP	RP
+menu		Save your game now. At {percent} Banana shuts down.	Sauvegardez votre partie maintenant. À {percent}, Banana s'éteint.
+menu		Plug in the charger soon. At {percent} Banana saves and shuts down.	Branchez bientôt le chargeur. À {percent}, Banana sauvegarde et s'éteint.
+menu		Not found: {parts}	Introuvable : {parts}
+menu		Banana started without {several}. A restart may help; banana/logs/health.txt has the details.	Banana a démarré sans {several}. Un redémarrage peut aider ; banana/logs/health.txt donne les détails.
+menu		The update didn't start	La mise à jour n'a pas démarré
+menu		Banana went back to the version before it by itself. banana/logs/updates.log has the details.	Banana est revenu de lui-même à la version d'avant. banana/logs/updates.log donne les détails.
+menu		The second card was repaired	La seconde carte a été réparée
+menu		The card was repaired	La carte a été réparée
+menu		It wasn't closed at the last power-off, and Banana fixed it. banana/logs/card-check.txt has the details.	Elle n'avait pas été fermée au dernier arrêt, et Banana l'a réparée. banana/logs/card-check.txt donne les détails.
+menu		The second card has errors	La seconde carte a des erreurs
+menu		The card has errors	La carte a des erreurs
+menu		Banana couldn't repair them all. Check the card on a computer; banana/logs/card-check.txt has the details.	Banana n'a pas pu toutes les réparer. Vérifiez la carte sur un ordinateur ; banana/logs/card-check.txt donne les détails.
+menu		1 minute of play left	1 minute de jeu restante
+menu		{minutes} minutes of play left	{minutes} minutes de jeu restantes
+menu		Then the game is saved and closed until tomorrow.	Ensuite, le jeu est sauvegardé et fermé jusqu'à demain.
+menu		Play time is up for today	Le temps de jeu est écoulé pour aujourd'hui
+menu		The game is saved. More tomorrow.	Le jeu est sauvegardé. La suite demain.
+menu		Flight recorder on	Enregistreur de vol activé
+menu		Hold Select for 2 seconds to mark a moment.	Maintenez Select 2 secondes pour marquer un moment.
+menu		Wi-Fi connected	Wi-Fi connecté
+menu		Address {done}	Adresse {done}
+menu		Bluetooth headphones connected	Casque Bluetooth connecté
+menu		The sound plays through them.	Le son passe dans le casque.
+menu		Bluetooth headphones disconnected	Casque Bluetooth déconnecté
+menu		The sound is back on the speakers.	Le son revient sur les haut-parleurs.
+menu		{c} wants to play together	{c} veut jouer ensemble
+menu		Open Play together in Apps to answer.	Ouvrez Jouer ensemble dans Applis pour répondre.
+menu		Playing together with {who}	Vous jouez ensemble avec {who}
+menu		When one of you starts a game, the other is asked to join.	Quand l'un de vous lance un jeu, l'autre est invité à le rejoindre.
+menu		{who} said no	{who} a refusé
+menu		Play together: invite someone else, or ask again later.	Jouer ensemble : invitez quelqu'un d'autre, ou redemandez plus tard.
+menu		{who} didn't answer	{who} n'a pas répondu
+menu		The invitation to play together ran out.	L'invitation à jouer ensemble a expiré.
+menu		{who} left Play together	{who} a quitté Jouer ensemble
+menu		You play on your own again.	Vous jouez de nouveau seul.
+menu		save state	sauvegarde d'état
+menu		load state	chargement d'état
+menu		fast-forward off	avance rapide désactivée
+menu		fast-forward on	avance rapide activée
+menu		Yellow	Jaune
+menu		Orange	Orange
+menu		Blue	Bleu
+menu		Red	Rouge
+menu		Green	Vert
+menu		Purple	Violet
+menu		Pink	Rose
+settings		A heavy 3D game may slow down with one after a while: set it to None (X in the library).	Un jeu 3D lourd peut ralentir avec un shader au bout d'un moment : réglez-le sur Aucun (X dans la bibliothèque).
+settings		Smooth scaling. The lightest: no extra work for the chip.	Mise à l'échelle lisse. La plus légère : aucun travail en plus pour la puce.
+settings		Every DS pixel an exact square, no blur.	Chaque pixel de la DS un carré exact, sans flou.
+settings		Sharp, evenly sized pixels, without blur.	Des pixels nets et réguliers, sans flou.
+settings		Sharp, even pixels, in the DS's own duller colours.	Des pixels nets et réguliers, dans les couleurs plus ternes de la DS.
+settings		The fine grid of the DS's screen.	La fine grille de l'écran de la DS.
+settings		The DS's screen grid, in its own duller colours.	La grille de l'écran de la DS, dans ses couleurs plus ternes.
+settings		Smooth, clean edges. The heaviest.	Des bords lisses et propres. Le plus lourd.
+settings		A handheld LCD's look, in the DS's colours.	Le rendu d'un écran LCD de console portable, aux couleurs de la DS.
+settings		A handheld LCD's look.	Le rendu d'un écran LCD de console portable.
+settings		A handheld LCD's look, with stronger lines.	Le rendu d'un écran LCD de console portable, avec des lignes plus marquées.
+settings		A light LCD look.	Un rendu LCD léger.
+settings		The DS's own, duller colours.	Les couleurs de la DS, plus ternes.
+settings		A soft retro pixel look.	Un rendu pixel rétro et doux.
+settings		Each pixel with a raised edge.	Chaque pixel avec un bord en relief.
+settings		Sharp pixels with smooth edges.	Des pixels nets aux bords lisses.
+settings		Sharp pixels with a TV's scanlines.	Des pixels nets avec les lignes de balayage d'une télé.
+settings		An old TV's scanlines.	Les lignes de balayage d'une vieille télé.
+settings		Jagged edges softened.	Les bords crénelés adoucis.
+settings		Exact square pixels, filling more of the screen.	Des pixels carrés exacts, qui remplissent plus l'écran.
+settings		The DS's screen grid, at double size.	La grille de l'écran de la DS, en double taille.
+settings		Round dots, like a printed picture (MiZai).	Des points ronds, comme une image imprimée (MiZai).
+settings		MiZai's dots, tuned for the RG DS screens.	Les points de MiZai, réglés pour les écrans des RG DS.
+settings		Each pixel a small tile.	Chaque pixel une petite tuile.
+settings		DraStic's LCD look.	Le rendu LCD de DraStic.
+settings		DraStic's LCD look, in the DS's colours.	Le rendu LCD de DraStic, aux couleurs de la DS.
+settings		DraStic's smooth pixel scaling.	La mise à l'échelle lisse des pixels de DraStic.
+settings		DraStic's sharp pixels with smooth edges.	Les pixels nets aux bords lisses de DraStic.
+settings		DraStic's sharp pixels, in the DS's colours.	Les pixels nets de DraStic, aux couleurs de la DS.
+settings		DraStic's light LCD look.	Le rendu LCD léger de DraStic.
+settings		DraStic's light LCD look, in the DS's colours.	Le rendu LCD léger de DraStic, aux couleurs de la DS.
+settings		Your own shader, from banana/shaders on the card.	Votre propre shader, depuis banana/shaders sur la carte.
+settings		As RetroArch has it.	Comme RetroArch le définit.
+settings		The game's shape, as large as fits.	Les proportions du jeu, aussi grand que possible.
+settings		Sharp, even pixels at a whole-number size, with a black margin.	Des pixels nets et réguliers à une taille entière, avec une marge noire.
+settings		The whole screen. Some games look stretched.	Tout l'écran. Certains jeux paraissent étirés.
+settings		Famicom Disk System	Famicom Disk System
+settings		Master System	Master System
+settings		Gearsystem	Gearsystem
+settings		SMS Plus GX	SMS Plus GX
+settings		Game Gear	Game Gear
+settings		Mega CD	Mega CD
+settings		Neo Geo Pocket	Neo Geo Pocket
+settings		RACE	RACE
+settings		Beetle NeoPop	Beetle NeoPop
+settings		Neo Geo Pocket Color	Neo Geo Pocket Color
+settings		WonderSwan	WonderSwan
+settings		Beetle Cygne	Beetle Cygne
+settings		WonderSwan Color	WonderSwan Color
+settings		Lynx	Lynx
+settings		Handy	Handy
+settings		Beetle Lynx	Beetle Lynx
+settings		Holani	Holani
+settings		Virtual Boy	Virtual Boy
+settings		Beetle VB	Beetle VB
+settings		Pokémon mini	Pokémon mini
+settings		PokeMini	PokeMini
+settings		PC Engine	PC Engine
+settings		Beetle PCE FAST	Beetle PCE FAST
+settings		Beetle PCE	Beetle PCE
+settings		Beetle SuperGrafx	Beetle SuperGrafx
+settings		Geargrafx	Geargrafx
+settings		PC Engine CD	PC Engine CD
+settings		Atari 2600	Atari 2600
+settings		Stella	Stella
+settings		Stella 2014	Stella 2014
+settings		Atari 7800	Atari 7800
+settings		ProSystem	ProSystem
+settings		ColecoVision	ColecoVision
+settings		Gearcoleco	Gearcoleco
+settings		Intellivision	Intellivision
+settings		FreeIntv	FreeIntv
+settings		Vectrex	Vectrex
+settings		Odyssey 2	Odyssey 2
+settings		Arcade	Arcade
+settings		FinalBurn Neo	FinalBurn Neo
+settings		MAME 2003-Plus	MAME 2003-Plus
+settings		MAME 2010	MAME 2010
+settings		FB Alpha 2012	FB Alpha 2012
+settings		Neo Geo	Neo Geo
+settings		Atari	Atari
+settings		Bandai	Bandai
+settings		Capcom	Capcom
+settings		Coleco	Coleco
+settings		GCE	GCE
+settings		Commodore	Commodore
+settings		Sinclair	Sinclair
+settings		Magnavox	Magnavox
+settings		Mattel	Mattel
+settings		NEC	NEC
+settings		Nintendo	Nintendo
+settings		Sega	Sega
+settings		SNK	SNK
+settings		Sony	Sony
+settings		PlayStation Portable	PlayStation Portable
+settings		Look & sound	Apparence et son
+settings		Dark colours, easy on the eyes.	Des couleurs sombres, reposantes pour les yeux.
+settings		Light colours, for daylight.	Des couleurs claires, pour la lumière du jour.
+settings		Your games as cartridges on a shelf. Still experimental.	Vos jeux en cartouches sur une étagère. Encore expérimental.
+settings		A theme from banana/themes on the card.	Un thème de banana/themes sur la carte.
+settings		Theme options	Options du thème
+settings		The theme's colours, its game pictures and its motion.	Les couleurs du thème, ses images de jeux et son animation.
+settings		Orange	Orange
+settings		Game pictures	Images des jeux
+settings		What the games show: the cartridges, Glass's cards, Plaza's tiles.	Ce que montrent les jeux : les cartouches, les cartes de Glass, les tuiles de Plaza.
+settings		The covers Scrape artworks fetched. A game without one shows its own icon.	Les jaquettes récupérées par Illustrations. Un jeu sans jaquette montre sa propre icône.
+settings		A DS game's own icon, as the DSi menu shows it. Other games show their logo, or their box art without one.	L'icône d'un jeu DS, comme le menu de la DSi l'affiche. Les autres jeux montrent leur logo, ou leur jaquette s'ils n'en ont pas.
+settings		The menu's gentle movement and shine.	Le léger mouvement et le reflet du menu.
+settings		The menu moves and shines.	Le menu bouge et brille.
+settings		The menu holds still, and saves a little battery.	Le menu reste immobile, et économise un peu de batterie.
+settings		Reset theme options	Réinitialiser les options du thème
+settings		The accent, its text, the game pictures and motion as they first were. Press A twice.	L'accent, son texte, les images des jeux et l'animation comme au début. Appuyez deux fois sur A.
+settings		Screens	Écrans
+settings		Each screen's brightness, and its colours.	La luminosité de chaque écran, et ses couleurs.
+settings		How bright the top screen is. F + volume changes both screens, in games too.	La luminosité de l'écran du haut. F + volume change les deux écrans, même en jeu.
+settings		How bright the bottom screen is. F + volume changes both screens, in games too.	La luminosité de l'écran du bas. F + volume change les deux écrans, même en jeu.
+settings		Sound	Son
+settings		The volume, the menu's sounds and the speakers' EQ.	Le volume, les sons du menu et l'égaliseur des haut-parleurs.
+settings		The speakers or headphones. The volume keys change it anywhere.	Les haut-parleurs ou le casque. Les touches de volume le changent partout.
+settings		The menu's sounds, softer than the games.	Les sons du menu, plus doux que les jeux.
+settings		Evens out the speakers. Headphones stay as they are.	Équilibre les haut-parleurs. Le casque reste tel quel.
+settings		Home row	Rangée d'accueil
+settings		Which systems are on it, where the apps go, and whether it goes round.	Les systèmes qui y sont, où vont les applis, et si elle tourne en boucle.
+settings		Apps	Applis
+settings		Where Files, Bshare, PortMaster and the Store's apps go on the home row.	Où vont Fichiers, Bshare, PortMaster et les applis de la Boutique sur la rangée d'accueil.
+settings		In an Apps tile	Dans une tuile Applis
+settings		With the systems	Avec les systèmes
+settings		One Apps tile at the end of the row holds every app.	Une tuile Applis au bout de la rangée contient toutes les applis.
+settings		Each app has its own tile on the row, among the systems.	Chaque appli a sa propre tuile sur la rangée, parmi les systèmes.
+settings		Endless row	Rangée sans fin
+settings		Whether the home row goes round, the first system after the last.	Si la rangée d'accueil tourne en boucle, le premier système après le dernier.
+settings		The row goes round: right on the last is the first again.	La rangée tourne en boucle : droite sur le dernier revient au premier.
+settings		The row has two ends, as a game list. Plaza's pages always do.	La rangée a deux bouts, comme une liste de jeux. Les pages de Plaza en ont toujours.
+settings		Date	Date
+settings		How the date shows on the top screen, in the themes that show it.	Comment la date s'affiche sur l'écran du haut, dans les thèmes qui l'affichent.
+settings		Month, then day.	Le mois, puis le jour.
+settings		Day, then month.	Le jour, puis le mois.
+settings		Day, then month, with dots.	Le jour, puis le mois, avec des points.
+settings		Year, month, day.	Année, mois, jour.
+settings		The month's name, then the day.	Le nom du mois, puis le jour.
+settings		The day, then the month's name.	Le jour, puis le nom du mois.
+settings		The weekday, the month's name, the day.	Le jour de la semaine, le nom du mois, le jour.
+settings		The weekday, the day, the month's name.	Le jour de la semaine, le jour, le nom du mois.
+settings		The screens never dim.	Les écrans ne s'assombrissent jamais.
+settings		Screens dim after 1 minute without use.	Les écrans s'assombrissent après 1 minute sans utilisation.
+settings		Screens dim after 2 minutes without use.	Les écrans s'assombrissent après 2 minutes sans utilisation.
+settings		Screens dim after 5 minutes without use.	Les écrans s'assombrissent après 5 minutes sans utilisation.
+settings		It never falls asleep by itself.	Elle ne se met jamais en veille d'elle-même.
+settings		Sleeps after 5 minutes without use.	Veille après 5 minutes sans utilisation.
+settings		Sleeps after 10 minutes without use.	Veille après 10 minutes sans utilisation.
+settings		Sleeps after 15 minutes without use.	Veille après 15 minutes sans utilisation.
+settings		Sleeps after 30 minutes without use.	Veille après 30 minutes sans utilisation.
+settings		Power-off after sleep	Arrêt après la veille
+settings		Turns off after sleeping a while. Your game is saved first.	S'éteint après un moment en veille. Votre jeu est sauvegardé d'abord.
+settings		3 hours	3 heures
+settings		6 hours	6 heures
+settings		It stays asleep until you wake it.	Elle reste en veille jusqu'à ce que vous la réveilliez.
+settings		Turns off after 5 minutes asleep.	S'éteint après 5 minutes en veille.
+settings		Turns off after 10 minutes asleep.	S'éteint après 10 minutes en veille.
+settings		Turns off after 15 minutes asleep.	S'éteint après 15 minutes en veille.
+settings		Turns off after 30 minutes asleep.	S'éteint après 30 minutes en veille.
+settings		Turns off after 1 hour asleep.	S'éteint après 1 heure en veille.
+settings		Turns off after 3 hours asleep.	S'éteint après 3 heures en veille.
+settings		Turns off after 6 hours asleep.	S'éteint après 6 heures en veille.
+settings		When you close the lid	À la fermeture du couvercle
+settings		Whether closing the lid puts the handheld to sleep.	Si fermer le couvercle met la console en veille.
+settings		Screens off	Écrans éteints
+settings		It sleeps, the game paused. Open the lid to carry on where you were.	Elle se met en veille, le jeu en pause. Rouvrez le couvercle pour reprendre là où vous en étiez.
+settings		Only the screens go dark: the game keeps running, its sound too.	Seuls les écrans s'éteignent : le jeu continue, son son aussi.
+settings		LED brightness	Luminosité des LED
+settings		How bright the lights are: green when on, red when the battery is low, amber while charging.	La luminosité des LED : vert allumée, rouge quand la batterie est faible, orange pendant la charge.
+settings		LED while asleep	LED en veille
+settings		The power light while the handheld sleeps.	La LED d'alimentation pendant la veille.
+settings		The light stays on, so you can tell it's asleep, not off.	La LED reste allumée, pour voir qu'elle est en veille, pas éteinte.
+settings		The light goes out while it sleeps.	La LED s'éteint pendant la veille.
+settings		How full it is, the time left, the power used and the battery's health.	Son niveau, le temps restant, la consommation et la santé de la batterie.
+settings		Charge	Charge
+settings		How full the battery is, and whether it is charging.	Le niveau de la batterie, et si elle est en charge.
+settings		Time left	Temps restant
+settings		About how long it lasts at the power it uses now (or, charging, until it is full).	Environ combien de temps elle tient à la consommation actuelle (ou, en charge, jusqu'à être pleine).
+settings		Power used	Consommation
+settings		What the handheld uses now: more with a game, brighter screens and Wi-Fi.	Ce que la console consomme maintenant : plus avec un jeu, des écrans plus lumineux et le Wi-Fi.
+settings		Voltage	Tension
+settings		The battery's voltage: about 4.2 V full, 3.4 V empty.	La tension de la batterie : environ 4,2 V pleine, 3,4 V vide.
+settings		Capacity	Capacité
+settings		How much the battery holds, as the gauge has measured it, of what it was made to hold.	Ce que la batterie contient, tel que la jauge l'a mesuré, sur ce qu'elle devait contenir à sa fabrication.
+settings		Charge cycles	Cycles de charge
+settings		A full battery's worth used, counted by Banana. A battery keeps most of its capacity for hundreds.	Une batterie pleine consommée, comptée par Banana. Une batterie garde l'essentiel de sa capacité pendant des centaines de cycles.
+settings		Which emulator plays DS games. X on a game picks one for that game only.	L'émulateur des jeux DS. X sur un jeu en choisit un pour ce jeu seul.
+settings		DraStic: the fastest. Its own settings are in Emulator configurations.	DraStic : le plus rapide. Ses réglages sont dans Configurations des émulateurs.
+settings		Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator configurations.	Celui de Banana, basé sur melonDS : le plus précis. Ses réglages sont dans Configurations des émulateurs.
+settings		The DS's language. Games with several languages start in it.	La langue de la DS. Les jeux en plusieurs langues démarrent dans celle-ci.
+settings		What DS games call you. Up to 10 characters.	Comment les jeux DS vous appellent. Jusqu'à 10 caractères.
+settings		Emulator configurations	Configurations des émulateurs
+settings		Each DS emulator's own settings: picture, speed, sound and hotkeys.	Les réglages propres à chaque émulateur DS : image, vitesse, son et raccourcis.
+settings		DraStic's settings: picture, speed, sound and hotkeys.	Les réglages de DraStic : image, vitesse, son et raccourcis.
+settings		BananaDS's settings: picture, speed, sound and hotkeys.	Les réglages de BananaDS : image, vitesse, son et raccourcis.
+settings		The look of the DS screens. Your own go in banana/shaders.	Le rendu des écrans de la DS. Les vôtres vont dans banana/shaders.
+settings		Outlines around 3D models, as in Zelda, Kirby and Pokémon battles.	Des contours autour des modèles 3D, comme dans Zelda, Kirby et les combats Pokémon.
+settings		A helper for DS Pokémon games on the touch screen. Early version, BananaDS only.	Une aide pour les jeux Pokémon DS sur l'écran tactile. Première version, BananaDS uniquement.
+settings		Restores BananaDS's settings. Saves, states and game clocks stay. Press A twice.	Rétablit les réglages de BananaDS. Les sauvegardes, les états et l'horloge des jeux restent. Appuyez deux fois sur A.
+settings		Restores DraStic's settings. Saves, states and cheats stay. Press A twice.	Rétablit les réglages de DraStic. Les sauvegardes, les états et les codes de triche restent. Appuyez deux fois sur A.
+settings		Shader, screen border, VSync and audio latency for RetroArch games.	Shader, bordure d'écran, VSync et latence audio pour les jeux RetroArch.
+settings		Achievements and tiles to save, load, open the menu, fast-forward and quit.	Succès et tuiles pour sauvegarder, charger, ouvrir le menu, avancer rapidement et quitter.
+settings		After 10 seconds without use.	Après 10 secondes sans utilisation.
+settings		After 30 seconds without use.	Après 30 secondes sans utilisation.
+settings		After a minute without use.	Après une minute sans utilisation.
+settings		Your party, battles, a guide and the map on the second screen in GBA Pokémon games. Inspired by PokeDaisy by Lidor Itzhari.	Votre équipe, les combats, un guide et la carte sur le second écran dans les jeux Pokémon GBA. Inspiré de PokeDaisy de Lidor Itzhari.
+settings		In Ruby, Sapphire, Emerald, FireRed, LeafGreen and the ROM hacks Unbound, Gaia, Glazed, Heart & Soul, Lazarus, Seaglass and SoulGold. Needs Second screen on.	Dans Rubis, Saphir, Émeraude, Rouge Feu, Vert Feuille et les ROM hacks Unbound, Gaia, Glazed, Heart & Soul, Lazarus, Seaglass et SoulGold. Nécessite Second écran activé.
+settings		For a Nuzlocke-style run in the Pokémon companion.	Pour une partie façon Nuzlocke dans le compagnon Pokémon.
+settings		Info about other GBA games on the second screen. Inspired by PokeDaisy.	Des infos sur les autres jeux GBA sur le second écran. Inspiré de PokeDaisy.
+settings		A look for other systems' games.	Un rendu pour les jeux des autres systèmes.
+settings		Picture size	Taille de l'image
+settings		How big other systems' games are drawn.	La taille des jeux des autres systèmes à l'écran.
+settings		Default	Par défaut
+settings		Fit	Ajusté
+settings		Pixel perfect	Pixel parfait
+settings		Full screen	Plein écran
+settings		Same as all	Comme pour tous
+settings		As set for all systems, in brackets.	Comme réglé pour tous les systèmes, entre parenthèses.
+settings		Which screen this system's games play on.	L'écran sur lequel tournent les jeux de ce système.
+settings		Its games play on the top screen.	Ses jeux tournent sur l'écran du haut.
+settings		Its games play on the bottom screen.	Ses jeux tournent sur l'écran du bas.
+settings		What the other screen shows while this system's games play.	Ce que l'autre écran affiche pendant les jeux de ce système.
+settings		A look for this system's games.	Un rendu pour les jeux de ce système.
+settings		What fills the space around this system's picture.	Ce qui remplit l'espace autour de l'image de ce système.
+settings		How big this system's games are drawn.	La taille des jeux de ce système à l'écran.
+settings		Colour correction	Correction des couleurs
+settings		Colours as the handheld's own screen showed them.	Les couleurs comme l'écran de la console d'origine les montrait.
+settings		Emulator's own	Celle de l'émulateur
+settings		As the emulator has it.	Comme l'émulateur le définit.
+settings		Softer colours, as on the real screen the games were made for.	Des couleurs plus douces, comme sur le vrai écran pour lequel les jeux ont été faits.
+settings		The colours as the game stores them: brighter and stronger.	Les couleurs telles que le jeu les enregistre : plus vives et plus fortes.
+settings		Game Boy palette	Palette Game Boy
+settings		The colours of Game Boy games.	Les couleurs des jeux Game Boy.
+settings		Grey	Gris
+settings		Pocket	Pocket
+settings		Super Game Boy	Super Game Boy
+settings		Shades of grey.	Des nuances de gris.
+settings		The original Game Boy's green.	Le vert de la Game Boy d'origine.
+settings		The Game Boy Pocket's paler screen.	L'écran plus pâle de la Game Boy Pocket.
+settings		The colours a Game Boy Color gave the game. Gambatte and mGBA only.	Les couleurs qu'une Game Boy Color donnait au jeu. Gambatte et mGBA uniquement.
+settings		The colours a Super Game Boy gave the game. Gambatte and mGBA only.	Les couleurs qu'un Super Game Boy donnait au jeu. Gambatte et mGBA uniquement.
+settings		{btnHelp} Companion: the second screen switches between its menu and the companion.	{btnHelp} Compagnon : le second écran bascule entre son menu et le compagnon.
+settings		The button beside F, in this system's games.	Le bouton à côté de F, dans les jeux de ce système.
+settings		Switches the second screen between its menu and the companion, as its top-right corner does.	Fait basculer le second écran entre son menu et le compagnon, comme son coin en haut à droite.
+settings		Does nothing.	Ne fait rien.
+settings		Which screen PSP games play on.	L'écran sur lequel tournent les jeux PSP.
+settings		What the other screen shows while PSP games play.	Ce que l'autre écran affiche pendant les jeux PSP.
+settings		Achievements and tiles to save, load, open PPSSPP's menu, fast-forward and quit.	Succès et tuiles pour sauvegarder, charger, ouvrir le menu de PPSSPP, avancer rapidement et quitter.
+settings		Per system configurations	Configurations par système
+settings		Each system's own settings: its emulator, screen, look and buttons.	Les réglages propres à chaque système : son émulateur, son écran, son rendu et ses boutons.
+settings		Open RetroArch	Ouvrir RetroArch
+settings		RetroArch's own menu: cores, playlists and its updater. F + Start comes back.	Le menu de RetroArch : cœurs, listes de lecture et son outil de mise à jour. F + Start revient.
+settings		Restores RetroArch's settings. Saves, states and your account stay. Press A twice.	Rétablit les réglages de RetroArch. Les sauvegardes, les états et votre compte restent. Appuyez deux fois sur A.
+settings		The wireless network and the networks nearby.	Le réseau sans fil et les réseaux alentour.
+settings		Networks nearby. A on one joins it.	Les réseaux alentour. A sur l'un d'eux s'y connecte.
+settings		Share the card on your network: on or off, login, password and SSH.	Partager la carte sur votre réseau : activé ou non, identifiant, mot de passe et SSH.
+settings		Scrape artworks	Illustrations
+settings		Covers, logos and title screens: fetch them, for the systems you pick.	Jaquettes, logos et écrans titres : les récupérer, pour les systèmes choisis.
+settings		A new version from GitHub or the card. It starts on the next restart.	Une nouvelle version depuis GitHub ou la carte. Elle démarre au prochain redémarrage.
+settings		Restarts into the version from before the last update. Press A twice.	Redémarre sur la version d'avant la dernière mise à jour. Appuyez deux fois sur A.
+settings		Fetch artworks	Récupérer les illustrations
+settings		Covers, logos, title screens, genres and years for the systems picked. Needs Wi-Fi.	Jaquettes, logos, écrans titres, genres et années pour les systèmes choisis. Wi-Fi nécessaire.
+settings		Which systems' games get artworks.	Les systèmes dont les jeux reçoivent des illustrations.
+settings		Artworks from	Illustrations depuis
+settings		Parental controls	Contrôle parental
+settings		Only the games you allow, and Settings locked by a PIN.	Seulement les jeux que vous autorisez, et les Paramètres verrouillés par un code PIN.
+settings		Shows only the allowed games, and asks for the PIN before Settings open.	N'affiche que les jeux autorisés, et demande le code PIN avant d'ouvrir les Paramètres.
+settings		Every game shows, and Settings open freely.	Tous les jeux s'affichent, et les Paramètres s'ouvrent librement.
+settings		Only the allowed games. Volume and brightness still work.	Seulement les jeux autorisés. Le volume et la luminosité fonctionnent toujours.
+settings		The PIN that unlocks Settings while the controls are on. A changes it.	Le code PIN qui déverrouille les Paramètres quand le contrôle est activé. A le modifie.
+settings		Allowed games	Jeux autorisés
+settings		The games shown while the controls are on. A opens the list.	Les jeux affichés quand le contrôle est activé. A ouvre la liste.
+settings		Daily play time	Temps de jeu quotidien
+settings		How long games can be played each day. Warnings come 10 minutes and 1 minute before the end; then the game is saved and closed until tomorrow.	Combien de temps on peut jouer chaque jour. Des avertissements arrivent 10 minutes et 1 minute avant la fin ; ensuite le jeu est sauvegardé et fermé jusqu'à demain.
+settings		No limit	Pas de limite
+settings		30 min	30 min
+settings		45 min	45 min
+settings		Reset options	Réinitialisation
+settings		Settings back to how they came. Games and saves stay.	Les réglages comme à l'origine. Les jeux et les sauvegardes restent.
+settings		Restores menu, display, sound, power and network settings. Games and saves stay. Press A twice.	Rétablit les réglages du menu, de l'affichage, du son, de l'alimentation et du réseau. Les jeux et les sauvegardes restent. Appuyez deux fois sur A.
+settings		Restores every emulator setting. Games and saves stay. Press A twice.	Rétablit chaque réglage des émulateurs. Les jeux et les sauvegardes restent. Appuyez deux fois sur A.
+settings		The model, the versions, the storage, the battery and the network.	Le modèle, les versions, le stockage, la batterie et le réseau.
+settings		The people behind this version of BananaOS.	Les personnes derrière cette version de BananaOS.
+settings		Tools for tracking down problems, such as a recording of what the handheld does.	Des outils pour trouver les problèmes, comme un enregistrement de ce que fait la console.
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound.	Partout, même en jeu : le rétroéclairage des deux écrans ensemble. Celui de chaque écran : Paramètres > Apparence et son.
+settings		Back twice	Retour deux fois
+settings		In a port (PortMaster's games, and PortMaster itself) and in PICO-8: Back pressed twice quickly.	Dans un portage (les jeux PortMaster, et PortMaster lui-même) et dans PICO-8 : Retour appuyé deux fois rapidement.
+settings		Back to Splore	Retour à Splore
+settings		In a PICO-8 game started from Splore: back to Splore's list.	Dans un jeu PICO-8 lancé depuis Splore : retour à la liste de Splore.
+settings		Swaps the face buttons in both DS emulators.	Inverse les boutons de façade dans les deux émulateurs DS.
+settings		L2, R2, L3 and R3 back to Banana's, A, B, X and Y as printed. Press A twice.	L2, R2, L3 et R3 remis à ceux de Banana, A, B, X et Y comme imprimés. Appuyez deux fois sur A.
+settings		Sleeps like the power button does. Your game pauses. Press A twice.	Met en veille comme le bouton d'alimentation. Votre jeu se met en pause. Appuyez deux fois sur A.
+settings		Gets the server's games and syncs saves both ways. Your own files stay.	Récupère les jeux du serveur et synchronise les sauvegardes dans les deux sens. Vos propres fichiers restent.
+settings		Which systems sync here. Skipped systems stay as they are.	Les systèmes synchronisés ici. Les systèmes ignorés restent tels quels.
+settings		Whether this system syncs with the home server.	Si ce système se synchronise avec le serveur domestique.
+settings		Its games and saves sync with the server.	Ses jeux et sauvegardes se synchronisent avec le serveur.
+settings		Its games stay as they are on this handheld.	Ses jeux restent tels quels sur cette console.
+settings		The handheld, as its device tree names it.	La console, telle que son arbre de périphériques la nomme.
+settings		Version	Version
+settings		The version of Banana running.	La version de Banana en cours.
+settings		Kernel	Noyau
+settings		The Linux kernel's version.	La version du noyau Linux.
+settings		RetroArch's version. It updates with Banana.	La version de RetroArch. Elle se met à jour avec Banana.
+settings		Processor	Processeur
+settings		The chip, and how many cores it has.	La puce, et son nombre de cœurs.
+settings		Memory	Mémoire
+settings		The memory in use now, of all there is.	La mémoire utilisée maintenant, sur le total.
+settings		Storage	Stockage
+settings		The space left on the card, of all there is.	L'espace libre sur la carte, sur le total.
+settings		Second card	Seconde carte
+settings		The space left on the card in the second slot, of all there is.	L'espace libre sur la carte du second emplacement, sur le total.
+settings		The network the handheld is on.	Le réseau de la console.
+settings		IP address	Adresse IP
+settings		The handheld's address on the network: for File sharing and SSH.	L'adresse de la console sur le réseau : pour le Partage de fichiers et SSH.
+settings		Wi-Fi MAC address	Adresse MAC Wi-Fi
+settings		The Wi-Fi chip's own address, for a router that lets in only the devices it knows.	L'adresse propre de la puce Wi-Fi, pour un routeur qui n'accepte que les appareils qu'il connaît.
+settings		Whether Bluetooth is on.	Si le Bluetooth est activé.
+settings		Up time	Temps de fonctionnement
+settings		How long since the handheld started (time asleep included).	Le temps écoulé depuis le démarrage de la console (veille comprise).
+settings		Records buttons, touches, the lid, screens, sleep, battery and Wi-Fi.	Enregistre les boutons, touchers, le couvercle, les écrans, la veille, la batterie et le Wi-Fi.
+settings		Recording to banana/logs/sessions, even after a restart. Hold Select for 2 seconds to mark a moment (the light blinks twice).	Enregistrement dans banana/logs/sessions, même après un redémarrage. Maintenez Select 2 secondes pour marquer un moment (la LED clignote deux fois).
+settings		Sleep timing log	Journal des temps de veille
+settings		How long each part of the handheld takes to sleep and to wake.	Le temps que met chaque partie de la console pour se mettre en veille et se réveiller.
+settings		Not logged.	Non enregistré.
+settings		Written to banana/logs/sleep-devices.log after each wake.	Écrit dans banana/logs/sleep-devices.log après chaque réveil.
+settings		Shutdown log	Journal d'arrêt
+settings		Where turning off stops, for a handheld that drains its battery while off.	Où s'arrête l'extinction, pour une console qui vide sa batterie une fois éteinte.
+settings		Each step in banana/logs/shutdown.txt. A power-off that hangs restarts, saves where it stopped, and turns off again.	Chaque étape dans banana/logs/shutdown.txt. Une extinction bloquée redémarre, enregistre où elle s'est arrêtée, et s'éteint à nouveau.
+settings		Night test	Test de nuit
+settings		Six hours on battery, then off. Report: banana/logs/night-test.txt. Press A twice.	Six heures sur batterie, puis extinction. Rapport : banana/logs/night-test.txt. Appuyez deux fois sur A.
+settings		Hides this row. A seven times on System > About brings it back. Press A twice.	Masque cette ligne. A sept fois sur Système > À propos la fait revenir. Appuyez deux fois sur A.
+settings		%.1f of %.1f GB free	%.1f Go libres sur %.1f Go
+settings		Rockchip {soc}	Rockchip {soc}
+settings		{n} cores	{n} cœurs
+settings		%ld of %ld MB used	%ld Mo utilisés sur %ld Mo
+settings		{m} d {m} h	{m} j {m} h
+settings		{m} h {m} min	{m} h {m} min
+settings		{m} min	{m} min
+settings		Full	Pleine
+settings		Charging	En charge
+settings		On the battery	Sur batterie
+settings		Until full	Jusqu'à pleine charge
+settings		%lld of %lld mAh (%d%%)	%lld mAh sur %lld (%d %%)
+settings		{design} mAh · {tr}	{design} mAh · {tr}
+settings		As made	D'origine
+settings		Not installed	Non installé
+settings		No card	Pas de carte
+settings		, charging	, en charge
+settings		Artwork systems	Systèmes illustrés
+settings		Night test stopped	Test de nuit arrêté
+settings		What it had so far is in banana/logs/night-test.txt.	Ce qu'il avait déjà est dans banana/logs/night-test.txt.
+settings		Night test started	Test de nuit lancé
+settings		Close the lid and leave it on battery. The report: banana/logs/night-test.txt.	Fermez le couvercle et laissez la console sur batterie. Le rapport : banana/logs/night-test.txt.
+settings		Theme options reset	Options du thème réinitialisées
+settings		The accent, its text, the game pictures and motion as they first were.	L'accent, son texte, les images des jeux et l'animation comme au début.
+settings		This system's own settings: its emulator, screen, look and buttons.	Les réglages propres à ce système : son émulateur, son écran, son rendu et ses boutons.
+settings		This system's own settings: its emulator, screen, look and buttons. No games on the card yet.	Les réglages propres à ce système : son émulateur, son écran, son rendu et ses boutons. Pas encore de jeux sur la carte.
+settings		The screens PSP games play on.	Les écrans sur lesquels tournent les jeux PSP.
+settings		The screens PSP games play on. No games on the card yet.	Les écrans sur lesquels tournent les jeux PSP. Pas encore de jeux sur la carte.
+settings		Whether Fetch artworks gets this system's covers, logos and title screens.	Si Récupérer les illustrations récupère les jaquettes, logos et écrans titres de ce système.
+settings		Fetch	Récupérer
+settings		Its games get artworks.	Ses jeux reçoivent des illustrations.
+settings		Left as they are: what they have stays.	Laissés tels quels : ce qu'ils ont reste.
+settings		Which systems show, the theme, games artworks, brightness, volume and sounds.	Les systèmes affichés, le thème, les illustrations, la luminosité, le volume et les sons.
+settings		When the handheld dims, sleeps and turns off, the lid, the LEDs and the battery.	Quand la console s'assombrit, se met en veille et s'éteint, le couvercle, les LED et la batterie.
+settings		The DS emulator, and how DS games look, sound and run.	L'émulateur DS, et l'image, le son et le fonctionnement des jeux DS.
+settings		RetroArch's games: the game panel, achievements, shaders and sound.	Les jeux de RetroArch : le panneau de jeu, les succès, les shaders et le son.
+settings		Wi-Fi, Bluetooth, file sharing and your home server.	Wi-Fi, Bluetooth, partage de fichiers et votre serveur domestique.
+settings		Language, time zone, updates, parental controls, hotkeys and resets.	Langue, fuseau horaire, mises à jour, contrôle parental, raccourcis et réinitialisations.
+settings		For working on Banana from a computer: ssh root@{address}, with your keys in banana/ssh/authorized_keys on the card.	Pour travailler sur Banana depuis un ordinateur : ssh root@{address}, avec vos clés dans banana/ssh/authorized_keys sur la carte.
+settings		Running: {st}. Press A twice to stop it. The report: banana/logs/night-test.txt.	En cours : {st}. Appuyez deux fois sur A pour l'arrêter. Le rapport : banana/logs/night-test.txt.
+settings		Makes the two screens' whites match: on a test pattern, one screen is adjusted to look like the other. Now: {c}	Fait correspondre le blanc des deux écrans : sur une mire, un écran est ajusté pour ressembler à l'autre. Actuellement : {c}
+settings		The card on your network: \\\\{address}\\banana on Windows, smb://{address}/banana on a Mac. {getConfValue}	La carte sur votre réseau : \\\\{address}\\banana sous Windows, smb://{address}/banana sur un Mac. {getConfValue}
+settings		No password needed: keep it off on networks you don't trust.	Pas de mot de passe nécessaire : laissez-le désactivé sur les réseaux dont vous n'êtes pas sûr.
+settings		Name {name}, password {password}.	Nom {name}, mot de passe {password}.
+settings		{on} of {all}	{on} sur {all}
+settings		The emulator for this game.	L'émulateur de ce jeu.
+settings		This game's screen	L'écran de ce jeu
+settings		Which screen this game plays on.	L'écran sur lequel tourne ce jeu.
+settings		This game's second screen	Le second écran de ce jeu
+settings		What the other screen shows while this game plays.	Ce que l'autre écran affiche pendant ce jeu.
+settings		A look for this game.	Un rendu pour ce jeu.
+settings		This game's screen border	La bordure d'écran de ce jeu
+settings		What fills the space around this game's picture.	Ce qui remplit l'espace autour de l'image de ce jeu.
+settings		This game's picture size	La taille d'image de ce jeu
+settings		How big this game is drawn.	La taille de ce jeu à l'écran.
+settings		This game's colours	Les couleurs de ce jeu
+settings		This game's palette	La palette de ce jeu
+settings		The colours of this Game Boy game.	Les couleurs de ce jeu Game Boy.
+settings		Same as system: as on its page in Other systems > Per system configurations.	Comme le système : comme sur sa page dans Autres systèmes > Configurations par système.
+settings		Same as system	Comme le système
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > Look & sound > Scrape artworks runs it again for new games.	Jaquettes, écrans titres, genres et années pour les jeux de la carte, depuis les collections gratuites de libretro : aucun compte nécessaire. Paramètres > Apparence et son > Illustrations le relance pour les nouveaux jeux.
+settings		{have} of {all} games	{have} jeux sur {all}
+settings		None yet	Aucun pour l'instant
+settings		PPSSPP	PPSSPP
+settings		Waiting for PPSSPP...	En attente de PPSSPP...
+settings		Sony PSP	Sony PSP
+settings		Sony PSP Minis	Sony PSP Minis
+settings		SNK Neo Geo MVS	SNK Neo Geo MVS
+settings		SNK Neo Geo AES	SNK Neo Geo AES
+menu		{cursor + 1} of {count}	{cursor + 1} sur {count}
+menu		 min left	 min restantes
+menu		 · 1 player	 · 1 joueur
+menu		STARTING	LANCEMENT
+systems		Famicom Disk System	Famicom Disk System
+systems		Master System	Master System
+systems		Game Gear	Game Gear
+systems		SG-1000	SG-1000
+systems		Mega CD	Mega CD
+systems		32X	32X
+systems		PSP	PSP
+systems		Neo Geo Pocket	Neo Geo Pocket
+systems		SNK	SNK
+systems		Neo Geo Pocket Color	Neo Geo Pocket Color
+systems		WonderSwan	WonderSwan
+systems		Bandai	Bandai
+systems		WonderSwan Color	WonderSwan Color
+systems		Lynx	Lynx
+systems		Atari	Atari
+systems		Virtual Boy	Virtual Boy
+systems		Pokémon mini	Pokémon mini
+systems		PC Engine	PC Engine
+systems		NEC	NEC
+systems		PC Engine CD	PC Engine CD
+systems		Atari 2600	Atari 2600
+systems		Atari 7800	Atari 7800
+systems		ColecoVision	ColecoVision
+systems		Coleco	Coleco
+systems		Intellivision	Intellivision
+systems		Mattel	Mattel
+systems		Vectrex	Vectrex
+systems		GCE	GCE
+systems		Odyssey 2	Odyssey 2
+systems		Magnavox	Magnavox
+systems		Arcade	Arcade
+systems		FinalBurn Neo	FinalBurn Neo
+systems		Neo Geo	Neo Geo
+systems		CPS-1	CPS-1
+systems		Capcom	Capcom
+systems		CPS-2	CPS-2
+systems		CPS-3	CPS-3
+systems		Play together	Jouer ensemble
+systems		RetroArch	RetroArch
+systems		Libretro	Libretro
+settings		can't write the trial	impossible d'écrire l'essai
+settings		U-Boot ({ubs} bytes) doesn't fit before the boot partition	U-Boot ({ubs} octets) ne tient pas avant la partition de démarrage
+settings		writing U-Boot	écriture d'U-Boot
+settings		U-Boot reads back wrong: the card may not start (write the image to it again)	U-Boot se relit mal : la carte risque de ne pas démarrer (réécrivez l'image dessus)
