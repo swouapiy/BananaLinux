@@ -1,6 +1,6 @@
 #!/bin/sh
 # SSH and SFTP (dropbear): one server, running while either of these is on.
-#  - SSH, for working on Banana itself: off by default (Settings > Network > File sharing > SSH). Root, with the public
+#  - SSH, for working on Banana itself: off by default (Settings > System > Developer options > SSH). Root, with the public
 #    keys in banana/ssh/authorized_keys on the card and no passwords; sftp and scp too. The keys are copied to /run
 #    (dropbear wants them readable by root alone, and exFAT can't say so), where /root/.ssh points; the host key is
 #    made once per card.

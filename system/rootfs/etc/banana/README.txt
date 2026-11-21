@@ -50,7 +50,7 @@ Equalizer APO's parametric format (what AutoEq and REW export: "Preamp: -3 dB", 
 Q 1.2"), picked in Profile.
 
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
-Settings > Network > File sharing > SSH, then ssh root@<address>. Keys only, no passwords; sftp and scp too.
+Settings > System > Developer options > SSH (A seven times on System > About shows them), then ssh root@<address>. Keys only, no passwords; sftp and scp too.
 
 RetroArch (the systems other than the DS and the PSP): F + a button in a game, F + X its menu, F + Start quits.
 PSP (PPSSPP, roms/psp): the same, F + L / F + R load / save the state, R2 fast-forwards; its saves, states and

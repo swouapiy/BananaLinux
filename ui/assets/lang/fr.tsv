@@ -3121,7 +3121,7 @@ settings		RetroArch's own menu: cores, playlists and its updater. F + Start come
 settings		Restores RetroArch's settings. Saves, states and your account stay. Press A twice.	Rétablit les réglages de RetroArch. Les sauvegardes, les états et votre compte restent. Appuyez deux fois sur A.
 settings		The wireless network and the networks nearby.	Le réseau sans fil et les réseaux alentour.
 settings		Networks nearby. A on one joins it.	Les réseaux alentour. A sur l'un d'eux s'y connecte.
-settings		Share the card on your network: on or off, login, password and SSH.	Partager la carte sur votre réseau : activé ou non, identifiant, mot de passe et SSH.
+settings		Share the card on your network: on or off, login and password.	Partager la carte sur votre réseau : activé ou non, identifiant et mot de passe.
 settings		Scrape artworks	Illustrations
 settings		Covers, logos and title screens: fetch them, for the systems you pick.	Pochettes, logos et écrans titres : les récupérer, pour les systèmes choisis.
 settings		A new version from GitHub or the card. It starts on the next restart.	Une nouvelle version depuis GitHub ou la carte. Elle démarre au prochain redémarrage.
@@ -3149,7 +3149,7 @@ settings		Restores menu, display, sound, power and network settings. Games and s
 settings		Restores every emulator setting. Games and saves stay. Press A twice.	Rétablit chaque réglage des émulateurs. Les jeux et les sauvegardes restent. Appuyez deux fois sur A.
 settings		The model, the versions, the storage, the battery and the network.	Le modèle, les versions, le stockage, la batterie et le réseau.
 settings		The people behind this version of BananaOS.	Les personnes derrière cette version de BananaOS.
-settings		Tools for tracking down problems, such as a recording of what the handheld does.	Des outils pour trouver les problèmes, comme un enregistrement de ce que fait la console.
+settings		Tools for finding what went wrong and working on Banana: a recording of what the handheld does, logs, and SSH.	Des outils pour trouver ce qui ne va pas et travailler sur Banana : un enregistrement de ce que fait la console, des journaux, et SSH.
 settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound.	Partout, même en jeu : le rétroéclairage des deux écrans ensemble. Celui de chaque écran : Paramètres > Apparence et son.
 settings		Back twice	Retour deux fois
 settings		In a port (PortMaster's games, and PortMaster itself) and in PICO-8: Back pressed twice quickly.	Dans un portage (les jeux PortMaster, et PortMaster lui-même) et dans PICO-8 : Retour appuyé deux fois rapidement.
@@ -3196,7 +3196,7 @@ settings		Where turning off stops, for a handheld that drains its battery while 
 settings		Each step in banana/logs/shutdown.txt. A power-off that hangs restarts, saves where it stopped, and turns off again.	Chaque étape dans banana/logs/shutdown.txt. Une extinction bloquée redémarre, enregistre où elle s'est arrêtée, et s'éteint à nouveau.
 settings		Night test	Test de nuit
 settings		Six hours on battery, then off. Report: banana/logs/night-test.txt. Press A twice.	Six heures sur batterie, puis extinction. Rapport : banana/logs/night-test.txt. Appuyez deux fois sur A.
-settings		Hides this row. A seven times on System > About brings it back. Press A twice.	Masque cette ligne. A sept fois sur Système > À propos la fait revenir. Appuyez deux fois sur A.
+settings		Hides this row, and turns SSH off. A seven times on System > About brings it back. Press A twice.	Masque cette ligne et désactive SSH. A sept fois sur Système > À propos la fait revenir. Appuyez deux fois sur A.
 settings		%.1f of %.1f GB free	%.1f Go libres sur %.1f Go
 settings		Rockchip {soc}	Rockchip {soc}
 settings		{n} cores	{n} cœurs

@@ -985,7 +985,7 @@ namespace banana
 			add(WF, "phone", "Networks", "Networks nearby. A on one joins it.", "", "network", {}, {}, Item::PAGE);
 		}
 		add(W, "phone", "Bluetooth", "Controllers, headphones and speakers.", "", "net_bt", {}, {}, Item::PAGE);
-		add(W, "phone", "File sharing", "Share the card on your network: on or off, login, password and SSH.", "", "net_share", {}, {}, Item::PAGE);
+		add(W, "phone", "File sharing", "Share the card on your network: on or off, login and password.", "", "net_share", {}, {}, Item::PAGE);
 		// the Bluetooth page (Network > Bluetooth)
 		{
 			const char* BT = "Bluetooth";
@@ -997,7 +997,7 @@ namespace banana
 				menu, "bt_audio", { "Low latency", "Best quality" }, { "latency", "quality" });
 			items.back().hints = { "The sound as close to the picture as Bluetooth gets: for games.", "The best sound the headphones have, a little later and a little more battery." };
 		}
-		// the File sharing page (Network > File sharing), SSH with it
+		// the File sharing page (Network > File sharing)
 		{
 			const char* FS = "File sharing";
 			add(FS, "phone", "File sharing", "The card as a shared folder on your network, over Wi-Fi.", menu, "share", { "Off", "On" }, { "off", "on" });
@@ -1006,8 +1006,6 @@ namespace banana
 				menu, "share_login", { "Name and password", "Guest" }, { "password", "guest" });
 			items.back().hints = { "The name and password below, for SMB and SFTP. Windows needs one.", "Anyone on the network, and no SFTP. Only on a network you trust." };
 			add(FS, "phone", "Sharing name and password", "", "", "share_account", {}, {}, Item::PAGE);
-			add(FS, "phone", "SSH", "A shell on the handheld from a computer, over Wi-Fi.", menu, "ssh", { "Off", "On" }, { "off", "on" });
-			items.back().hints = { "Off.", "On: ssh root@<address>." };
 		}
 		add(W, "phone", "Home server", "Your games, box art and saves from a server at home: Romhost or RomM.",
 			"", "homesync", {}, {}, Item::PAGE);
@@ -1093,14 +1091,8 @@ namespace banana
 		add(S, "gear", "Hotkeys", "The buttons that do something everywhere, and in the menu.", "", "hotkeys", {}, {}, Item::PAGE);
 		// (PR #94, swouapiy) last in System, and there only once unlocked: A seven times on About (settings.conf's
 		// developer); groupEnd leaves it out until then
-		add(S, "gear", "Developer options", "Tools for tracking down problems, such as a recording of what the handheld does.",
+		add(S, "gear", "Developer options", "Tools for finding what went wrong and working on Banana: a recording of what the handheld does, logs, and SSH.",
 			"", "developer", {}, {}, Item::PAGE);
-		// the Developer options list: opened from that row, not a tile
-		add("Developer options", "gear", "Flight recorder", "Records what the handheld does, in banana/logs/sessions on the card.", power, "recorder",
-			{ "Off", "On" }, { "off", "on" });
-		items.back().hints = { "Not recording.", "Recording. Hold Select for 2 seconds to mark a moment." };
-		add("Developer options", "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About brings it back). Press A twice.",
-			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 		// the hotkey pages: System > Hotkeys (everywhere and the menu) and one for each emulator (from Nintendo DS and
 		// Nintendo DS). What each does, from bananad, the menu, SuperDrastic's drastic.cfg and menu and BananaDS's menu.
 		// Rows to read, key "hk": what each does, or for L2, R2, L3 and R3 their Buttons row's job as it is now
@@ -1237,7 +1229,10 @@ namespace banana
 			"Each step in banana/logs/shutdown.txt. A power-off that hangs restarts, saves where it stopped, and turns off again." };
 		add(DEV, "moon", "Night test", "Six hours on battery, then off. Report: banana/logs/night-test.txt. Press A twice.",
 			"", "night_test", { "" }, { "" }, Item::ACTION);
-		add(DEV, "gear", "Hide developer options", "Hides this row. A seven times on System > About brings it back. Press A twice.",
+		// (SSH: root, for working on Banana itself; here rather than with File sharing, whose login it doesn't use)
+		add(DEV, "gear", "SSH", "A shell on the handheld from a computer, over Wi-Fi.", menu, "ssh", { "Off", "On" }, { "off", "on" });
+		items.back().hints = { "Off.", "On: ssh root@<address>." };
+		add(DEV, "gear", "Hide developer options", "Hides this row, and turns SSH off. A seven times on System > About brings it back. Press A twice.",
 			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 		addShelfRows();
 		addSystemRows();
@@ -1615,6 +1610,12 @@ namespace banana
 		aboutTaps = 0;
 		inGroups = true;
 		devOn = getConfValue(data + "/settings.conf", "developer", "off") == "on";
+		// SSH on from before it moved here (it was with File sharing): its row stays in reach
+		if (!devOn && getConfValue(data + "/settings.conf", "ssh", "off") == "on")
+		{
+			devOn = true;
+			setConfValue(data + "/settings.conf", "developer", "on");
+		}
 		aboutTaps = 0;
 		if (!devOn && (items[sel].key == "developer" || items[sel].section == "Developer options")) sel = 0;
 		gsel = std::min(groupOf(sel), gridCount() - 1);	// (Power has no tile: back on the first)
@@ -1827,6 +1828,9 @@ namespace banana
 				armed = -1;
 				devOn = false;
 				setConfValue(data + "/settings.conf", "developer", "off");
+				// (as a phone's USB debugging: hidden developer options leave nothing of theirs running)
+				for (auto& r : items)
+					if (r.key == "ssh" && r.at != 0) { r.at = 0; save(r); }
 				for (size_t i = 0; i < items.size(); i++) if (items[i].key == "about") sel = (int)i;
 				top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
 				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);

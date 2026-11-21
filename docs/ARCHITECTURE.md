@@ -218,7 +218,7 @@ it starts without them (the page says so). The settings' pages keep their textur
 times the panel's area; the least recently used go after each frame), as the menu's engine does, and a folder's rows
 get their words only for the window on screen: a folder of any number of names doesn't fill the memory.
 
-**SSH** (Settings > Network, off by default): dropbear with keys only, as root. The keys are written in
+**SSH** (Settings > System > Developer options, off by default; hiding them turns it off): dropbear with keys only, as root. The keys are written in
 `banana/ssh/authorized_keys` on the card and copied to `/run/banana/ssh` (mode 0600, which exFAT can't hold;
 `/root/.ssh` points there); the host key is made once per card. Logs and `sleep_debug`'s timings can be read
 on a computer without taking the card out. sftp and scp work too (gesftpserver as dropbear's `sftp-server`).
