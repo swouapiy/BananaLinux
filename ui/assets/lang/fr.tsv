@@ -1099,7 +1099,7 @@ settings		The two screens rarely show the same white. This corrects one of them 
 settings		no correction.	aucune correction.
 settings		the top screen corrected.	l'écran du haut corrigé.
 settings		the bottom screen corrected.	l'écran du bas corrigé.
-settings		What a computer asks for when it opens the share: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	Ce qu'un ordinateur demande en ouvrant le partage : nom {name}, mot de passe {password}. A les modifie (ils sont gardés dans banana/accounts.conf, que le partage ne montre jamais).
+settings		What a computer asks for when it opens the share, over SMB or SFTP: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	Ce qu'un ordinateur demande en ouvrant le partage, en SMB ou en SFTP : nom {name}, mot de passe {password}. A les modifie (ils sont gardés dans banana/accounts.conf, que le partage ne montre jamais).
 settings		Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.	N'importe qui sur le réseau peut l'ouvrir sans mot de passe (Connexion au partage) : laissez-le désactivé sur les réseaux dont vous n'êtes pas sûr.
 settings		Name {name}, password {password} (Sharing name and password, below).	Nom {name}, mot de passe {password} (Nom et mot de passe du partage, ci-dessous).
 settings		Not set	Non défini
@@ -3235,12 +3235,12 @@ settings		The DS emulator, and how DS games look, sound and run.	L'émulateur DS
 settings		RetroArch's games: the game panel, achievements, shaders and sound.	Les jeux de RetroArch : le panneau de jeu, les succès, les shaders et le son.
 settings		Wi-Fi, Bluetooth, file sharing and your home server.	Wi-Fi, Bluetooth, partage de fichiers et votre serveur domestique.
 settings		Language, time zone, updates, parental controls, hotkeys and resets.	Langue, fuseau horaire, mises à jour, contrôle parental, raccourcis et réinitialisations.
-settings		For working on Banana from a computer: ssh root@{address}, with your keys in banana/ssh/authorized_keys on the card.	Pour travailler sur Banana depuis un ordinateur : ssh root@{address}, avec vos clés dans banana/ssh/authorized_keys sur la carte.
+settings		For working on Banana from a computer: ssh root@{address}, with your keys in banana/ssh/authorized_keys on the card. sftp and scp too.	Pour travailler sur Banana depuis un ordinateur : ssh root@{address}, avec vos clés dans banana/ssh/authorized_keys sur la carte. sftp et scp aussi.
 settings		Running: {st}. Press A twice to stop it. The report: banana/logs/night-test.txt.	En cours : {st}. Appuyez deux fois sur A pour l'arrêter. Le rapport : banana/logs/night-test.txt.
 settings		Makes the two screens' whites match: on a test pattern, one screen is adjusted to look like the other. Now: {c}	Fait correspondre le blanc des deux écrans : sur une mire, un écran est ajusté pour ressembler à l'autre. Actuellement : {c}
 settings		The card on your network: \\\\{address}\\banana on Windows, smb://{address}/banana on a Mac. {getConfValue}	La carte sur votre réseau : \\\\{address}\\banana sous Windows, smb://{address}/banana sur un Mac. {getConfValue}
 settings		No password needed: keep it off on networks you don't trust.	Pas de mot de passe nécessaire : laissez-le désactivé sur les réseaux dont vous n'êtes pas sûr.
-settings		Name {name}, password {password}.	Nom {name}, mot de passe {password}.
+settings		Name {name}, password {password}, for sftp://{address} too (FileZilla, a phone's file manager).	Nom {name}, mot de passe {password}, pour sftp://{address} aussi (FileZilla, le gestionnaire de fichiers d'un téléphone).
 settings		{on} of {all}	{on} sur {all}
 settings		The emulator for this game.	L'émulateur de ce jeu.
 settings		This game's screen	L'écran de ce jeu
@@ -3314,3 +3314,5 @@ settings		can't write the trial	impossible d'écrire l'essai
 settings		U-Boot ({ubs} bytes) doesn't fit before the boot partition	U-Boot ({ubs} octets) ne tient pas avant la partition de démarrage
 settings		writing U-Boot	écriture d'U-Boot
 settings		U-Boot reads back wrong: the card may not start (write the image to it again)	U-Boot se relit mal : la carte risque de ne pas démarrer (réécrivez l'image dessus)
+settings		The name and password below, for SMB and SFTP. Windows needs one.	Le nom et le mot de passe ci-dessous, pour SMB et SFTP. Windows en a besoin.
+settings		Anyone on the network, and no SFTP. Only on a network you trust.	Tout le monde sur le réseau, et pas de SFTP. Seulement sur un réseau de confiance.

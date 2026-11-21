@@ -9,3 +9,5 @@ CONFIG_PKILL=y
 CONFIG_TIMEOUT=y
 # the power LED lit as it starts (rcK: devmem sets BOOT_CHARGING before restarting into charging, uboot-patches/004)
 CONFIG_DEVMEM=y
+# File sharing's SFTP: each session in a mount namespace of its own (usr/libexec/banana/sftp-session)
+CONFIG_UNSHARE=y
