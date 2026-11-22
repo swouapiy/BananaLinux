@@ -19,6 +19,9 @@ define BANANA_UI_BUILD_CMDS
 	# Activity (store/apps/activity, #213): built here from its source, not the prebuilt binary beside it
 	$(TARGET_CXX) $(TARGET_CXXFLAGS) -O2 -std=c++17 $(TARGET_LDFLAGS) -o $(@D)/banana-activity \
 		$(BR2_EXTERNAL_BANANA_PATH)/../store/apps/activity/banana-activity.cpp
+	# Banana Bistro (store/apps/bistro): its pictures, fonts and sounds are baked into its headers
+	$(TARGET_CXX) $(TARGET_CXXFLAGS) -O2 -std=c++17 $(TARGET_LDFLAGS) -o $(@D)/banana-bistro \
+		$(BR2_EXTERNAL_BANANA_PATH)/../store/apps/bistro/bistro.cpp -lasound -lpthread
 endef
 
 define BANANA_UI_INSTALL_TARGET_CMDS
@@ -26,6 +29,9 @@ define BANANA_UI_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/banana-activity $(TARGET_DIR)/usr/bin/banana-activity
 	mkdir -p $(TARGET_DIR)/usr/share/banana/apps/activity
 	touch $(TARGET_DIR)/usr/share/banana/apps/activity/Activity.app
+	$(INSTALL) -D -m 0755 $(@D)/banana-bistro $(TARGET_DIR)/usr/bin/banana-bistro
+	mkdir -p $(TARGET_DIR)/usr/share/banana/apps/bistro
+	touch "$(TARGET_DIR)/usr/share/banana/apps/bistro/Banana Bistro.app"
 endef
 
 $(eval $(generic-package))

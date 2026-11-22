@@ -1,0 +1,9 @@
+#!/bin/sh
+# Banana Bistro (systems.conf's [bistro], store/apps/bistro): the game on both panels, the kitchen on the top one
+# (DSI-2). Its best score goes in /data/apps/bistro (kept through updates); its log kept small.
+#   run-bistro <Banana Bistro.app>
+L=/data/banana/logs/bistro.log
+export BISTRO_DATA=/data/apps/bistro
+mkdir -p /data/banana/logs $BISTRO_DATA
+[ -f $L ] && [ "$(wc -c < $L)" -gt 262144 ] && mv -f $L $L.1
+exec /usr/bin/banana-bistro >> $L 2>&1
