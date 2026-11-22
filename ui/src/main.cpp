@@ -587,7 +587,7 @@ struct HealthNotice
 
 // ---- the other notifications --------------------------------------------------------------------------------------
 // What changed that is worth a word, shown as the battery's notice is (the banner at the top, 4 s, any press hides
-// it): Wi-Fi connected, Bluetooth headphones connected or gone, the flight recorder on. Looked at once a second; a
+// it): Wi-Fi connected, Bluetooth headphones connected or gone, the flight recorder on, a device on File sharing. Looked at once a second; a
 // newer one replaces the one showing. Not said: what a sleep does by itself (the Wi-Fi going and coming back within
 // two minutes awake, the headphones' hold through a sleep).
 struct EventNotice
@@ -600,6 +600,10 @@ struct EventNotice
 	std::string bsReq, bsRecv = "?", bsSend = "?";	// Bshare's request, receive and send, as last read ("?": not yet)
 	std::string tgInvite = "?", tgNews = "?";	// Play together's invitation and news, as last read ("?": not yet)
 	std::string ptSeen = "?";	// Parental controls' play time notice (bananad's), as last read ("?": not yet)
+	std::string shSftp = "?";	// File sharing's last SFTP login (sftp-session's line), as last read ("?": not yet)
+	std::set<std::string> smbOn;	// the addresses on the share's SMB at the last look
+	bool smbLooked = false;
+	std::map<std::string, double> shareSeen;	// "SMB <address>", "SFTP <address>": when last seen
 	bool btHeld = false;	// the headphones gone for a sleep: their coming back isn't news
 	bool showing(double now) const { return until > now; }
 	bool hide(double now) { bool was = showing(now); until = 0; return was; }
@@ -740,6 +744,59 @@ struct EventNotice
 			if (bsSend != "?" && c.size() >= 2 && c[0] == "declined") { show(c[1] + " said no", "Nothing was sent.", 2, 0xffb340, now); came = true; }
 			bsSend = sc;
 		}
+		// File sharing: a device that opened the card, over SFTP (sftp-session's line, one a login: "sftp\t<address>\t<pid>")
+		// or SMB (ksmbd is the kernel's own: its connections on port 445, in /proc/net, while its module is in). One
+		// notice a device and protocol, and none again until it has been gone 10 minutes: FileZilla and Finder open
+		// several connections, and Windows drops an idle one and comes back
+		auto opened = [&](const std::string& who, bool smb) {
+			std::string k = (smb ? "SMB " : "SFTP ") + who;
+			auto at = shareSeen.find(k);
+			bool fresh = at == shareSeen.end() || now - at->second > 600000;
+			shareSeen[k] = now;
+			if (!fresh) return;
+			show(who + " opened the card", smb ? "Over SMB, with File sharing." : "Over SFTP, with File sharing.", 1, 0x5ac8fa, now);
+			came = true;
+		};
+		std::string sf = read("share-sftp");
+		if (sf != shSftp)
+		{
+			auto c = cols(sf.substr(0, sf.find('\n')));
+			if (shSftp != "?" && c.size() >= 2 && c[0] == "sftp" && !c[1].empty()) opened(c[1], false);
+			shSftp = sf;
+		}
+		const char* net = getenv("SHARE_NET");	// (the headless test's /proc/net)
+		if ((net && *net) || access("/sys/module/ksmbd", F_OK) == 0)
+		{
+			std::set<std::string> on;
+			for (const char* t : { "/tcp", "/tcp6" })
+			{
+				std::ifstream f(std::string(net && *net ? net : "/proc/net") + t);
+				std::string l, sl, loc, rem, st;
+				std::getline(f, l);	// (the heading)
+				while (std::getline(f, l))
+				{
+					std::istringstream in(l);
+					in >> sl >> loc >> rem >> st;
+					// established (01), on our port 445 (01BD); the other end's IPv4 address, as the kernel writes it (its
+					// bytes in the machine's order: little-endian), or mapped into IPv6 (tcp6)
+					if (st != "01" || loc.size() < 5 || loc.compare(loc.size() - 5, 5, ":01BD") != 0) continue;
+					std::string h = rem.substr(0, rem.find(':'));
+					if (h.size() == 32 && h.compare(0, 24, "0000000000000000FFFF0000") == 0) h = h.substr(24);
+					if (h.size() != 8) continue;
+					unsigned long v = strtoul(h.c_str(), nullptr, 16);
+					char b[16];
+					snprintf(b, sizeof b, "%lu.%lu.%lu.%lu", v & 255, v >> 8 & 255, v >> 16 & 255, v >> 24 & 255);
+					on.insert(b);
+				}
+			}
+			// (the first look only notes who is there: a connection older than the menu isn't news)
+			for (auto& a : on)
+				if (smbLooked && !smbOn.count(a)) opened(a, true);
+				else shareSeen["SMB " + a] = now;
+			smbOn = on;
+		}
+		else smbOn.clear();
+		smbLooked = true;
 		return came;
 	}
 };
@@ -1186,6 +1243,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "filesdone") { for (int i = 0; i < 3000 && settings.filesWorking(); i++) usleep(10000); }
 		// fetchdone: banana-fetch's runner said a job finished (fetch.finished), as the device's loop hears of it
 		// togethercheck: Play together's together-start looked at, as the menu's loop does (its age not: a test's)
+		// noticecheck: the other notifications looked at, as the menu's loop does once a second (what came, logged as there)
+		else if (op == "noticecheck")
+		{
+			static EventNotice ev;
+			if (ev.check(now)) logf("notice: %s: %s", ev.title.c_str(), ev.body.c_str());
+		}
 		else if (op == "togethercheck")
 		{
 			std::string st = Settings::togetherFile("together-start");
