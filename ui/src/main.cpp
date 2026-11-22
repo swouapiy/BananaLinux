@@ -291,6 +291,7 @@ struct Options
 	std::string headless, script;
 	long repeat = 1;	// --repeat: the script run this many times over (the soak test)
 	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
+	std::string brand;		// --brand TEXT: beside the logo, as the device's version file makes it ("Alpha 0.5.3"; headless)
 	int w = 640, h = 480;
 };
 
@@ -1139,6 +1140,17 @@ static int ndsPresenterTest(const std::string& file, const std::string& out, boo
 	return 0;
 }
 
+// Parental controls' play time left today, over every theme's status bar (where its menu says, timeLeftAt), as the
+// menu shows it: nothing with no limit
+static void drawTimeLeft(Library& lib, const Menu& ui, Settings& settings)
+{
+	long left = lib.playLeft();
+	if (left < 0) return;
+	float x = 320, y = 32, room = 640;
+	ui.timeLeftAt(x, y, room);
+	settings.timeLeftPill((left + 59) / 60, x, y, room);
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -1182,6 +1194,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	int levelPercent = 0;
 	be.overlay = [&](int screen)
 	{
+		if (screen == 0 && !settings.isOpen()) drawTimeLeft(lib, ui, settings);
 		if (screen == 0 && !levelLabel.empty()) settings.level(levelLabel, levelPercent);
 		else if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
 		else if (screen == 0 && health.showing(now)) settings.notice(health.title, health.body, -1);	// (-1: no battery)
@@ -2512,6 +2525,7 @@ int main(int argc, char** argv)
 			}
 		}
 		else if (a == "--theme") o.theme = next();
+		else if (a == "--brand") o.brand = next();
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
 	}
@@ -2559,6 +2573,7 @@ int main(int argc, char** argv)
 		std::ifstream("/etc/banana/version") >> v;
 		std::ifstream sf("/etc/banana/stage"); std::string st; if (std::getline(sf, st) && !st.empty()) stage = st;
 		if (!v.empty()) rnds::brandNote = stage + " " + v.substr(0, v.find('-'));
+		if (!o.brand.empty()) rnds::brandNote = o.brand;
 	}
 	Host lib(o.systems, o.roms, o.data, o.assets);
 	lib.motion = settings["motion"] != "off";
@@ -2803,6 +2818,7 @@ int main(int argc, char** argv)
 		// the flight recorder recording (bananad's /run/banana/recording): a small red dot in the top corner
 		if (access("/run/banana/recording", F_OK) == 0)
 			be.fill(std::round(disp.width() - 16 * scale), std::round(6 * scale), std::round(6 * scale), std::round(6 * scale), rnds::Color::hex(0xff3b30));
+		if (!settingsView.isOpen()) drawTimeLeft(lib, *ui, settingsView);	// (under the notices)
 		if (drawNotice(t)) {}
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
 		else if (int k = looking())
