@@ -3319,3 +3319,7 @@ settings		Anyone on the network, and no SFTP. Only on a network you trust.	Tout 
 menu		{who} opened the card	{who} a ouvert la carte
 menu		Over SMB, with File sharing.	Par SMB, avec le Partage de fichiers.
 menu		Over SFTP, with File sharing.	Par SFTP, avec le Partage de fichiers.
+menu		{n} min left	{n} min restantes
+menu		{h} h {mm} left	{h} h {mm} restantes
+menu		{n} min	{n} min
+menu		{h} h {mm}	{h} h {mm}
