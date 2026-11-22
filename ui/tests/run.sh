@@ -1027,6 +1027,27 @@ PY
     grep -q "^send mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" && grep -q "^send --pin 4242 mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" ||
         { echo "FAIL $size: bshare: the PIN wasn't asked for and sent: $(cat "$BRUN/args")"; fail=1; }
     sed -i '/^bshare_/d' "$FX/data/settings.conf"
+    # File sharing's notice (main.cpp's EventNotice): a device on SMB (a connection on port 445 in /proc/net, here the
+    # test's), then one on SFTP (sftp-session's line), each said once; one there as the menu starts isn't news
+    slog=$OUT/$size-share.log; SRUN=$OUT/sharerun
+    rm -rf "$SRUN"; mkdir -p "$SRUN/net"
+    th='  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode'
+    printf '%s\n   0: 0100A8C0:01BD 0900A8C0:C001 01 00000000:00000000 00:00000000 00000000     0        0 1 1\n' "$th" > "$SRUN/net/tcp"
+    printf '%s\n' "$th" > "$SRUN/net/tcp6"
+    (sleep 1.5
+     # (192.168.0.23 on IPv6's mapped form, 192.168.0.9 still there, a listening socket that isn't a connection)
+     printf '%s\n   0: 0000000000000000FFFF00000100A8C0:01BD 0000000000000000FFFF00001700A8C0:D431 01 0:0 0:0 0 0 0 2 1\n   1: 00000000000000000000000000000000:01BD 00000000000000000000000000000000:0000 0A 0:0 0:0 0 0 0 3 1\n' "$th" > "$SRUN/net/tcp6.new" &&
+         mv "$SRUN/net/tcp6.new" "$SRUN/net/tcp6"
+     sleep 1.5; printf 'sftp\t192.168.0.42\t1234\n' > "$SRUN/share-sftp"
+     sleep 1.5; printf 'sftp\t192.168.0.42\t1240\n' > "$SRUN/share-sftp") & sp=$!
+    SHARE_NET="$SRUN/net" BSHARE_RUN="$SRUN" "$HERE/banana-ui" --headless "$OUT/$size-share-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "home nds; noticecheck; sleep 2500; noticecheck; sleep 1500; noticecheck; sleep 1500; noticecheck" 2> "$slog" ||
+        { echo "FAIL $size: banana-ui (share notice) exited $?"; fail=1; }
+    wait $sp
+    grep -q "notice: 192.168.0.23 opened the card: Over SMB, with File sharing." "$slog" || { echo "FAIL $size: share notice: no SMB notice for 192.168.0.23"; fail=1; }
+    grep -q "notice: 192.168.0.42 opened the card: Over SFTP, with File sharing." "$slog" || { echo "FAIL $size: share notice: no SFTP notice for 192.168.0.42"; fail=1; }
+    [ "$(grep -c "notice: 192.168.0.42 opened the card" "$slog")" = 1 ] || { echo "FAIL $size: share notice: FileZilla's second login said again"; fail=1; }
+    ! grep -q "notice: 192.168.0.9 opened" "$slog" || { echo "FAIL $size: share notice: a connection older than the menu said"; fail=1; }
     # settings.conf values not in their lists are put back to the defaults at start (the lists of allowed values were
     # read on past their ends: "accent = on" or "nds_emulator = off" could pass, the next list's values, or the menu crash)
     vlog=$OUT/$size-values.log

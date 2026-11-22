@@ -3316,3 +3316,6 @@ settings		writing U-Boot	écriture d'U-Boot
 settings		U-Boot reads back wrong: the card may not start (write the image to it again)	U-Boot se relit mal : la carte risque de ne pas démarrer (réécrivez l'image dessus)
 settings		The name and password below, for SMB and SFTP. Windows needs one.	Le nom et le mot de passe ci-dessous, pour SMB et SFTP. Windows en a besoin.
 settings		Anyone on the network, and no SFTP. Only on a network you trust.	Tout le monde sur le réseau, et pas de SFTP. Seulement sur un réseau de confiance.
+menu		{who} opened the card	{who} a ouvert la carte
+menu		Over SMB, with File sharing.	Par SMB, avec le Partage de fichiers.
+menu		Over SFTP, with File sharing.	Par SFTP, avec le Partage de fichiers.

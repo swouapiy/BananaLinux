@@ -6,6 +6,10 @@
 # with the files the share hides (its veto files: Wi-Fi's, the accounts', Files' servers' passwords, the SSH host key)
 # empty and read-only, and root's SSH keys too (the share's password doesn't make a key that logs in as root). All that in a mount namespace of the session's own, so the menu and the share still see the
 # real files; then the server chroots there and becomes nobody (the card's exFAT lets anyone write: uid=0,fmask=0000).
+# the menu's notice of who opened the card (a line a login: the pid makes each one new; dropbear's SSH_CLIENT is
+# "<address> <port> 22")
+c=${SSH_CLIENT%% *}; c=${c#::ffff:}
+[ -n "$c" ] && printf 'sftp\t%s\t%s\n' "$c" $$ > /run/banana/share-sftp
 exec unshare -m /bin/sh -c '
 V=/run/banana/sftp-view
 mount --make-rprivate / &&

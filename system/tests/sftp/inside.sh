@@ -53,7 +53,10 @@ L=$(printf 'ls -1 /\nls -1 /banana/roms/gba\nls -1 /sd2\n' | sf linux banana 2>&
 check "/ is banana and sd2" 'printf "%s" "$L" | grep -qx /banana && printf "%s" "$L" | grep -qx /sd2'
 check "accented name listed" 'printf "%s" "$L" | grep -qF "Pok\\303\\251mon \\303\\211meraude.gba"'
 check "second card" 'printf "%s" "$L" | grep -q on-sd2.txt'
+check "the login noted for the menu's notice (sftp, the client's address)" 'cut -f1,2 /run/banana/share-sftp | grep -qx "sftp	127.0.0.1"'
+n0=$(cat /run/banana/share-sftp 2>/dev/null)
 check "wrong password refused" '! echo "ls /" | sf nope banana >/dev/null 2>&1'
+check "a refused login isn't noted" '[ "$(cat /run/banana/share-sftp 2>/dev/null)" = "$n0" ]'
 rm -f /tmp/got; echo 'get /banana/banana/accounts.conf /tmp/got' | sf linux banana >/dev/null 2>&1
 check "accounts.conf reads empty" '[ -f /tmp/got ] && [ ! -s /tmp/got ]'
 rm -f /tmp/got; echo 'get /banana/banana/ssh/authorized_keys /tmp/got' | sf linux banana >/dev/null 2>&1
