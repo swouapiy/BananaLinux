@@ -255,8 +255,8 @@ settings		Time zone	Fuseau horaire
 settings		The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.	Le fuseau horaire de l'horloge, heure d'été comprise, pour le menu et les jeux (l'horloge d'un jeu DS aussi). L'heure elle-même vient du Wi-Fi ou de l'horloge de la console.
 settings		Update	Mise à jour
 settings		A new version of Banana, downloaded from GitHub over Wi-Fi or from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.	Une nouvelle version de Banana, téléchargée depuis GitHub en Wi-Fi ou depuis un paquet sur la carte, écrite dans l'autre emplacement et lancée au prochain redémarrage ; celle-ci reste telle quelle jusque-là.
-settings		Box art	Jaquettes
-settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	Jaquettes, écrans titres, genres et années pour vos jeux, depuis les collections gratuites de libretro (sans compte, Wi-Fi nécessaire). Cela continue en arrière-plan ; les jeux qui ont déjà des images sont ignorés, donc le relancer ne récupère que les nouveautés.
+settings		Box art	Pochettes
+settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	Pochettes, écrans titres, genres et années pour vos jeux, depuis les collections gratuites de libretro (sans compte, Wi-Fi nécessaire). Cela continue en arrière-plan ; les jeux qui ont déjà des images sont ignorés, donc le relancer ne récupère que les nouveautés.
 settings		Previous version	Version précédente
 settings		Restarts into the other slot: the version that ran before the last update. Press A twice.	Redémarre sur l'autre emplacement : la version d'avant la dernière mise à jour. Appuyez deux fois sur A.
 settings		SSH	SSH
@@ -287,7 +287,7 @@ settings		For working on Banana itself: ssh root@{address}, with the public keys
 settings		<address>	<adresse>
 settings		The card on the network: \\{address}\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). Anyone on the network can open it with no password: leave it off on networks you don't trust.	La carte sur le réseau : \\{address}\banana dans l'Explorateur de fichiers de Windows, smb://{address}/banana sur un Mac (Finder, Aller, Se connecter au serveur). N'importe qui sur le réseau peut l'ouvrir sans mot de passe : laissez-le désactivé sur les réseaux dont vous n'êtes pas sûr.
 settings		(Not connected to Wi-Fi now.)	(Pas connecté au Wi-Fi pour l'instant.)
-settings		Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.	Récupération des jaquettes et écrans titres. Le menu les affiche au fur et à mesure, et cela continue si vous quittez cet écran.
+settings		Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.	Récupération des pochettes et écrans titres. Le menu les affiche au fur et à mesure, et cela continue si vous quittez cet écran.
 settings		Press A again	Appuyez encore sur A
 settings		Choose	Choisir
 settings		Back	Retour
@@ -396,12 +396,12 @@ settings		The server said no ({code})	Le serveur a refusé ({code})
 settings		Account name	Nom du compte
 settings		Finish	Terminer
 settings		Not signed in	Non connecté
-settings		Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.	Votre réseau domestique : les succès des jeux, l'horloge et les images en ont besoin. A le choisit parmi les réseaux alentour ; le mot de passe se tape au clavier.
+settings		Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.	Votre réseau local : les succès des jeux, l'horloge et les images en ont besoin. A le choisit parmi les réseaux alentour ; le mot de passe se tape au clavier.
 settings		The clock on the top screen, and the games' own clocks. Left and right change it.	L'horloge de l'écran du haut, et celle des jeux. Gauche et droite la changent.
 settings		Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.	Votre compte retroachievements.org : DraStic et RetroArch débloquent les succès avec lui. A tape le nom, puis le mot de passe. Passez si vous n'en avez pas.
-settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.	Jaquettes, écrans titres, genres et années pour les jeux de la carte, depuis les collections gratuites de libretro : sans compte. A le lance (le Wi-Fi d'abord) ; cela continue pendant que vous terminez la configuration, et le menu affiche les images au fur et à mesure. Paramètres > Système > Jaquettes le relance pour les nouveaux jeux.
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.	Pochettes, écrans titres, genres et années pour les jeux de la carte, depuis les collections gratuites de libretro : sans compte. A le lance (le Wi-Fi d'abord) ; cela continue pendant que vous terminez la configuration, et le menu affiche les images au fur et à mesure. Paramètres > Système > Pochettes le relance pour les nouveaux jeux.
 settings		Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes.	Tout ce qui est ici se trouve aussi dans les paramètres (Start dans le menu), et cette configuration est dans Système > Première configuration. A termine.
-settings		Fetching covers and title screens. It carries on while you finish the setup.	Récupération des jaquettes et écrans titres. Cela continue pendant que vous terminez la configuration.
+settings		Fetching covers and title screens. It carries on while you finish the setup.	Récupération des pochettes et écrans titres. Cela continue pendant que vous terminez la configuration.
 settings		Welcome to Banana	Bienvenue dans Banana
 settings		Skip	Passer
 settings		Next zone	Zone suivante
@@ -470,7 +470,7 @@ settings		Pwr	Puis.
 settings		You	Vous
 settings		Foe	Adversaire
 settings		It's still an egg.	C'est encore un œuf.
-settings		the list of covers	la liste des jaquettes
+settings		the list of covers	la liste des pochettes
 settings		the boot partition can't be written	la partition de démarrage n'est pas accessible en écriture
 settings		can't write extlinux.conf	impossible d'écrire extlinux.conf
 settings		slot {slot} holds no system	l'emplacement {slot} ne contient aucun système
@@ -785,7 +785,7 @@ settings		A again: the game (saves kept)	A encore : le jeu (sauvegardes gardée
 settings		A again: the game, saves and art	A encore : le jeu, les sauvegardes et les images
 settings		Delete...	Supprimer...
 settings		The game couldn't be deleted: the card may be read-only.	Le jeu n'a pas pu être supprimé : la carte est peut-être en lecture seule.
-settings		Removes this game's file from the card: %s. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	Retire le fichier de ce jeu de la carte : %s. Gauche et droite choisissent si ses sauvegardes, états et jaquettes partent aussi, ou restent (ils reviennent si vous recopiez le jeu). Rien d'autre n'est touché : aucun autre jeu, aucun BIOS. A demande d'abord ; A encore supprime.
+settings		Removes this game's file from the card: %s. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	Retire le fichier de ce jeu de la carte : %s. Gauche et droite choisissent si ses sauvegardes, états et pochettes partent aussi, ou restent (ils reviennent si vous recopiez le jeu). Rien d'autre n'est touché : aucun autre jeu, aucun BIOS. A demande d'abord ; A encore supprime.
 settings		Shown systems	Systèmes affichés
 settings		Which systems are on the home row. Each one: with games (when it has something to start), hidden, or always (with nothing in it too: Ports for PortMaster).	Les systèmes présents sur la rangée d'accueil. Pour chacun : avec des jeux (quand il y a quelque chose à lancer), masqué, ou toujours (même vide : Ports pour PortMaster).
 settings		With games	Avec des jeux
@@ -807,7 +807,7 @@ settings		Menu: SELECT	Menu : SELECT
 settings		In the menu: search every system's games by name.	Dans le menu : chercher les jeux de tous les systèmes par leur nom.
 settings		Menu: X	Menu : X
 settings		Resume, options	Reprise, options
-settings		On the home row: the system's last game. On a game: its page (name, box art, emulator, delete).	Sur la rangée d'accueil : le dernier jeu du système. Sur un jeu : sa page (nom, jaquette, émulateur, suppression).
+settings		On the home row: the system's last game. On a game: its page (name, box art, emulator, delete).	Sur la rangée d'accueil : le dernier jeu du système. Sur un jeu : sa page (nom, pochette, émulateur, suppression).
 settings		Menu: L / R	Menu : L / R
 settings		A page	Une page
 settings		In a game list or a settings list: five at a time. Up and down too.	Dans une liste de jeux ou de paramètres : cinq à la fois. Haut et bas aussi.
@@ -890,7 +890,7 @@ settings		Try again	Réessayer
 settings		Logged in	Connecté
 settings		Not logged in	Non connecté
 settings		No answer	Pas de réponse
-settings		Start fetching box art	Lancer la récupération des jaquettes
+settings		Start fetching box art	Lancer la récupération des pochettes
 settings		Fetch again	Récupérer à nouveau
 settings		translated by	traduit par
 settings		Connected, address {address}	Connecté, adresse {address}
@@ -907,15 +907,15 @@ settings		Login failed	Échec de la connexion
 settings		Fetching in the background	Récupération en arrière-plan
 settings		{network} (no internet)	{network} (pas d'internet)
 settings		The menu's language, and the settings' and the emulators' menus. The rest of the setup is in the language picked.	La langue du menu, ainsi que des paramètres et des menus des émulateurs. La suite de la configuration est dans la langue choisie.
-settings		Your home network: achievements, the clock, box art and updates need it. Pick it from the networks around, type its password, and the connection is tested.	Votre réseau domestique : les succès, l'horloge, les jaquettes et les mises à jour en ont besoin. Choisissez-le parmi les réseaux alentour, tapez son mot de passe, et la connexion est testée.
+settings		Your home network: achievements, the clock, box art and updates need it. Pick it from the networks around, type its password, and the connection is tested.	Votre réseau local : les succès, l'horloge, les pochettes et les mises à jour en ont besoin. Choisissez-le parmi les réseaux alentour, tapez son mot de passe, et la connexion est testée.
 settings		For the clock on the top screen and the games' own clocks. Left and right change it.	Pour l'horloge de l'écran du haut et celle des jeux. Gauche et droite la changent.
 settings		For the clock on the top screen and the games' own clocks. Left and right change it; the time itself came from the internet.	Pour l'horloge de l'écran du haut et celle des jeux. Gauche et droite la changent ; l'heure elle-même vient d'internet.
 settings		Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Leave it and the emulators use their own.	Votre nom sur la DS, comme une vraie le demande la première fois : les records de Mario Kart, Pictochat, la sauvegarde d'un jeu. 10 caractères au plus. Laissez vide et les émulateurs utilisent le leur.
 settings		Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. The login is checked with the site. No account? Skip this: it can be added later.	Votre compte retroachievements.org : DraStic et RetroArch débloquent les succès avec lui. La connexion est vérifiée auprès du site. Pas de compte ? Passez cette étape : il pourra être ajouté plus tard.
-settings		Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes.	Récupération des jaquettes et écrans titres. Cela continue en arrière-plan pendant que vous terminez la configuration ; le menu affiche les images au fur et à mesure.
-settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.	Jaquettes, écrans titres, genres et années pour les jeux de la carte, depuis les collections gratuites de libretro : aucun compte nécessaire. Paramètres > Système > Jaquettes le relance pour les nouveaux jeux.
+settings		Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes.	Récupération des pochettes et écrans titres. Cela continue en arrière-plan pendant que vous terminez la configuration ; le menu affiche les images au fur et à mesure.
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.	Pochettes, écrans titres, genres et années pour les jeux de la carte, depuis les collections gratuites de libretro : aucun compte nécessaire. Paramètres > Système > Pochettes le relance pour les nouveaux jeux.
 settings		Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.	Tout ce qui est ici se trouve aussi dans les Paramètres (START dans le menu), et cette configuration est dans Système > Première configuration.
-settings		The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.	La configuration du premier démarrage à nouveau, une étape à la fois : le Wi-Fi (avec un test de la connexion), le fuseau horaire, le nom de la DS, la connexion RetroAchievements et les jaquettes. B sur la première étape revient ici.
+settings		The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.	La configuration du premier démarrage à nouveau, une étape à la fois : le Wi-Fi (avec un test de la connexion), le fuseau horaire, le nom de la DS, la connexion RetroAchievements et les pochettes. B sur la première étape revient ici.
 settings		Looking at the connection	Examen de la connexion
 settings		Looking at the connection...	Examen de la connexion...
 settings		Keep it and go on	Le garder et continuer
@@ -1054,8 +1054,8 @@ settings		Sharing name and password	Nom et mot de passe du partage
 settings		The language of the menu and the settings. Lines not yet translated stay in English.	La langue du menu et des paramètres. Les lignes pas encore traduites restent en anglais.
 settings		{name} ({English name}): translated by {translator}.	{name} ({English name}) : traduit par {translator}.
 settings		Language	Langue
-settings		Box art from	Jaquettes depuis
-settings		libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.	libretro : les collections de libretro. libretro + Twilight : TwilightBoxart (boxart.kirovair.com) pour les jaquettes que libretro n'a pas. Twilight d'abord : les jaquettes de TwilightBoxart quand il en a. TwilightBoxart est interrogé à raison d'un jeu par seconde.
+settings		Box art from	Pochettes depuis
+settings		libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.	libretro : les collections de libretro. libretro + Twilight : TwilightBoxart (boxart.kirovair.com) pour les pochettes que libretro n'a pas. Twilight d'abord : les pochettes de TwilightBoxart quand il en a. TwilightBoxart est interrogé à raison d'un jeu par seconde.
 settings		libretro + Twilight	libretro + Twilight
 settings		Twilight first	Twilight d'abord
 settings		Second SD card	Seconde carte SD
@@ -1153,15 +1153,15 @@ settings		{error}. What came ({n} MB) is kept: Download again carries on from th
 settings		the download stopped at {n} of {n} MB: Download again carries on from there	le téléchargement s'est arrêté à {n} sur {n} Mo : Télécharger à nouveau reprend de là
 settings		the download is damaged: its SHA-256 doesn't match the release's SHA256SUMS, so it was deleted. Download it again	le téléchargement est endommagé : son SHA-256 ne correspond pas au SHA256SUMS de la version, il a donc été supprimé. Téléchargez-le à nouveau
 settings		can't move the download into banana/updates	impossible de déplacer le téléchargement dans banana/updates
-settings		Fetching the cover and the title screen...	Récupération de la jaquette et de l'écran titre...
-settings		Box art for	Jaquette pour
+settings		Fetching the cover and the title screen...	Récupération de la pochette et de l'écran titre...
+settings		Box art for	Pochette pour
 settings		{value} (B works once it has answered.)	{value} (B fonctionne une fois qu'il a répondu.)
-settings		libretro's names for the words typed, the closest first. A fetches that game's cover and title screen for this one (over what it had), and every scrape after keeps them. B types other words.	Les noms de libretro pour les mots tapés, les plus proches en premier. A récupère la jaquette et l'écran titre de ce jeu pour celui-ci (à la place de ce qu'il avait), et chaque récupération suivante les garde. B pour taper d'autres mots.
+settings		libretro's names for the words typed, the closest first. A fetches that game's cover and title screen for this one (over what it had), and every scrape after keeps them. B types other words.	Les noms de libretro pour les mots tapés, les plus proches en premier. A récupère la pochette et l'écran titre de ce jeu pour celui-ci (à la place de ce qu'il avait), et chaque récupération suivante les garde. B pour taper d'autres mots.
 settings		Looking...	Recherche...
 settings		Use	Utiliser
 settings		{shader} (not on the card)	{shader} (absent de la carte)
 settings		Wi-Fi is off: switch it on in Settings > Network first.	Le Wi-Fi est désactivé : activez-le d'abord dans Paramètres > Réseau.
-settings		Box art: the game's name in libretro's collection	Jaquette : le nom du jeu dans la collection de libretro
+settings		Box art: the game's name in libretro's collection	Pochette : le nom du jeu dans la collection de libretro
 settings		This game's name	Le nom de ce jeu
 settings		This game's sort title	Le titre de tri de ce jeu
 settings		As in Settings ({setting})	Comme dans les Paramètres ({setting})
@@ -1175,14 +1175,14 @@ settings		This game's emulator	L'émulateur de ce jeu
 settings		This game's shader	Le shader de ce jeu
 settings		This game's 3D	La 3D de ce jeu
 settings		This game's microphone	Le microphone de ce jeu
-settings		This game's box art	La jaquette de ce jeu
+settings		This game's box art	La pochette de ce jeu
 settings		SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator.	SuperDrastic : DraStic sur les deux écrans, le plus rapide. BananaDS : l'émulateur de Banana (le cœur de melonDS), le plus précis. Ce choix vaut pour ce jeu seul ; les autres suivent Paramètres > Nintendo DS > Émulateur.
 settings		The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. None scales smoothly and costs no GPU work.{PLUS_SHADER_NOTE}	Le shader de l'image pour ce jeu seul, dans les deux émulateurs ; les autres suivent Paramètres > Nintendo DS > Shader. Aucun met à l'échelle en lissant, sans travail du GPU.{PLUS_SHADER_NOTE}
 settings		SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow Settings > Nintendo DS > Threaded 3D.	SuperDrastic (DraStic) uniquement. Activé affiche la 3D de la DS à côté du jeu, la méthode la plus rapide ; Désactivé l'affiche en même temps que le jeu, pour un jeu dont la 3D s'affiche sur le mauvais écran ou avec une image de retard (les jeux Dragon Quest). Les autres suivent Paramètres > Nintendo DS > 3D en parallèle.
 settings		How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers.	La force qu'un mot ou un souffle doit avoir pour atteindre ce jeu, dans les deux émulateurs : Élevée entend une voix douce, Faible seulement une voix forte, Désactivé rien. Pour un jeu qui a besoin du microphone (Nintendogs) ou que le micro dérange.
-settings		The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in banana/game-titles.tsv, which scraping the box art again leaves alone.	Le nom que le menu affiche pour ce jeu. A permet de le taper ; un nom vide revient au nom récupéré. Gardé dans banana/game-titles.tsv, qu'une nouvelle récupération des jaquettes ne touche pas.
+settings		The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in banana/game-titles.tsv, which scraping the box art again leaves alone.	Le nom que le menu affiche pour ce jeu. A permet de le taper ; un nom vide revient au nom récupéré. Gardé dans banana/game-titles.tsv, qu'une nouvelle récupération des pochettes ne touche pas.
 settings		The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. A types it; an empty one sorts by the name again.	L'ordre de la bibliothèque suit ce titre au lieu du nom : Dragon Quest 04, 05 et 09 gardent IV, V et IX dans l'ordre. A permet de le taper ; un titre vide trie de nouveau par le nom.
-settings		For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.	Pour un jeu dont la jaquette est fausse ou introuvable (une traduction, un hack, un autre nom) : A permet de taper son nom tel que la collection de libretro l'a, puis vous choisissez le bon parmi ce qu'elle trouve. Wi-Fi nécessaire.
+settings		For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.	Pour un jeu dont la pochette est fausse ou introuvable (une traduction, un hack, un autre nom) : A permet de taper son nom tel que la collection de libretro l'a, puis vous choisissez le bon parmi ce qu'elle trouve. Wi-Fi nécessaire.
 settings		This game	Ce jeu
 settings		Type	Taper
 settings		Find	Trouver
@@ -1227,8 +1227,8 @@ settings		Keep	Garder
 settings		3x (experimental)	3x (expérimental)
 settings		4x (experimental)	4x (expérimental)
 settings		The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.	L'émulateur (cœur RetroArch) des jeux de ce système : le premier est celui de BananaOS. Les cœurs téléchargés avec le Core Downloader de RetroArch (son Online Updater) sont aussi listés ici.
-settings		Home server	Serveur domestique
-settings		Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.	Vos jeux, leurs jaquettes et vos sauvegardes depuis un serveur chez vous : Romhost (la bibliothèque de ROM de Homeport) ou RomM. A ouvre sa page : association, Synchroniser maintenant, et ce qui se synchronise.
+settings		Home server	Serveur local
+settings		Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.	Vos jeux, leurs pochettes et vos sauvegardes depuis un serveur chez vous : Romhost (la bibliothèque de ROM de Homeport) ou RomM. A ouvre sa page : association, Synchroniser maintenant, et ce qui se synchronise.
 settings		SuperDrastic: F + SELECT	SuperDrastic : F + SELECT
 settings		Swap the screens	Inverser les écrans
 settings		DS games in SuperDrastic: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	Jeux DS dans SuperDrastic : l'écran du haut de la DS sur l'écran du bas et son écran du bas sur celui du haut (le tactile suit : l'écran tactile du haut de la RG DS ; sur la RG DS Plus pas de tactile tant qu'ils sont inversés), et retour. Gardé pour chaque jeu.
@@ -1236,7 +1236,7 @@ settings		BananaDS: F + SELECT	BananaDS : F + SELECT
 settings		DS games in BananaDS: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	Jeux DS dans BananaDS : l'écran du haut de la DS sur l'écran du bas et son écran du bas sur celui du haut (le tactile suit : l'écran tactile du haut de la RG DS ; sur la RG DS Plus pas de tactile tant qu'ils sont inversés), et retour. Gardé pour chaque jeu.
 settings		Server	Serveur
 settings		Sync now	Synchroniser maintenant
-settings		Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.	Copie les jeux du serveur (avec leurs jaquettes et leurs noms) sur la carte et synchronise les sauvegardes dans les deux sens. Cela continue en arrière-plan ; la console ne se met pas en veille pendant le téléchargement des jeux. Vos propres fichiers ne sont jamais remplacés ni supprimés : seulement ceux qu'une synchronisation a mis là.
+settings		Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.	Copie les jeux du serveur (avec leurs pochettes et leurs noms) sur la carte et synchronise les sauvegardes dans les deux sens. Cela continue en arrière-plan ; la console ne se met pas en veille pendant le téléchargement des jeux. Vos propres fichiers ne sont jamais remplacés ni supprimés : seulement ceux qu'une synchronisation a mis là.
 settings		Download: the server's games for the systems below come to the card (and leave it when they leave the server). Saves only: the games stay as they are and only the saves sync.	Télécharger : les jeux du serveur pour les systèmes ci-dessous arrivent sur la carte (et la quittent quand ils quittent le serveur). Sauvegardes seules : les jeux restent tels quels et seules les sauvegardes se synchronisent.
 settings		Saves only	Sauvegardes seules
 settings		Games go to	Les jeux vont sur
@@ -1251,8 +1251,8 @@ settings		And on Wi-Fi	Et en Wi-Fi
 settings		Which systems sync on this handheld. A skipped system's games stay as they are on the card.	Les systèmes synchronisés sur cette console. Les jeux d'un système ignoré restent tels quels sur la carte.
 settings		Forget this server	Oublier ce serveur
 settings		Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.	Dissocie la console : plus rien ne se synchronise tant qu'elle n'est pas associée à nouveau. Les jeux et les sauvegardes restent sur la carte. Appuyez deux fois sur A.
-settings		Home server systems	Systèmes du serveur domestique
-settings		Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.	Synchroniser : ses jeux et sauvegardes se synchronisent avec le serveur domestique. Ignorer : ils restent tels quels sur cette console.
+settings		Home server systems	Systèmes du serveur local
+settings		Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.	Synchroniser : ses jeux et sauvegardes se synchronisent avec le serveur local. Ignorer : ils restent tels quels sur cette console.
 settings		Sync	Synchroniser
 settings		Unpaired. The games and saves stay on the card.	Dissociée. Les jeux et les sauvegardes restent sur la carte.
 settings		Game page > {value}	Page du jeu > {value}
@@ -1307,7 +1307,7 @@ settings		Syncing with {homeServer}. It carries on if you leave this screen; the
 settings		the server	le serveur
 settings		Pairing	Association
 settings		Not paired	Non associée
-settings		The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed.	L'adresse du serveur domestique : son nom ou son IP, et :port quand ce n'est pas l'habituel (Romhost 8092, RomM 8080 ou 80). A tape la touche, B efface, L symboles (le point et les deux-points), START une fois tapé.
+settings		The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed.	L'adresse du serveur local : son nom ou son IP, et :port quand ce n'est pas l'habituel (Romhost 8092, RomM 8080 ou 80). A tape la touche, B efface, L symboles (le point et les deux-points), START une fois tapé.
 settings		The code Homeport shows under ROMs > Pair a device (or, for RomM, a client token's pairing code). START when it is typed.	Le code que Homeport affiche sous ROMs > Pair a device (ou, pour RomM, le code d'association d'un jeton client). START une fois tapé.
 settings		no reason given	aucune raison donnée
 settings		Y again deletes this package from banana/updates on the card (the installed versions aren't touched). Any other button keeps it.	Y encore supprime ce paquet de banana/updates sur la carte (les versions installées ne sont pas touchées). Tout autre bouton le garde.
@@ -1330,7 +1330,7 @@ settings		Don't turn the handheld off	N'éteignez pas la console
 settings		Don't turn the handheld off. Your games, saves and settings stay; the running version isn't touched until the restart. It takes a minute or two.	N'éteignez pas la console. Vos jeux, sauvegardes et réglages restent ; la version en cours n'est pas touchée avant le redémarrage. Cela prend une minute ou deux.
 settings		A restarts into the new version now. If it ever fails to start, Settings > System > Previous version brings this one back.	A redémarre maintenant sur la nouvelle version. Si elle ne démarre pas, Paramètres > Système > Version précédente ramène celle-ci.
 settings		The password couldn't be passed on ({runDir} can't be written).	Le mot de passe n'a pas pu être transmis ({runDir} n'est pas accessible en écriture).
-settings		Looking for a home server on the network...	Recherche d'un serveur domestique sur le réseau...
+settings		Looking for a home server on the network...	Recherche d'un serveur local sur le réseau...
 settings		Not paired yet: Server, above, pairs the handheld.	Pas encore associée : Serveur, ci-dessus, associe la console.
 settings		Syncing	Synchronisation
 settings		Didn't all work	Tout n'a pas fonctionné
@@ -1839,7 +1839,7 @@ settings		{value} (The RG DS Plus has no R3.)	{value} (La RG DS Plus n'a pas de 
 settings		Menu look	Apparence du menu
 settings		The menu's smaller looks: the top screen's motion, battery and clock, the boot animation, and what the DS cartridges show.	Les petits détails du menu : l'animation, la batterie et l'horloge de l'écran du haut, l'animation de démarrage, et ce que montrent les cartouches DS.
 settings		DS cartridges	Cartouches DS
-settings		What the Nintendo DS cartridges on the bottom screen show. Box art: the covers fetched by Box art (a game without one shows its own icon). Game icon: every game's own icon from the cartridge, as the DSi menu shows it. The top screen keeps the box art.	Ce que montrent les cartouches Nintendo DS sur l'écran du bas. Jaquette : les jaquettes récupérées par Jaquettes (un jeu sans jaquette montre sa propre icône). Icône du jeu : l'icône de chaque jeu, tirée de la cartouche, comme le menu de la DSi l'affiche. L'écran du haut garde la jaquette.
+settings		What the Nintendo DS cartridges on the bottom screen show. Box art: the covers fetched by Box art (a game without one shows its own icon). Game icon: every game's own icon from the cartridge, as the DSi menu shows it. The top screen keeps the box art.	Ce que montrent les cartouches Nintendo DS sur l'écran du bas. Pochette : les pochettes récupérées par Pochettes (un jeu sans pochette montre sa propre icône). Icône du jeu : l'icône de chaque jeu, tirée de la cartouche, comme le menu de la DSi l'affiche. L'écran du haut garde la pochette.
 settings		Game icon	Icône du jeu
 settings		SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on F; each keeps its own settings on its page below. X on a game in the library picks one for that game alone.	SuperDrastic : DraStic directement sur les deux écrans, avec son propre régulateur. BananaDS : l'émulateur de Banana (le cœur de melonDS). Les deux affichent la 3D avec le Gengis Engine en 2x et ont leur menu sur F ; chacun garde ses propres réglages sur sa page ci-dessous. X sur un jeu dans la bibliothèque en choisit un pour ce jeu seul.
 settings		Buttons	Boutons
@@ -1873,7 +1873,7 @@ settings		Controllers, headphones and speakers: Bluetooth on or off, the devices
 settings		The card on your network: file sharing on or off, its login and name and password, and SSH.	La carte sur votre réseau : le partage de fichiers activé ou non, sa connexion, son nom et mot de passe, et SSH.
 settings		Updates	Mises à jour
 settings		A new version of Banana: checking for it, downloading and installing it, test versions, a daily check, and going back to the version before.	Une nouvelle version de Banana : la rechercher, la télécharger et l'installer, les versions de test, une vérification quotidienne, et le retour à la version d'avant.
-settings		Covers, title screens, genres and years for your games: fetching them, and where they come from.	Jaquettes, écrans titres, genres et années pour vos jeux : leur récupération, et leur provenance.
+settings		Covers, title screens, genres and years for your games: fetching them, and where they come from.	Pochettes, écrans titres, genres et années pour vos jeux : leur récupération, et leur provenance.
 settings		The buttons that do something everywhere and in the menu. Each DS emulator's own: Nintendo DS > SuperDrastic > Hotkeys and BananaDS > Hotkeys.	Les boutons qui font quelque chose partout et dans le menu. Ceux de chaque émulateur DS : Nintendo DS > SuperDrastic > Raccourcis et BananaDS > Raccourcis.
 settings		Developer options	Options pour les développeurs
 settings		Tools for finding what went wrong: a recording of everything the handheld does, on the card.	Des outils pour trouver ce qui n'a pas marché : un enregistrement de tout ce que fait la console, sur la carte.
@@ -2008,7 +2008,7 @@ settings		The picture's shader for this game only, in either emulator; the other
 settings		SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow Settings > Nintendo DS > SuperDrastic > Threaded 3D.	SuperDrastic (DraStic) uniquement. Activé affiche la 3D de la DS à côté du jeu, la méthode la plus rapide ; Désactivé l'affiche en même temps que le jeu, pour un jeu dont la 3D s'affiche sur le mauvais écran ou avec une image de retard (les jeux Dragon Quest). Les autres suivent Paramètres > Nintendo DS > SuperDrastic > 3D en parallèle.
 settings		The size the DS's 3D is drawn at for this game, in either emulator: 1x the DS's own, 2x twice, 3x and 4x (experimental) three and four times, the sharpest and the heaviest (a busy 3D scene can drop below full speed). SuperDrastic draws 3x and 4x at 2x, its most. The others follow each emulator's 3D resolution (Settings > Nintendo DS > BananaDS or SuperDrastic).	La taille à laquelle la 3D de la DS est affichée pour ce jeu, dans les deux émulateurs : 1x celle de la DS, 2x le double, 3x et 4x (expérimental) le triple et le quadruple, le plus net et le plus lourd (une scène 3D chargée peut descendre sous la pleine vitesse). SuperDrastic affiche 3x et 4x en 2x, son maximum. Les autres suivent la résolution 3D de chaque émulateur (Paramètres > Nintendo DS > BananaDS ou SuperDrastic).
 settings		BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn loses its 3D world): if this one goes wrong, set it back. Fast, DSi CPU also runs the game's main CPU at the DSi's 133 MHz: a game that slows down by itself on a DS (Origin HeartGold's busy towns) keeps its speed, for more of the handheld's power. The others follow Settings > Nintendo DS > BananaDS > Timing.	BananaDS uniquement. Rapide laisse les deux CPU de la DS tourner plus longtemps entre deux rendez-vous pour ce jeu (jusqu'à environ 10 % plus vite dans HeartGold et ses hacks comme Origin HeartGold), Précise est celle de melonDS. Rapide peut casser un jeu (Golden Sun : L'Âge Obscur perd son monde en 3D) : si celui-ci se comporte mal, remettez-le. Rapide, CPU DSi fait aussi tourner le CPU principal du jeu aux 133 MHz de la DSi : un jeu qui ralentit tout seul sur une DS (les villes chargées d'Origin HeartGold) garde sa vitesse, au prix d'un peu plus de la puissance de la console. Les autres suivent Paramètres > Nintendo DS > BananaDS > Synchronisation.
-settings		Removes this game's file from the card: {file}. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	Retire le fichier de ce jeu de la carte : {file}. Gauche et droite choisissent si ses sauvegardes, états et jaquettes partent aussi, ou restent (ils reviennent si vous recopiez le jeu). Rien d'autre n'est touché : aucun autre jeu, aucun BIOS. A demande d'abord ; A encore supprime.
+settings		Removes this game's file from the card: {file}. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	Retire le fichier de ce jeu de la carte : {file}. Gauche et droite choisissent si ses sauvegardes, états et pochettes partent aussi, ou restent (ils reviennent si vous recopiez le jeu). Rien d'autre n'est touché : aucun autre jeu, aucun BIOS. A demande d'abord ; A encore supprime.
 settings		A Wi-Fi password has 8 to 63 characters; this one has {pw}.	Un mot de passe Wi-Fi compte de 8 à 63 caractères ; celui-ci en a {pw}.
 settings		Asking {done}...	Interrogation de {done}...
 settings		Checking the account {user}...	Vérification du compte {user}...
@@ -2541,8 +2541,8 @@ settings		Like 2:30 PM.	Comme 2:30 PM.
 settings		The bananas and the cartridge as the handheld starts.	Les bananes et la cartouche au démarrage de la console.
 settings		Plays as it starts, and backwards as it shuts down.	Jouée au démarrage, et à l'envers à l'extinction.
 settings		Goes straight to the menu, and straight to black.	Directement au menu, et directement au noir.
-settings		What the DS cartridges on the bottom screen show. The top screen keeps the box art.	Ce que montrent les cartouches DS sur l'écran du bas. L'écran du haut garde la jaquette.
-settings		The covers Box art fetched. A game without one shows its own icon.	Les jaquettes récupérées par Jaquettes. Un jeu sans jaquette montre sa propre icône.
+settings		What the DS cartridges on the bottom screen show. The top screen keeps the box art.	Ce que montrent les cartouches DS sur l'écran du bas. L'écran du haut garde la pochette.
+settings		The covers Box art fetched. A game without one shows its own icon.	Les pochettes récupérées par Pochettes. Un jeu sans pochette montre sa propre icône.
 settings		Each game's own icon, as the DSi menu shows it.	L'icône de chaque jeu, comme le menu de la DSi l'affiche.
 settings		Puts the handheld to sleep when you leave it alone. Your game pauses.	Met la console en veille quand vous la laissez de côté. Votre jeu se met en pause.
 settings		Lowers the screens when you leave the handheld alone.	Baisse les écrans quand vous laissez la console de côté.
@@ -2694,7 +2694,7 @@ settings		Anyone on the network. Only on a network you trust.	N'importe qui sur 
 settings		A shell on the handheld from a computer, over Wi-Fi.	Un terminal sur la console depuis un ordinateur, en Wi-Fi.
 settings		Off.	Désactivé.
 settings		On: ssh root@<address>.	Activé : ssh root@<adresse>.
-settings		Your games, box art and saves from a server at home: Romhost or RomM.	Vos jeux, jaquettes et sauvegardes depuis un serveur chez vous : Romhost ou RomM.
+settings		Your games, box art and saves from a server at home: Romhost or RomM.	Vos jeux, pochettes et sauvegardes depuis un serveur chez vous : Romhost ou RomM.
 settings		Your time zone, for the clock and your games. Summer time is included.	Votre fuseau horaire, pour l'horloge et vos jeux. L'heure d'été est comprise.
 settings		New versions of Banana: checking, installing, and going back.	Les nouvelles versions de Banana : les rechercher, les installer, et revenir en arrière.
 settings		A new version, from GitHub or a package on the card. It runs from the next restart.	Une nouvelle version, depuis GitHub ou un paquet sur la carte. Elle est lancée au prochain redémarrage.
@@ -2704,10 +2704,10 @@ settings		Only stable versions.	Seulement les versions stables.
 settings		When Banana looks for a new version. Nothing downloads without you.	Quand Banana cherche une nouvelle version. Rien n'est téléchargé sans vous.
 settings		Only when you choose Check for updates.	Seulement quand vous choisissez Rechercher des mises à jour.
 settings		Also once a day, when Wi-Fi connects.	Aussi une fois par jour, quand le Wi-Fi se connecte.
-settings		Covers, title screens, genres and years for your games, from libretro. Wi-Fi needed.	Jaquettes, écrans titres, genres et années pour vos jeux, depuis libretro. Wi-Fi nécessaire.
-settings		Where covers come from.	La provenance des jaquettes.
+settings		Covers, title screens, genres and years for your games, from libretro. Wi-Fi needed.	Pochettes, écrans titres, genres et années pour vos jeux, depuis libretro. Wi-Fi nécessaire.
+settings		Where covers come from.	La provenance des pochettes.
 settings		libretro's collections.	Les collections de libretro.
-settings		libretro, then TwilightBoxart for the covers it lacks.	libretro, puis TwilightBoxart pour les jaquettes qui lui manquent.
+settings		libretro, then TwilightBoxart for the covers it lacks.	libretro, puis TwilightBoxart pour les pochettes qui lui manquent.
 settings		TwilightBoxart first, where it has them.	TwilightBoxart d'abord, quand il les a.
 settings		Games on the card in the second slot.	Les jeux de la carte dans le second emplacement.
 settings		Its games show with the others while it's in. exFAT or FAT32.	Ses jeux s'affichent avec les autres tant qu'elle est insérée. exFAT ou FAT32.
@@ -2969,8 +2969,8 @@ settings		The theme's colours, its game pictures and its motion.	Les couleurs du
 settings		Orange	Orange
 settings		Game pictures	Images des jeux
 settings		What the games show: the cartridges, Glass's cards, Plaza's tiles.	Ce que montrent les jeux : les cartouches, les cartes de Glass, les tuiles de Plaza.
-settings		The covers Scrape artworks fetched. A game without one shows its own icon.	Les jaquettes récupérées par Illustrations. Un jeu sans jaquette montre sa propre icône.
-settings		A DS game's own icon, as the DSi menu shows it. Other games show their logo, or their box art without one.	L'icône d'un jeu DS, comme le menu de la DSi l'affiche. Les autres jeux montrent leur logo, ou leur jaquette s'ils n'en ont pas.
+settings		The covers Scrape artworks fetched. A game without one shows its own icon.	Les pochettes récupérées par Illustrations. Un jeu sans pochette montre sa propre icône.
+settings		A DS game's own icon, as the DSi menu shows it. Other games show their logo, or their box art without one.	L'icône d'un jeu DS, comme le menu de la DSi l'affiche. Les autres jeux montrent leur logo, ou leur pochette s'ils n'en ont pas.
 settings		The menu's gentle movement and shine.	Le léger mouvement et le reflet du menu.
 settings		The menu moves and shines.	Le menu bouge et brille.
 settings		The menu holds still, and saves a little battery.	Le menu reste immobile, et économise un peu de batterie.
@@ -3123,11 +3123,11 @@ settings		The wireless network and the networks nearby.	Le réseau sans fil et l
 settings		Networks nearby. A on one joins it.	Les réseaux alentour. A sur l'un d'eux s'y connecte.
 settings		Share the card on your network: on or off, login, password and SSH.	Partager la carte sur votre réseau : activé ou non, identifiant, mot de passe et SSH.
 settings		Scrape artworks	Illustrations
-settings		Covers, logos and title screens: fetch them, for the systems you pick.	Jaquettes, logos et écrans titres : les récupérer, pour les systèmes choisis.
+settings		Covers, logos and title screens: fetch them, for the systems you pick.	Pochettes, logos et écrans titres : les récupérer, pour les systèmes choisis.
 settings		A new version from GitHub or the card. It starts on the next restart.	Une nouvelle version depuis GitHub ou la carte. Elle démarre au prochain redémarrage.
 settings		Restarts into the version from before the last update. Press A twice.	Redémarre sur la version d'avant la dernière mise à jour. Appuyez deux fois sur A.
 settings		Fetch artworks	Récupérer les illustrations
-settings		Covers, logos, title screens, genres and years for the systems picked. Needs Wi-Fi.	Jaquettes, logos, écrans titres, genres et années pour les systèmes choisis. Wi-Fi nécessaire.
+settings		Covers, logos, title screens, genres and years for the systems picked. Needs Wi-Fi.	Pochettes, logos, écrans titres, genres et années pour les systèmes choisis. Wi-Fi nécessaire.
 settings		Which systems' games get artworks.	Les systèmes dont les jeux reçoivent des illustrations.
 settings		Artworks from	Illustrations depuis
 settings		Parental controls	Contrôle parental
@@ -3160,7 +3160,7 @@ settings		L2, R2, L3 and R3 back to Banana's, A, B, X and Y as printed. Press A 
 settings		Sleeps like the power button does. Your game pauses. Press A twice.	Met en veille comme le bouton d'alimentation. Votre jeu se met en pause. Appuyez deux fois sur A.
 settings		Gets the server's games and syncs saves both ways. Your own files stay.	Récupère les jeux du serveur et synchronise les sauvegardes dans les deux sens. Vos propres fichiers restent.
 settings		Which systems sync here. Skipped systems stay as they are.	Les systèmes synchronisés ici. Les systèmes ignorés restent tels quels.
-settings		Whether this system syncs with the home server.	Si ce système se synchronise avec le serveur domestique.
+settings		Whether this system syncs with the home server.	Si ce système se synchronise avec le serveur local.
 settings		Its games and saves sync with the server.	Ses jeux et sauvegardes se synchronisent avec le serveur.
 settings		Its games stay as they are on this handheld.	Ses jeux restent tels quels sur cette console.
 settings		The handheld, as its device tree names it.	La console, telle que son arbre de périphériques la nomme.
@@ -3225,7 +3225,7 @@ settings		This system's own settings: its emulator, screen, look and buttons.	Le
 settings		This system's own settings: its emulator, screen, look and buttons. No games on the card yet.	Les réglages propres à ce système : son émulateur, son écran, son rendu et ses boutons. Pas encore de jeux sur la carte.
 settings		The screens PSP games play on.	Les écrans sur lesquels tournent les jeux PSP.
 settings		The screens PSP games play on. No games on the card yet.	Les écrans sur lesquels tournent les jeux PSP. Pas encore de jeux sur la carte.
-settings		Whether Fetch artworks gets this system's covers, logos and title screens.	Si Récupérer les illustrations récupère les jaquettes, logos et écrans titres de ce système.
+settings		Whether Fetch artworks gets this system's covers, logos and title screens.	Si Récupérer les illustrations récupère les pochettes, logos et écrans titres de ce système.
 settings		Fetch	Récupérer
 settings		Its games get artworks.	Ses jeux reçoivent des illustrations.
 settings		Left as they are: what they have stays.	Laissés tels quels : ce qu'ils ont reste.
@@ -3233,7 +3233,7 @@ settings		Which systems show, the theme, games artworks, brightness, volume and 
 settings		When the handheld dims, sleeps and turns off, the lid, the LEDs and the battery.	Quand la console s'assombrit, se met en veille et s'éteint, le couvercle, les LED et la batterie.
 settings		The DS emulator, and how DS games look, sound and run.	L'émulateur DS, et l'image, le son et le fonctionnement des jeux DS.
 settings		RetroArch's games: the game panel, achievements, shaders and sound.	Les jeux de RetroArch : le panneau de jeu, les succès, les shaders et le son.
-settings		Wi-Fi, Bluetooth, file sharing and your home server.	Wi-Fi, Bluetooth, partage de fichiers et votre serveur domestique.
+settings		Wi-Fi, Bluetooth, file sharing and your home server.	Wi-Fi, Bluetooth, partage de fichiers et votre serveur local.
 settings		Language, time zone, updates, parental controls, hotkeys and resets.	Langue, fuseau horaire, mises à jour, contrôle parental, raccourcis et réinitialisations.
 settings		For working on Banana from a computer: ssh root@{address}, with your keys in banana/ssh/authorized_keys on the card. sftp and scp too.	Pour travailler sur Banana depuis un ordinateur : ssh root@{address}, avec vos clés dans banana/ssh/authorized_keys sur la carte. sftp et scp aussi.
 settings		Running: {st}. Press A twice to stop it. The report: banana/logs/night-test.txt.	En cours : {st}. Appuyez deux fois sur A pour l'arrêter. Le rapport : banana/logs/night-test.txt.
@@ -3257,7 +3257,7 @@ settings		This game's palette	La palette de ce jeu
 settings		The colours of this Game Boy game.	Les couleurs de ce jeu Game Boy.
 settings		Same as system: as on its page in Other systems > Per system configurations.	Comme le système : comme sur sa page dans Autres systèmes > Configurations par système.
 settings		Same as system	Comme le système
-settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > Look & sound > Scrape artworks runs it again for new games.	Jaquettes, écrans titres, genres et années pour les jeux de la carte, depuis les collections gratuites de libretro : aucun compte nécessaire. Paramètres > Apparence et son > Illustrations le relance pour les nouveaux jeux.
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > Look & sound > Scrape artworks runs it again for new games.	Pochettes, écrans titres, genres et années pour les jeux de la carte, depuis les collections gratuites de libretro : aucun compte nécessaire. Paramètres > Apparence et son > Illustrations le relance pour les nouveaux jeux.
 settings		{have} of {all} games	{have} jeux sur {all}
 settings		None yet	Aucun pour l'instant
 settings		PPSSPP	PPSSPP
