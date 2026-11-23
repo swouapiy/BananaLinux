@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-# Banana Bistro: bakes the CC0 pictures and fonts into bistro-assets.h, so the game is one binary with no image or
+# Bistro: bakes the CC0 pictures and fonts into bistro-assets.h, so the game is one binary with no image or
 # font library. Sprites: Kenney's Food Kit renders (cropped, 64 px and 32 px), plus a few made from them (chopped
 # cabbage, the raw patty, burnt things). Fonts: Kenney Future (titles, numbers) and Inter Bold (button letters), as
 # Inter SemiBold (sentences), 8-bit coverage at the sizes the game draws.
-#   bake.py <food-kit Previews dir> <Kenney Future.ttf> <Inter-SemiBold.ttf> <Inter-Bold.ttf> <out.h>
+# Emotes: Kenney's Emotes Pack (CC0), its round bubbles (PNG/Vector/Style 3), over the customers.
+#   bake.py <food-kit Previews dir> <Kenney Future.ttf> <Inter-SemiBold.ttf> <Inter-Bold.ttf> <out.h> <emotes Style dir>
 import sys
 from PIL import Image, ImageFont, ImageDraw
 
-PREV, FUT, SEMI, INTER, OUT = sys.argv[1:6]
+PREV, FUT, SEMI, INTER, OUT, EMO = sys.argv[1:7]
 
 def load(name):
     im = Image.open(f"{PREV}/{name}.png").convert("RGBA")
@@ -40,6 +41,10 @@ SPRITES = {
     "pan": load("frying-pan"), "plate": load("plate"), "bowl": load("bowl"),
     "board": load("cutting-board"), "knife": load("cooking-knife"), "cookie": load("cookie"),
 }
+for name, f in { "emo_happy": "faceHappy", "emo_sad": "faceSad", "emo_angry": "faceAngry", "emo_hearts": "hearts",
+                 "emo_anger": "anger", "emo_dots": "dots3", "emo_heart": "heart" }.items():
+    im = Image.open(f"{EMO}/emote_{f}.png").convert("RGBA")
+    SPRITES[name] = im.crop(im.getbbox())
 
 def fit(im, s):
     im = im.copy(); r = s / max(im.size)

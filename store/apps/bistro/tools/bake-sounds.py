@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-# Banana Bistro: bakes the game's sounds (Kenney's Interface Sounds, CC0) into bistro-sounds.h, as 22050 Hz mono
+# Bistro: bakes the game's sounds (Kenney's Interface Sounds, CC0) into bistro-sounds.h, as 22050 Hz mono
 # 16-bit, quiet ends trimmed. Needs soundfile + numpy.
-#   bake-sounds.py <Interface Sounds/Audio dir> <out.h>
+# The music (Doge's "Catchy Swing", CC0, OpenGameArt), a 60 s loop, goes in as IMA ADPCM (4 bits a sample: 660 KB).
+#   bake-sounds.py <Interface Sounds/Audio dir> <out.h> <catchyswing.ogg>
 import sys
 import numpy as np, soundfile as sf
 
-SRC, OUT = sys.argv[1:3]
+SRC, OUT, MUSIC = sys.argv[1:4]
 RATE = 22050
 SOUNDS = {  # the game's name: the file, its loudness
     "pick": ("pluck_001", 0.8), "drop": ("drop_002", 0.8), "chop": ("tick_002", 0.9), "chopped": ("select_003", 0.7),
@@ -30,6 +31,39 @@ for name, (f, vol) in SOUNDS.items():
     o.append(f"static const int16_t s_{name}[] = {{" + ",".join(map(str, s.tolist())) + "};")
 o.append("static const Clip clips[] = {")
 for name in SOUNDS: o.append(f'\t{{ "{name}", (int)(sizeof(s_{name}) / 2), s_{name} }},')
-o.append("};\n}")
+o.append("};")
+
+# --- the music: mono, 22050 Hz, IMA ADPCM (low nibble first), from the state (0, 0) at its start
+STEPS = [7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107,
+         118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544, 598, 658, 724, 796, 876,
+         963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358,
+         5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623, 27086,
+         29794, 32767]
+IDX = [-1, -1, -1, -1, 2, 4, 6, 8]
+d, r = sf.read(MUSIC, dtype="float32", always_2d=True)
+d = d.mean(axis=1)
+n = int(len(d) * RATE / r)
+d = np.interp(np.linspace(0, len(d), n, endpoint=False), np.arange(len(d)), d)
+peak = float(np.max(np.abs(d))) or 1
+pcm = (np.clip(d / peak * 0.9, -1, 1) * 32767).astype(np.int32).tolist()
+pred, idx, nib = 0, 0, []
+for x in pcm:
+    step = STEPS[idx]; diff = x - pred; code = 0
+    if diff < 0: code = 8; diff = -diff
+    delta = step >> 3
+    if diff >= step: code |= 4; diff -= step; delta += step
+    step >>= 1
+    if diff >= step: code |= 2; diff -= step; delta += step
+    step >>= 1
+    if diff >= step: code |= 1; delta += step
+    pred = max(-32768, min(32767, pred - delta if code & 8 else pred + delta))
+    idx = max(0, min(88, idx + IDX[code & 7]))
+    nib.append(code)
+if len(nib) % 2: nib.append(0)
+data = bytes(nib[i] | nib[i + 1] << 4 for i in range(0, len(nib), 2))
+o.append(f"constexpr int MUSIC_SAMPLES = {len(pcm)};")
+o.append("static const int16_t ADPCM_STEPS[89] = {" + ",".join(map(str, STEPS)) + "};")
+o.append("static const uint8_t music[] = {" + ",".join(map(str, data)) + "};")
+o.append("}")
 open(OUT, "w").write("\n".join(o) + "\n")
 print(OUT, len(SOUNDS), "sounds")

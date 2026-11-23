@@ -1,10 +1,12 @@
-// Banana Bistro: the kitchen's rules. One kitchen, three recipes (salad, tomato soup, cheeseburger), chefs who
+// Bistro: the kitchen's rules. One kitchen, three recipes (salad, tomato soup, cheeseburger), chefs who
 // carry one thing at a time. Plain C++17, no drawing and no device: bistro.cpp draws it and feeds it the buttons;
 // bistro-test.cpp plays it. Positions are in kitchen squares (16 x 12, 40 px each on the top screen).
 #pragma once
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -94,12 +96,13 @@ struct Vessel {
 	enum Kind : uint8_t { POT, PAN } kind = POT;
 	int n = 0;               // tomatoes in the pot, or 1 when the pan has meat
 	float cook = 0;          // seconds cooking, once full
+	float burnsAfter = BURNS_AFTER; // (the tutorial's never burn)
 	static constexpr float POT_DONE = 10, PAN_DONE = 6, BURNS_AFTER = 9;  // (seconds after done)
 	bool full() const { return kind == POT ? n >= 3 : n >= 1; }
 	float doneAt() const { return kind == POT ? POT_DONE : PAN_DONE; }
 	bool done() const { return full() && cook >= doneAt() && !burnt(); }
-	bool burnt() const { return full() && cook >= doneAt() + BURNS_AFTER; }
-	bool warning() const { return full() && cook >= doneAt() + BURNS_AFTER * 0.45f && !burnt(); }
+	bool burnt() const { return full() && cook >= doneAt() + burnsAfter; }
+	bool warning() const { return full() && cook >= doneAt() + burnsAfter * 0.45f && !burnt(); }
 };
 
 struct Cell {
@@ -113,6 +116,7 @@ struct Order {
 	Recipe r = SALAD;
 	float left = 60, total = 60; // seconds
 	int id = 0;
+	float age = 0;           // seconds since it came in
 };
 
 struct Chef {
@@ -126,10 +130,16 @@ struct Chef {
 
 // What happened in a step, for the sounds and the little pop-ups
 struct Event {
-	enum Kind : uint8_t { PICK, DROP, CHOP, CHOPPED, SIZZLE, DONE, BURNT, SERVED, WRONG, MISSED, NEWORDER, BIN, DASH, TICK } kind;
+	enum Kind : uint8_t { PICK, DROP, CHOP, CHOPPED, SIZZLE, DONE, BURNT, SERVED, WRONG, MISSED, NEWORDER, BIN, DASH, TICK, HEART } kind;
 	float x = 0, y = 0;      // where, in squares
 	int value = 0;           // tips for SERVED/MISSED
+	int order = 0;           // the order's id (SERVED, MISSED, NEWORDER): its customer
 };
+
+// How a game is played. CALM: no clock, keep the customers happy (a customer who leaves without their dish takes a
+// heart; the last one ends it). RUSH: three minutes, as many tips as you can. TUTORIAL: one chef's lessons, orders
+// that wait, nothing burns.
+enum Mode : uint8_t { CALM, RUSH, TUTORIAL };
 
 struct Buttons { bool up = false, down = false, left = false, right = false, a = false, x = false, b = false; };
 
@@ -139,9 +149,13 @@ public:
 	std::vector<Chef> chefs;
 	std::vector<Order> orders;
 	std::vector<Event> events;   // this step's
-	float time = 180;            // seconds left
+	Mode mode = RUSH;
+	float time = 180;            // seconds left (RUSH)
 	float roundLength = 180;
+	float played = 0;            // seconds played
 	int tips = 0, served = 0, missed = 0;
+	int hearts = 3;              // (CALM)
+	static constexpr int MAX_HEARTS = 3, HEART_BACK = 8;  // a heart back each 8 served, up to 3
 	int stars[3] = { 40, 90, 140 };
 	uint32_t rng = 12345;
 	float nextOrder = 0;
@@ -150,8 +164,9 @@ public:
 	static constexpr float SPEED = 3.6f, DASH_SPEED = 9.5f, R = 0.32f, CHOP_TIME = 1.6f;
 	static constexpr int MAX_ORDERS = 4;
 
-	explicit Kitchen(int nChefs = 2, uint32_t seed = 12345, const char* const* map = KITCHEN1)
+	explicit Kitchen(int nChefs = 2, uint32_t seed = 12345, Mode m = RUSH, const char* const* map = KITCHEN1)
 	{
+		mode = m;
 		rng = seed ? seed : 1;
 		for (int y = 0; y < MH; ++y)
 			for (int x = 0; x < MW; ++x) {
@@ -159,27 +174,36 @@ public:
 				c.kind = map[y][x];
 				if (c.kind == 'S') c.vessel.kind = Vessel::POT;
 				if (c.kind == 'F') c.vessel.kind = Vessel::PAN;
+				if (m == TUTORIAL) c.vessel.burnsAfter = 1e9f;
 			}
 		static const float start[4][2] = { { 3.5f, 4.0f }, { 12.5f, 8.5f }, { 3.5f, 8.5f }, { 12.5f, 4.0f } };
 		for (int i = 0; i < nChefs && i < 4; ++i) { Chef c; c.x = start[i][0]; c.y = start[i][1]; chefs.push_back(c); }
-		addOrder(); addOrder();
+		if (m != TUTORIAL) { addOrder(); addOrder(); }
 		nextOrder = 14;
 	}
+	bool autoOrders() const { return mode != TUTORIAL; }
 
 	uint32_t rand() { rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5; return rng; }
 
-	void addOrder()
+	// A customer in, with an order (a random one when r < 0); its id, or 0 when the room is full
+	int addOrder(int r = -1)
 	{
-		if ((int)orders.size() >= MAX_ORDERS) return;
+		if ((int)orders.size() >= MAX_ORDERS) return 0;
 		Order o;
 		// soup and salad more often than the burger (three steps more)
 		uint32_t k = rand() % 10;
-		o.r = k < 4 ? SALAD : k < 7 ? TOMATO_SOUP : BURGER;
-		o.total = o.left = o.r == BURGER ? 80 : o.r == TOMATO_SOUP ? 70 : 55;
+		o.r = r >= 0 ? (Recipe)r : k < 4 ? SALAD : k < 7 ? TOMATO_SOUP : BURGER;
+		o.total = o.left = (o.r == BURGER ? 80 : o.r == TOMATO_SOUP ? 70 : 55) * patience();
 		o.id = ++orderIds;
 		orders.push_back(o);
-		events.push_back({ Event::NEWORDER, 0, 0, o.id });
+		Event e{ Event::NEWORDER, 0, 0, o.id }; e.order = o.id;
+		events.push_back(e);
+		return o.id;
 	}
+	// CALM gets busier the longer it lasts: customers come more often (16 s apart, down to 9 after 5 minutes)
+	// and wait less (down to 75% after 10 minutes)
+	float patience() const { return mode == CALM ? std::max(0.75f, 1 - played / 2400) : 1; }
+	float orderGap() const { return mode == CALM ? std::max(9.f, 16 - played / 43) : 16; }
 
 	bool inside(int x, int y) const { return x >= 0 && y >= 0 && x < MW && y < MH; }
 	bool solidAt(int x, int y) const { return !inside(x, y) || cells[y][x].solid(); }
@@ -262,9 +286,11 @@ public:
 			if (r < 0 || best < 0) { ev(Event::WRONG, ex, ey); return; }
 			int tip = 20 + (int)std::lround(10 * orders[best].left / orders[best].total);
 			tips += tip; served++;
+			int id = orders[best].id;
 			orders.erase(orders.begin() + best);
 			h = Thing();
-			ev(Event::SERVED, ex, ey, tip);
+			ev(Event::SERVED, ex, ey, tip); events.back().order = id;
+			if (mode == CALM && served % HEART_BACK == 0 && hearts < MAX_HEARTS) { hearts++; ev(Event::HEART, ex, ey, hearts); }
 			if (orders.empty()) nextOrder = std::min(nextOrder, 2.0f);
 			return;
 		}
@@ -333,9 +359,12 @@ public:
 	{
 		events.clear();
 		if (over) return;
-		time -= dt;
-		if (time <= 0) { time = 0; over = true; return; }
-		if ((int)std::ceil(time) != (int)std::ceil(time + dt) && time <= 10) ev(Event::TICK, 0, 0, (int)std::ceil(time));
+		played += dt;
+		if (mode == RUSH) {
+			time -= dt;
+			if (time <= 0) { time = 0; over = true; return; }
+			if ((int)std::ceil(time) != (int)std::ceil(time + dt) && time <= 10) ev(Event::TICK, 0, 0, (int)std::ceil(time));
+		}
 		for (size_t i = 0; i < chefs.size(); ++i) {
 			Chef& c = chefs[i];
 			Buttons h = i < held.size() ? held[i] : Buttons(), p = i < pressed.size() ? pressed[i] : Buttons();
@@ -378,19 +407,122 @@ public:
 				if (v.burnt()) ev(Event::BURNT, x + 0.5f, y + 0.5f);
 			}
 		// the orders
-		for (size_t i = 0; i < orders.size();) {
+		for (auto& o : orders) o.age += dt;
+		for (size_t i = 0; i < orders.size() && mode != TUTORIAL;) {
 			orders[i].left -= dt;
 			if (orders[i].left <= 0) {
-				missed++; int lost = std::min(tips, 10); tips -= lost;
-				ev(Event::MISSED, 0, 0, lost);
+				missed++;
+				int lost = 0;
+				if (mode == RUSH) { lost = std::min(tips, 10); tips -= lost; }
+				else if (hearts > 0) hearts--;
+				ev(Event::MISSED, 0, 0, lost); events.back().order = orders[i].id;
 				orders.erase(orders.begin() + i);
+				if (mode == CALM && hearts <= 0) { over = true; return; }
 			} else ++i;
 		}
+		if (!autoOrders()) return;
 		nextOrder -= dt;
 		if (nextOrder <= 0 || orders.size() < 2) {
 			if ((int)orders.size() < MAX_ORDERS) addOrder();
-			nextOrder = 16;
+			nextOrder = orderGap();
 		}
+	}
+
+	// Anything in the kitchen (a hand, a counter, a pot's or pan's contents as a food) that pred likes
+	template <class P> bool anywhere(P pred) const
+	{
+		for (auto& c : chefs) if (pred(c.hand)) return true;
+		for (int y = 0; y < MH; ++y)
+			for (int x = 0; x < MW; ++x) if (pred(cells[y][x].thing)) return true;
+		return false;
+	}
+
+	// --- a CALM game kept to go on with later: one line of numbers per thing
+	static void putThing(std::string& o, const Thing& t)
+	{
+		o += std::to_string((int)t.kind) + " " + std::to_string((int)t.food.f) + " " + std::to_string((int)t.food.s) + " " +
+		     std::to_string((int)std::lround(t.chop * 1000)) + " " + std::to_string(t.on.size());
+		for (auto& b : t.on) o += " " + std::to_string((int)b.f) + " " + std::to_string((int)b.s);
+	}
+	std::string save() const
+	{
+		std::string o = "bistro-save 1\n";
+		auto num = [&](const char* k, double v) { char b[64]; snprintf(b, sizeof b, "%s %.3f\n", k, v); o += b; };
+		num("mode", mode); num("time", time); num("played", played); num("tips", tips); num("served", served);
+		num("missed", missed); num("hearts", hearts); num("rng", rng); num("next", nextOrder); num("ids", orderIds);
+		for (auto& c : chefs) {
+			char b[128]; snprintf(b, sizeof b, "chef %.3f %.3f %.3f %.3f ", c.x, c.y, c.fx, c.fy); o += b;
+			putThing(o, c.hand); o += "\n";
+		}
+		for (auto& r : orders) { char b[96]; snprintf(b, sizeof b, "order %d %.3f %.3f %d\n", (int)r.r, r.left, r.total, r.id); o += b; }
+		for (int y = 0; y < MH; ++y)
+			for (int x = 0; x < MW; ++x) {
+				const Cell& c = cells[y][x];
+				if (!c.thing.empty()) { o += "thing " + std::to_string(x) + " " + std::to_string(y) + " "; putThing(o, c.thing); o += "\n"; }
+				if (c.vessel.n) { char b[96]; snprintf(b, sizeof b, "vessel %d %d %d %.3f\n", x, y, c.vessel.n, c.vessel.cook); o += b; }
+			}
+		return o + "end\n";
+	}
+	// false (and the kitchen as it was) if s isn't a whole save
+	bool load(const std::string& s)
+	{
+		Kitchen k(0, 1, CALM);
+		k.orders.clear(); k.events.clear();
+		const char* p = s.c_str();
+		auto line = [&](std::string& out) { if (!*p) return false; const char* e = strchr(p, '\n'); out.assign(p, e ? e - p : strlen(p)); p = e ? e + 1 : p + strlen(p); return true; };
+		std::string l;
+		if (!line(l) || l != "bistro-save 1") return false;
+		auto thing = [](const char*& q, Thing& t) {
+			int kind, f, st, chop, n, used;
+			if (sscanf(q, "%d %d %d %d %d%n", &kind, &f, &st, &chop, &n, &used) != 5 || n < 0 || n > 3) return false;
+			q += used;
+			t.kind = (Thing::Kind)kind; t.food = { (Food)f, (Stage)st }; t.chop = chop / 1000.f; t.on.clear();
+			for (int i = 0; i < n; ++i) { int bf, bs; if (sscanf(q, "%d %d%n", &bf, &bs, &used) != 2) return false; q += used; t.on.push_back({ (Food)bf, (Stage)bs }); }
+			return true;
+		};
+		bool ended = false;
+		while (line(l)) {
+			char key[16] = {}; int used = 0;
+			if (sscanf(l.c_str(), "%15s%n", key, &used) != 1) continue;
+			const char* q = l.c_str() + used;
+			std::string kname = key;
+			double v = 0;
+			if (kname == "end") { ended = true; break; }
+			if (kname == "chef") {
+				Chef c; int u;
+				if (sscanf(q, "%f %f %f %f%n", &c.x, &c.y, &c.fx, &c.fy, &u) != 4) return false;
+				q += u;
+				if (!thing(q, c.hand)) return false;
+				k.chefs.push_back(c);
+			} else if (kname == "order") {
+				Order o; int r;
+				if (sscanf(q, "%d %f %f %d", &r, &o.left, &o.total, &o.id) != 4 || r < 0 || r >= NRECIPES) return false;
+				o.r = (Recipe)r; k.orders.push_back(o);
+			} else if (kname == "thing") {
+				int x, y, u;
+				if (sscanf(q, "%d %d%n", &x, &y, &u) != 2 || !k.inside(x, y)) return false;
+				q += u;
+				if (!thing(q, k.cells[y][x].thing)) return false;
+			} else if (kname == "vessel") {
+				int x, y, n; float cook;
+				if (sscanf(q, "%d %d %d %f", &x, &y, &n, &cook) != 4 || !k.inside(x, y)) return false;
+				k.cells[y][x].vessel.n = n; k.cells[y][x].vessel.cook = cook;
+			} else if (sscanf(q, "%lf", &v) == 1) {
+				if (kname == "mode") k.mode = (Mode)(int)v;
+				else if (kname == "time") k.time = (float)v;
+				else if (kname == "played") k.played = (float)v;
+				else if (kname == "tips") k.tips = (int)v;
+				else if (kname == "served") k.served = (int)v;
+				else if (kname == "missed") k.missed = (int)v;
+				else if (kname == "hearts") k.hearts = (int)v;
+				else if (kname == "rng") k.rng = (uint32_t)v ? (uint32_t)v : 1;
+				else if (kname == "next") k.nextOrder = (float)v;
+				else if (kname == "ids") k.orderIds = (int)v;
+			}
+		}
+		if (!ended || k.chefs.empty()) return false;
+		*this = k;
+		return true;
 	}
 
 	int starsEarned() const { int n = 0; for (int s : stars) if (tips >= s) n++; return n; }
