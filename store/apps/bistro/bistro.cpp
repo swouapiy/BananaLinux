@@ -1,9 +1,11 @@
 /*
- * Banana Bistro: a co-op cooking game for the RG DS. The kitchen on the top screen, the orders on the bottom one.
- * One kitchen, three recipes; on one handheld you run two chefs and Y switches between them.
+ * Bistro: a co-op cooking game for the RG DS. The kitchen on the top screen (its customers along the top), the orders
+ * on the bottom one. One kitchen, three recipes; on one handheld you run two chefs and Y switches between them.
+ * Three ways to play: Play (no clock: keep the customers happy, saved when you leave), Rush (three minutes, tips) and
+ * the Tutorial (lessons, one step at a time).
  *
  * Everything is in this binary: the pictures and fonts (bistro-assets.h, Kenney's CC0 Food Kit and fonts, Inter),
- * the sounds (bistro-sounds.h, Kenney's CC0 Interface Sounds). Plain C++17 with DRM/KMS and evdev ioctls (the same
+ * the sounds and the music (bistro-sounds.h, Kenney's CC0 Interface Sounds and Doge's CC0 "Catchy Swing"). Plain C++17 with DRM/KMS and evdev ioctls (the same
  * shim as Activity) and ALSA for the sound; no SDL.
  *
  *   banana-bistro [--data DIR] [--top DSI-2]           play (both panels; the menu has let go of them)
@@ -11,6 +13,7 @@
  *   banana-bistro --bench                               what drawing a frame costs
  */
 #include "bistro-game.h"
+#include "bistro-tutorial.h"
 #include "bistro-assets.h"
 #include "bistro-sounds.h"
 
@@ -30,6 +33,7 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <unistd.h>
 
 #if defined(__linux__) && !defined(BISTRO_NO_DEVICE)
 #define BISTRO_DEVICE 1
@@ -277,9 +281,10 @@ static float text(Canvas& cv, int f, float x, float y, const std::string& s, uin
 
 /* ------------------------------------------------------------------------------------------------ the look */
 
-static const uint32_t FLOOR_A = 0xf6ecd6, FLOOR_B = 0xecdec2, WALL = 0x5c465c, WALL_TILE = 0x7a607a;
+static const uint32_t FLOOR_A = 0xf6ecd6, FLOOR_B = 0xecdec2, WALL = 0x5c465c;
+static const uint32_t DINING = 0xe0ae78, DINING_LINE = 0xd09c66, DOOR = 0x6e4a3a, DOOR_IN = 0x3e2a24;
 static const uint32_t COUNTER_TOP = 0xeccea0, COUNTER_EDGE = 0x967046, SHADOW = 0x1e140a;
-static const uint32_t YELLOW = 0xffd640, BROWN = 0x5c3414, INK = 0x422c1e, CARD = 0xfff8ec, CARD_LINE = 0xe2d6c4;
+static const uint32_t YELLOW = 0xffd640, INK = 0x422c1e, CARD = 0xfff8ec, CARD_LINE = 0xe2d6c4;
 static const uint32_t BG = 0x2c2234, BG_STRIPE = 0x32273a, PANEL = 0x3c3046, LIGHT = 0xf0e8f6, MUTED = 0xbeb0cc;
 static const uint32_t GREEN = 0x34c759, ORANGE = 0xff9f0a, RED = 0xff453a, WHITE = 0xffffff;
 static const uint32_t CHEF_COL[4] = { 0xf5a623, 0x409cff, 0x34c759, 0xff6b9a };
@@ -311,6 +316,17 @@ static void drawThing(Canvas& cv, const Thing& t, float cx, float cy, float size
 		sprite(cv, foodSprite(t.on[i]), cx + spots[n - 1][i][0] * size, cy - 2 + spots[n - 1][i][1] * size, size * 0.5f);
 }
 
+static uint32_t mixc(uint32_t a, uint32_t b, float t)
+{
+	auto ch = [&](int sh) { return (uint32_t)std::lround(((a >> sh) & 255) * (1 - t) + ((b >> sh) & 255) * t) << sh; };
+	return ch(16) | ch(8) | ch(0);
+}
+static void heart(Canvas& cv, float cx, float cy, float r, uint32_t c, float a = 1)
+{
+	cv.ellipse(cx - r * 0.48f, cy - r * 0.25f, r * 0.55f, r * 0.55f, c, a);
+	cv.ellipse(cx + r * 0.48f, cy - r * 0.25f, r * 0.55f, r * 0.55f, c, a);
+	cv.poly({ { cx - r * 1.0f, cy - r * 0.1f }, { cx + r * 1.0f, cy - r * 0.1f }, { cx, cy + r * 0.95f } }, c, a);
+}
 static void bar(Canvas& cv, float x, float y, float wdt, float p, uint32_t c)
 {
 	cv.rrect(x, y, x + wdt, y + 7, 3.5f, 0x281e28);
@@ -329,15 +345,13 @@ static void drawKitchenBase(Canvas& cv, const Kitchen& k)
 {
 	for (int gy = 0; gy < MH; ++gy)
 		for (int gx = 0; gx < MW; ++gx) cv.rect(gx * T, gy * T, (gx + 1) * T, (gy + 1) * T, (gx + gy) % 2 ? FLOOR_B : FLOOR_A);
-	cv.rect(0, 0, W, 2 * T, WALL);
-	for (int i = 0; i < 33; ++i) {
-		cv.rrect(i * 20 + 1, 6, i * 20 + 19, 34, 2, WALL_TILE);
-		cv.rrect(i * 20 - 9, 38, i * 20 + 9, 66, 2, WALL_TILE);
-	}
+	// the dining room along the top (rows 0-1), where the customers come in by the left door and leave by the right
+	cv.rect(0, 0, W, 2 * T, DINING);
+	for (int i = 0; i < 8; ++i) cv.rect(0, 14 + i * 9, W, 15 + i * 9, DINING_LINE);
+	cv.rect(0, 0, W, 10, WALL);
+	cv.rrect(-12, 4, 30, 78, 6, DOOR); cv.rrect(-12, 8, 24, 78, 4, DOOR_IN);
+	cv.rrect(610, 4, 652, 78, 6, DOOR); cv.rrect(616, 8, 652, 78, 4, DOOR_IN);
 	cv.rect(0, 11 * T, W, H, WALL);
-	cv.rrect(178, 14, 462, 64, 12, SHADOW, 0.35f, 4);
-	cv.rrect(178, 12, 462, 62, 12, YELLOW);
-	text(cv, F24, 320, 37, "BANANA BISTRO", BROWN, 1);
 	auto counter = [&](int gx, int gy) { return gy >= 2 && gy <= MH - 2 && k.cells[gy][gx].solid(); };
 	for (int gy = 0; gy < MH; ++gy)
 		for (int gx = 0; gx < MW; ++gx)
@@ -414,13 +428,96 @@ static void drawChef(Canvas& cv, const Chef& c, int i, bool active, bool marker,
 	(void)active;
 }
 
+// A customer: one for each order, in the dining room along the top. In by the left door to a seat, their dish in a
+// bubble; out by the right door, hearts when served, cross when they gave up waiting.
+struct Customer {
+	enum State { COMING, WAITING, HAPPY, MAD } state = COMING;
+	int id = 0, seat = 0, recipe = 0;
+	float x = -30, t = 0;
+	uint32_t look = 0;
+};
+static const int SEATS = 4;
+static float seatX(int i) { return 80 + i * 135.f; }
+
 struct View {
 	int active = 0;          // the chef this handheld runs
 	bool markers = true;     // the arrow over that chef
 	float clock = 0;
 	std::vector<Floater> floaters;
 	std::vector<std::pair<float, float>> lastPos;
+	std::vector<Customer> customers;
+	uint32_t looks = 7;
+
+	// after each step of the kitchen shown: its events, then everyone's walk
+	void updateCustomers(const Kitchen& k, float dt)
+	{
+		for (auto& e : k.events) {
+			if (e.kind != Event::SERVED && e.kind != Event::MISSED) continue;
+			for (auto& c : customers)
+				if (c.id == e.order && c.state < Customer::HAPPY) { c.state = e.kind == Event::SERVED ? Customer::HAPPY : Customer::MAD; c.t = 0; }
+		}
+		// a waiting customer whose order is gone without a word (the kitchen started again): gone too
+		customers.erase(std::remove_if(customers.begin(), customers.end(), [&](const Customer& c) {
+			if (c.state >= Customer::HAPPY) return c.x > W + 40;
+			for (auto& o : k.orders) if (o.id == c.id) return false;
+			return true;
+		}), customers.end());
+		// each order its customer (a new one, the first two, a saved game's): in by the door
+		for (auto& o : k.orders) {
+			bool has = false;
+			for (auto& c : customers) has = has || c.id == o.id;
+			if (has) continue;
+			bool taken[SEATS] = {};
+			for (auto& c : customers) if (c.state < Customer::HAPPY && c.seat < SEATS) taken[c.seat] = true;
+			Customer c; c.id = o.id; c.recipe = o.r;
+			c.seat = 0; while (c.seat < SEATS - 1 && taken[c.seat]) c.seat++;
+			looks = looks * 1103515245u + 12345u; c.look = looks >> 8;
+			c.x = -30 - 30.f * (float)customers.size();
+			customers.push_back(c);
+		}
+		for (auto& c : customers) {
+			c.t += dt;
+			if (c.state == Customer::COMING) {
+				c.x = std::min(seatX(c.seat), c.x + 130 * dt);
+				if (c.x >= seatX(c.seat)) { c.state = Customer::WAITING; c.t = 0; }
+			} else if (c.state >= Customer::HAPPY && c.t > 0.9f) c.x += (c.state == Customer::MAD ? 170 : 110) * dt;
+		}
+	}
 };
+
+static const uint32_t SHIRTS[6] = { 0x5b8def, 0xe85d75, 0x47b881, 0x9b6bdf, 0x3fb8c8, 0xf08a3c };
+static const uint32_t SKINS[4] = { 0xffdcba, 0xf0c090, 0xc68c5c, 0x8d5a3a };
+static const uint32_t HAIRS[5] = { 0x3a2a20, 0x7a4a24, 0xe8c060, 0x222222, 0xb85030 };
+
+static void drawCustomer(Canvas& cv, const Customer& c, const Order* o, bool patient, float clock)
+{
+	bool walking = c.state == Customer::COMING || (c.state >= Customer::HAPPY && c.t > 0.9f);
+	float x = c.x, y = 46 + (walking ? -std::fabs(std::sin(clock * 12 + c.id)) * 2.5f : 0);
+	cv.ellipse(x, 70, 13, 4, SHADOW, 0.3f, 2);
+	uint32_t shirt = SHIRTS[c.look % 6];
+	if (c.state == Customer::MAD) shirt = mixc(shirt, RED, 0.4f);
+	cv.ellipse(x, y + 12, 13, 10, shirt);
+	cv.ellipse(x, y - 4, 10, 9.5f, SKINS[(c.look / 6) % 4]);
+	cv.ellipse(x, y - 10, 10.5f, 5.5f, HAIRS[(c.look / 24) % 5]);
+	cv.ellipse(x - 3.5f, y - 2, 1.5f, 1.8f, 0x32221e);
+	cv.ellipse(x + 3.5f, y - 2, 1.5f, 1.8f, 0x32221e);
+	if (c.state == Customer::WAITING && o) {
+		// the dish they want, in a bubble; under it, how long they'll still wait
+		float p = o->left / o->total, shake = !patient && p < 0.25f ? std::sin(clock * 40) * 1.2f : 0;
+		float bx = x + 34 + shake, by = 24;
+		cv.rrect(bx - 19, by - 17, bx + 19, by + 15, 11, SHADOW, 0.25f, 2);
+		cv.poly({ { bx - 16, by + 4 }, { bx - 6, by + 12 }, { bx - 24, by + 16 } }, WHITE);
+		cv.rrect(bx - 19, by - 18, bx + 19, by + 13, 11, WHITE);
+		sprite(cv, dishSprite(o->r), bx, by - 3, 25);
+		if (!patient) {
+			uint32_t col = p > 0.5f ? GREEN : p > 0.25f ? ORANGE : RED;
+			bar(cv, bx - 18, by + 18, 36, p, col);
+		}
+	} else if (c.state >= Customer::HAPPY) {
+		float rise = std::min(1.f, c.t * 3);
+		sprite(cv, c.state == Customer::HAPPY ? "emo_hearts" : "emo_anger", x + 14, y - 22 - rise * 6, 24, std::min(1.f, c.t * 4));
+	}
+}
 
 static void drawKitchen(Canvas& cv, const Canvas& base, const Kitchen& k, View& v)
 {
@@ -466,6 +563,14 @@ static void drawKitchen(Canvas& cv, const Canvas& base, const Kitchen& k, View& 
 				drawThing(cv, c.thing, cx, cy, 30);
 				if (c.kind == 'K' && c.thing.chop > 0) bar(cv, x + 4, y - 9, T - 8, c.thing.chop, GREEN);
 			}
+		}
+	// the customers (the leaving ones over the others)
+	for (int pass = 0; pass < 2; ++pass)
+		for (auto& cu : v.customers) {
+			if ((cu.state >= Customer::HAPPY) != (pass == 1)) continue;
+			const Order* o = nullptr;
+			for (auto& r : k.orders) if (r.id == cu.id) o = &r;
+			drawCustomer(cv, cu, o, k.mode == TUTORIAL, v.clock);
 		}
 	// chefs, the farther ones first
 	std::vector<int> order(k.chefs.size());
@@ -541,38 +646,137 @@ static void drawTicket(Canvas& cv, const Order& o, float x, float y, float cw, f
 	}
 }
 
-static void drawOrders(Canvas& cv, const Canvas& bg, const Kitchen& k, const View& v, int nChefs, float missFlash)
+// a sentence on as many lines as it needs (at spaces), each `lineH` below the last; the lines' count
+static int wrapText(Canvas& cv, int f, float x, float y, float maxW, const std::string& s, uint32_t c, float lineH, int align = 0)
+{
+	std::vector<std::string> lines;
+	std::string cur;
+	size_t i = 0;
+	while (i <= s.size()) {
+		size_t sp = s.find(' ', i);
+		if (sp == std::string::npos) sp = s.size();
+		std::string word = s.substr(i, sp - i);
+		std::string tryLine = cur.empty() ? word : cur + " " + word;
+		if (!cur.empty() && textW(f, tryLine) > maxW) { lines.push_back(cur); cur = word; }
+		else cur = tryLine;
+		i = sp + 1;
+	}
+	if (!cur.empty()) lines.push_back(cur);
+	for (size_t l = 0; l < lines.size(); ++l) text(cv, f, x, y + l * lineH, lines[l], c, align);
+	return (int)lines.size();
+}
+
+// the tutorial's lesson, over the bottom screen's top
+static void drawLesson(Canvas& cv, const Tutorial& t, float clock)
+{
+	const Lesson& l = LESSONS[std::min(t.step, NLESSONS - 1)];
+	cv.rrect(16, 18, 624, 166, 16, 0, 0.4f, 6);
+	cv.rrect(16, 12, 624, 160, 16, CARD);
+	char buf[48];
+	snprintf(buf, sizeof buf, "LESSON %d OF %d", t.step + 1, NLESSONS);
+	text(cv, F11, 36, 32, buf, 0x9a8a78);
+	for (int i = 0; i < NLESSONS; ++i)
+		cv.ellipse(604 - (NLESSONS - 1 - i) * 11, 32, 3.5f, 3.5f, i < t.step ? GREEN : i == t.step ? ORANGE : CARD_LINE);
+	text(cv, F24, 36, 62, l.title, INK);
+	wrapText(cv, N15, 36, 100, 568, l.text, INK, 22);
+	// the buttons it's about, right of the title
+	std::string keys = l.keys;
+	float x = 604;
+	{
+		size_t a2 = 0;
+		while (a2 < keys.size()) {
+			size_t sp = keys.find(' ', a2);
+			if (sp == std::string::npos) sp = keys.size();
+			x -= std::max(28.f, textW(K13, keys.substr(a2, sp - a2)) + 16) + 10;
+			a2 = sp + 1;
+		}
+		x += 10;
+	}
+	size_t at = 0;
+	while (at < keys.size()) {
+		size_t sp = keys.find(' ', at);
+		if (sp == std::string::npos) sp = keys.size();
+		std::string k = keys.substr(at, sp - at);
+		float kw = std::max(28.f, textW(K13, k) + 16);
+		float pulse = 0.5f + 0.5f * std::sin(clock * 6);
+		cv.rrect(x - 3, 47, x + kw + 3, 77, 15, ORANGE, pulse);
+		cv.rrect(x, 50, x + kw, 74, 12, INK);
+		text(cv, K13, x + kw / 2, 62, k, WHITE, 1);
+		x += kw + 10;
+		at = sp + 1;
+	}
+}
+
+static void pill(Canvas& cv, float x0, float y0, float x1, float y1, const char* s, uint32_t bg, uint32_t fg)
+{
+	cv.rrect(x0, y0 + 3, x1, y1 + 3, (y1 - y0) / 2, 0, 0.35f, 3);
+	cv.rrect(x0, y0, x1, y1, (y1 - y0) / 2, bg);
+	text(cv, F13, (x0 + x1) / 2, (y0 + y1) / 2, s, fg, 1);
+}
+
+// The bottom screen's buttons while cooking (touch)
+static const float PAUSE_X0 = 510, PAUSE_X1 = 616, SKIP_X0 = 24, SKIP_X1 = 220, TUTOR_Y0 = 436, TUTOR_Y1 = 470;
+
+static void drawOrders(Canvas& cv, const Canvas& bg, const Kitchen& k, const View& v, const Tutorial& tutor, float missFlash)
 {
 	cv.copy(bg);
-	bool low = k.time <= 10 && k.time > 0;
-	uint32_t tb = low && std::fmod(v.clock, 1.f) < 0.5f ? RED : YELLOW;
-	cv.rrect(16, 14, 200, 70, 16, tb);
-	text(cv, F11, 34, 27, "TIME", low ? WHITE : 0x785014);
-	int secs = (int)std::ceil(k.time);
 	char buf[32];
-	snprintf(buf, sizeof buf, "%d:%02d", secs / 60, secs % 60);
-	text(cv, F24, 34, 52, buf, low && tb == RED ? WHITE : INK);
-	cv.rrect(440, 14, 624, 70, 16, missFlash > 0 ? RED : YELLOW);
-	text(cv, F11, 458, 27, "TIPS", missFlash > 0 ? WHITE : 0x785014);
-	sprite(cv, "cookie", 476, 51, 24);
-	snprintf(buf, sizeof buf, "%d", k.tips);
-	text(cv, F24, 496, 52, buf, missFlash > 0 ? WHITE : INK);
-	if (missFlash > 0) text(cv, F16, 600, 52, "-10", WHITE, 2, std::min(1.f, missFlash * 2));
-	for (int i = 0; i < 3; ++i) {
-		float sx = 268 + i * 52;
-		bool got = k.tips >= k.stars[i];
-		cv.star(sx, 36, 17, got ? YELLOW : 0x5a4c64);
-		snprintf(buf, sizeof buf, "%d", k.stars[i]);
-		text(cv, F11, sx, 64, buf, 0xe6dcf0, 1);
+	int nChefs = (int)k.chefs.size();
+	float ticketsY = 92;
+	if (k.mode == TUTORIAL) {
+		drawLesson(cv, tutor, v.clock);
+		ticketsY = 176;
+	} else if (k.mode == RUSH) {
+		bool low = k.time <= 10 && k.time > 0;
+		uint32_t tb = low && std::fmod(v.clock, 1.f) < 0.5f ? RED : YELLOW;
+		cv.rrect(16, 14, 200, 70, 16, tb);
+		text(cv, F11, 34, 27, "TIME", low ? WHITE : 0x785014);
+		int secs = (int)std::ceil(k.time);
+		snprintf(buf, sizeof buf, "%d:%02d", secs / 60, secs % 60);
+		text(cv, F24, 34, 52, buf, low && tb == RED ? WHITE : INK);
+		for (int i = 0; i < 3; ++i) {
+			float sx = 268 + i * 52;
+			bool got = k.tips >= k.stars[i];
+			cv.star(sx, 36, 17, got ? YELLOW : 0x5a4c64);
+			snprintf(buf, sizeof buf, "%d", k.stars[i]);
+			text(cv, F11, sx, 64, buf, 0xe6dcf0, 1);
+		}
+	} else {
+		// CALM: the hearts left, and the customers served
+		bool hurt = missFlash > 0;
+		cv.rrect(16, 14, 200, 70, 16, hurt ? RED : YELLOW);
+		text(cv, F11, 34, 27, "HAPPY CUSTOMERS", hurt ? WHITE : 0x785014);
+		for (int i = 0; i < Kitchen::MAX_HEARTS; ++i)
+			heart(cv, 46 + i * 34, 51, 12, i < k.hearts ? (hurt ? WHITE : RED) : (hurt ? 0xffb0a8 : 0xd8b040), i < k.hearts ? 1 : 0.6f);
+		text(cv, F11, 320, 27, "SERVED", MUTED, 1);
+		snprintf(buf, sizeof buf, "%d", k.served);
+		text(cv, F32, 320, 54, buf, WHITE, 1);
+	}
+	if (k.mode != TUTORIAL) {
+		bool tipFlash = missFlash > 0 && k.mode == RUSH;
+		cv.rrect(440, 14, 624, 70, 16, tipFlash ? RED : YELLOW);
+		text(cv, F11, 458, 27, "TIPS", tipFlash ? WHITE : 0x785014);
+		sprite(cv, "cookie", 476, 51, 24);
+		snprintf(buf, sizeof buf, "%d", k.tips);
+		text(cv, F24, 496, 52, buf, tipFlash ? WHITE : INK);
+		if (tipFlash) text(cv, F16, 600, 52, "-10", WHITE, 2, std::min(1.f, missFlash * 2));
 	}
 	int n = (int)k.orders.size();
 	float cw = 142, gap = 10, x0 = (W - (n * cw + (n - 1) * gap)) / 2;
 	for (int i = 0; i < n; ++i) {
 		const Order& o = k.orders[i];
-		float age = o.total - o.left, slide = age < 0.35f ? (1 - age / 0.35f) * 300 : 0;
-		drawTicket(cv, o, x0 + i * (cw + gap) + slide, 92, cw, v.clock);
+		float slide = o.age < 0.35f ? (1 - o.age / 0.35f) * 300 : 0;
+		Order shown = o;
+		if (k.mode == TUTORIAL) shown.left = shown.total;  // (they wait)
+		drawTicket(cv, shown, x0 + i * (cw + gap) + slide, ticketsY, cw, v.clock);
 	}
-	if (n == 0) text(cv, N15, W / 2, 210, "NO ORDERS RIGHT NOW", MUTED, 1);
+	if (n == 0) text(cv, N15, W / 2, ticketsY + 118, k.mode == TUTORIAL ? "NO CUSTOMER YET" : "NO ORDERS RIGHT NOW", MUTED, 1);
+	if (k.mode == TUTORIAL) {
+		pill(cv, SKIP_X0, TUTOR_Y0, SKIP_X1, TUTOR_Y1, "SKIP LESSON", PANEL, LIGHT);
+		pill(cv, PAUSE_X0 - 40, TUTOR_Y0, PAUSE_X1, TUTOR_Y1, "PAUSE", PANEL, LIGHT);
+		text(cv, F11, 345, 453, tutor.step >= 17 ? "Y: SWITCH CHEF" : "SELECT: SKIP", MUTED, 1);
+		return;
+	}
 	cv.rrect(16, 362, 624, 410, 16, PANEL);
 	for (int i = 0; i < nChefs; ++i) {
 		float cx = 40 + i * 150;
@@ -581,7 +785,7 @@ static void drawOrders(Canvas& cv, const Canvas& bg, const Kitchen& k, const Vie
 		snprintf(buf, sizeof buf, "CHEF %d", i + 1);
 		text(cv, F13, cx + 18, 386, buf, LIGHT);
 	}
-	text(cv, F13, 608, 386, "KITCHEN 1", MUTED, 2);
+	pill(cv, PAUSE_X0, 370, PAUSE_X1, 402, "PAUSE", 0x56486a, LIGHT);
 	float x = 20;
 	keycap(cv, x, 441, "A", "Take / put");
 	keycap(cv, x, 441, "X", "Chop (hold)");
@@ -597,18 +801,25 @@ enum class Btn { UP, DOWN, LEFT, RIGHT, A, B, X, Y, L, R, SELECT, START, NONE };
 struct Button { float x0, y0, x1, y1; std::string label; };
 
 struct Game {
-	enum Scene { TITLE, HOWTO, PLAY, PAUSE, RESULTS } scene = TITLE;
+	enum Scene { TITLE, HOWTO, PLAY, PAUSE, RESULTS, OPTIONS } scene = TITLE;
+	Scene optionsFrom = TITLE;
+	Mode mode = CALM;
 	Kitchen k{ 2 };
+	Kitchen demo{ 2, 1, TUTORIAL };   // the title's kitchen: customers come and go
+	float demoT = 0;
+	Tutorial tutor;
 	View view;
 	Canvas base, bottomBg, top, bottom;
 	int sel = 0;
 	float sceneT = 0, missFlash = 0;
 	bool quit = false, redrawBase = true, newBest = false;
-	int bestTips = 0, bestStars = 0;
+	int bestTips = 0, bestStars = 0, bestServed = 0;
+	bool musicOn = true, soundsOn = true, hasSave = false;
 	std::string dataDir;
 	bool held[12] = {};
 	Buttons pressed;
 	std::function<void(const char*)> sound = [](const char*) {};
+	std::function<void()> optionsChanged = [] {};
 	uint32_t seed = 0;
 
 	Game()
@@ -616,37 +827,146 @@ struct Game {
 		stripes(bottomBg);
 		drawKitchenBase(base, k);
 	}
+	void play(const char* s) { if (soundsOn) sound(s); }
+
+	// --- what's kept in dataDir: the best scores, the options, a Play game left to go on with
+	std::string file(const char* n) const { return dataDir + "/" + n; }
 	void loadBest()
 	{
 		if (dataDir.empty()) return;
-		if (FILE* f = fopen((dataDir + "/best.txt").c_str(), "r")) { if (fscanf(f, "%d %d", &bestTips, &bestStars) != 2) bestTips = bestStars = 0; fclose(f); }
+		if (FILE* f = fopen(file("best.txt").c_str(), "r")) {
+			char line[96];
+			bool first = true;
+			while (fgets(line, sizeof line, f)) {
+				int a, b;
+				if (first && sscanf(line, "%d %d", &a, &b) == 2) { bestTips = a; bestStars = b; }   // (the first version's)
+				else if (sscanf(line, "rush %d %d", &a, &b) == 2) { bestTips = a; bestStars = b; }
+				else if (sscanf(line, "play %d", &a) == 1) bestServed = a;
+				first = false;
+			}
+			fclose(f);
+		}
+		if (FILE* f = fopen(file("options.txt").c_str(), "r")) {
+			char line[64];
+			int v;
+			while (fgets(line, sizeof line, f)) {
+				if (sscanf(line, "music %d", &v) == 1) musicOn = v;
+				else if (sscanf(line, "sounds %d", &v) == 1) soundsOn = v;
+			}
+			fclose(f);
+		}
+		FILE* f = fopen(file("save.txt").c_str(), "r");
+		hasSave = f != nullptr;
+		if (f) fclose(f);
 	}
 	void saveBest()
 	{
 		if (dataDir.empty()) return;
-		if (FILE* f = fopen((dataDir + "/best.txt").c_str(), "w")) { fprintf(f, "%d %d\n", bestTips, bestStars); fclose(f); }
+		if (FILE* f = fopen(file("best.txt").c_str(), "w")) { fprintf(f, "rush %d %d\nplay %d\n", bestTips, bestStars, bestServed); fclose(f); }
 	}
-	void go(Scene s) { scene = s; sel = 0; sceneT = 0; }
-	void startRound()
+	void saveOptions()
 	{
-		k = Kitchen(2, seed ? seed : (uint32_t)std::chrono::steady_clock::now().time_since_epoch().count());
-		view.floaters.clear(); view.active = 0; missFlash = 0; newBest = false;
-		go(PLAY);
-		sound("start");
+		optionsChanged();
+		if (dataDir.empty()) return;
+		if (FILE* f = fopen(file("options.txt").c_str(), "w")) { fprintf(f, "music %d\nsounds %d\n", musicOn, soundsOn); fclose(f); }
 	}
+	// a Play game, kept (written beside, then put in place: a power cut leaves the old one or the new one)
+	void saveGame()
+	{
+		if (mode != CALM || k.over || dataDir.empty()) return;
+		std::string tmp = file("save.txt.new");
+		if (FILE* f = fopen(tmp.c_str(), "w")) {
+			std::string s = k.save();
+			bool ok = fwrite(s.data(), 1, s.size(), f) == s.size();
+			ok = fflush(f) == 0 && ok;
+			fsync(fileno(f));
+			fclose(f);
+			if (ok && rename(tmp.c_str(), file("save.txt").c_str()) == 0) hasSave = true;
+		}
+	}
+	void dropSave() { if (!dataDir.empty()) remove(file("save.txt").c_str()); hasSave = false; }
+	bool loadGame()
+	{
+		FILE* f = fopen(file("save.txt").c_str(), "r");
+		if (!f) return false;
+		std::string s; char b[4096]; size_t n;
+		while ((n = fread(b, 1, sizeof b, f)) > 0) s.append(b, n);
+		fclose(f);
+		return k.load(s);
+	}
+
+	void go(Scene s) { scene = s; sel = 0; sceneT = 0; }
+	void fresh()
+	{
+		view.floaters.clear(); view.customers.clear(); view.active = 0; missFlash = 0; newBest = false;
+		go(PLAY);
+		play("start");
+	}
+	void startRound(Mode m)
+	{
+		mode = m;
+		k = Kitchen(2, seed ? seed : (uint32_t)std::chrono::steady_clock::now().time_since_epoch().count(), m);
+		if (m == TUTORIAL) { tutor = Tutorial(); tutor.begin(k); }
+		if (m == CALM) dropSave();
+		fresh();
+	}
+	void continueGame()
+	{
+		if (!loadGame()) { dropSave(); startRound(CALM); return; }
+		mode = CALM;
+		fresh();
+	}
+	void leave()
+	{
+		if (mode == CALM) saveGame();
+		go(TITLE);
+	}
+
 	std::vector<std::string> menuItems() const
 	{
-		if (scene == TITLE) return { "PLAY", "HOW TO PLAY", "QUIT" };
-		if (scene == PAUSE) return { "RESUME", "START AGAIN", "LEAVE THE KITCHEN" };
-		if (scene == RESULTS) return { "PLAY AGAIN", "MENU" };
+		if (scene == TITLE) {
+			std::vector<std::string> v;
+			if (hasSave) v.push_back("CONTINUE");
+			for (auto s : { "PLAY", "RUSH: 3 MINUTES", "TUTORIAL", "HOW TO COOK", "OPTIONS", "QUIT" }) v.push_back(s);
+			return v;
+		}
+		if (scene == PAUSE) {
+			if (mode == TUTORIAL) return { "RESUME", "SKIP THIS LESSON", "OPTIONS", "LEAVE THE TUTORIAL" };
+			if (mode == CALM) return { "RESUME", "OPTIONS", "SAVE AND LEAVE", "START AGAIN" };
+			return { "RESUME", "START AGAIN", "OPTIONS", "LEAVE THE KITCHEN" };
+		}
+		if (scene == RESULTS) return mode == TUTORIAL ? std::vector<std::string>{ "PLAY", "MENU" } : std::vector<std::string>{ "PLAY AGAIN", "MENU" };
+		if (scene == OPTIONS) return { musicOn ? "MUSIC: ON" : "MUSIC: OFF", soundsOn ? "SOUNDS: ON" : "SOUNDS: OFF", "BACK" };
 		return {};
 	}
 	void choose(int i)
 	{
-		sound("ok");
-		if (scene == TITLE) { if (i == 0) startRound(); else if (i == 1) go(HOWTO); else quit = true; }
-		else if (scene == PAUSE) { if (i == 0) { scene = PLAY; } else if (i == 1) startRound(); else go(TITLE); }
-		else if (scene == RESULTS) { if (i == 0) startRound(); else go(TITLE); }
+		auto items = menuItems();
+		if (i < 0 || i >= (int)items.size()) return;
+		const std::string& c = items[i];
+		if (c.rfind("SOUNDS", 0) != 0) play("ok");
+		if (c == "CONTINUE") continueGame();
+		else if (c == "PLAY") startRound(CALM);
+		else if (c == "RUSH: 3 MINUTES") startRound(RUSH);
+		else if (c == "TUTORIAL") startRound(TUTORIAL);
+		else if (c == "HOW TO COOK") go(HOWTO);
+		else if (c == "OPTIONS") { optionsFrom = scene; go(OPTIONS); }
+		else if (c == "QUIT") quit = true;
+		else if (c == "RESUME") scene = PLAY;
+		else if (c == "START AGAIN" || c == "PLAY AGAIN") startRound(mode);
+		else if (c == "SKIP THIS LESSON") { tutor.skip(k); scene = PLAY; if (tutor.finished) go(RESULTS); }
+		else if (c == "SAVE AND LEAVE" || c == "LEAVE THE KITCHEN" || c == "LEAVE THE TUTORIAL" || c == "MENU") leave();
+		else if (c.rfind("MUSIC", 0) == 0) { musicOn = !musicOn; saveOptions(); }
+		else if (c.rfind("SOUNDS", 0) == 0) { soundsOn = !soundsOn; saveOptions(); play("ok"); }
+		else if (c == "BACK") { scene = optionsFrom; sel = 0; }
+	}
+	void back()
+	{
+		play("back");
+		if (scene == PAUSE) scene = PLAY;
+		else if (scene == RESULTS || scene == HOWTO) go(TITLE);
+		else if (scene == OPTIONS) { scene = optionsFrom; sel = 0; }
+		else if (scene == TITLE) quit = true;
 	}
 	void key(Btn b, bool down)
 	{
@@ -655,39 +975,55 @@ struct Game {
 		if (!down) return;
 		auto items = menuItems();
 		if (scene == PLAY) {
-			if (b == Btn::START) { scene = PAUSE; sel = 0; sound("back"); return; }
-			if (b == Btn::Y && k.chefs.size() > 1) { view.active = (view.active + 1) % (int)k.chefs.size(); sound("switch"); return; }
-			if (b == Btn::A) pressed.a = true;
+			if (b == Btn::START) { scene = PAUSE; sel = 0; play("back"); return; }
+			if (b == Btn::SELECT && mode == TUTORIAL) { skipLesson(); return; }
+			if (b == Btn::Y && k.chefs.size() > 1) {
+				if (mode == TUTORIAL && tutor.step < 17) { play("wrong"); return; }   // (one chef till the lesson on two)
+				view.active = (view.active + 1) % (int)k.chefs.size(); play("switch");
+				tutor.switched = true;
+				return;
+			}
+			if (b == Btn::A) { pressed.a = true; if (mode == TUTORIAL && !tutor.finished && LESSONS[tutor.step].pressA) tutor.aPressed = true; }
 			if (b == Btn::B) pressed.b = true;
 			if (b == Btn::X) pressed.x = true;
 			return;
 		}
-		if (scene == HOWTO) { if (b == Btn::B || b == Btn::A || b == Btn::START) { sound("back"); go(TITLE); } return; }
+		if (scene == HOWTO) { if (b == Btn::B || b == Btn::A || b == Btn::START) back(); return; }
 		if (items.empty()) return;
-		if (b == Btn::UP) { sel = (sel + (int)items.size() - 1) % (int)items.size(); sound("move"); }
-		else if (b == Btn::DOWN) { sel = (sel + 1) % (int)items.size(); sound("move"); }
+		if (b == Btn::UP) { sel = (sel + (int)items.size() - 1) % (int)items.size(); play("move"); }
+		else if (b == Btn::DOWN) { sel = (sel + 1) % (int)items.size(); play("move"); }
 		else if (b == Btn::A) choose(sel);
-		else if (b == Btn::B) {
-			if (scene == PAUSE) { scene = PLAY; sound("back"); }
-			else if (scene == RESULTS) { sound("back"); go(TITLE); }
-			else if (scene == TITLE) { sound("back"); quit = true; }
-		} else if (b == Btn::START && scene == PAUSE) { scene = PLAY; sound("back"); }
+		else if (b == Btn::B) back();
+		else if (b == Btn::START && scene == PAUSE) { scene = PLAY; play("back"); }
+	}
+	void skipLesson()
+	{
+		tutor.skip(k);
+		play("chopped");
+		if (tutor.finished) { play("end"); go(RESULTS); }
 	}
 	std::vector<Button> buttons() const
 	{
 		std::vector<Button> out;
 		auto items = menuItems();
-		float y = scene == TITLE ? 190 : scene == RESULTS ? 330 : 170;
-		for (size_t i = 0; i < items.size(); ++i) out.push_back({ 170, y + i * 64, 470, y + i * 64 + 52, items[i] });
+		float h = 44, step = 50;
+		float y = scene == TITLE ? H - 14 - items.size() * step : scene == RESULTS ? 350 : scene == OPTIONS ? 150 : 130;
+		for (size_t i = 0; i < items.size(); ++i) out.push_back({ 170, y + i * step, 470, y + i * step + h, items[i] });
 		return out;
 	}
 	void touch(int x, int y)
 	{
-		if (scene == HOWTO) { sound("back"); go(TITLE); return; }
+		if (scene == HOWTO) { back(); return; }
 		if (scene == PLAY) {
+			if (mode == TUTORIAL) {
+				if (y >= TUTOR_Y0 - 6 && y < TUTOR_Y1 + 6 && x >= SKIP_X0 && x < SKIP_X1) skipLesson();
+				else if (y >= TUTOR_Y0 - 6 && y < TUTOR_Y1 + 6 && x >= PAUSE_X0 - 40 && x < PAUSE_X1) { scene = PAUSE; sel = 0; play("back"); }
+				return;
+			}
+			if (x >= PAUSE_X0 && x < PAUSE_X1 && y >= 362 && y < 410) { scene = PAUSE; sel = 0; play("back"); return; }
 			// the chef chips switch chef
 			for (size_t i = 0; i < k.chefs.size(); ++i)
-				if (x >= 22 + (int)i * 150 && x < 156 + (int)i * 150 && y >= 362 && y < 410 && view.active != (int)i) { view.active = (int)i; sound("switch"); }
+				if (x >= 22 + (int)i * 150 && x < 156 + (int)i * 150 && y >= 362 && y < 410 && view.active != (int)i) { view.active = (int)i; play("switch"); }
 			return;
 		}
 		auto bs = buttons();
@@ -701,26 +1037,45 @@ struct Game {
 			float ex = e.x * T, ey = e.y * T - 10;
 			char buf[16];
 			switch (e.kind) {
-			case Event::PICK: sound("pick"); break;
-			case Event::DROP: sound("drop"); break;
-			case Event::CHOP: sound("chop"); break;
-			case Event::CHOPPED: sound("chopped"); break;
-			case Event::DONE: sound("done"); break;
-			case Event::BURNT: sound("burnt"); view.floaters.push_back({ ex, ey - 16, "BURNT!", RED }); break;
+			case Event::PICK: play("pick"); break;
+			case Event::DROP: play("drop"); break;
+			case Event::CHOP: play("chop"); break;
+			case Event::CHOPPED: play("chopped"); break;
+			case Event::DONE: play("done"); break;
+			case Event::BURNT: play("burnt"); view.floaters.push_back({ ex, ey - 16, "BURNT!", RED }); break;
 			case Event::SERVED:
-				sound("served");
+				play("served");
 				snprintf(buf, sizeof buf, "+%d", e.value);
 				view.floaters.push_back({ ex - 30, ey, buf, GREEN, 1.4f, 0, F24 });
 				break;
-			case Event::WRONG: sound("wrong"); view.floaters.push_back({ ex - 50, ey, "NOT ORDERED", RED, 1.2f, 0, F13 }); break;
-			case Event::MISSED: sound("missed"); missFlash = 1.2f; break;
-			case Event::NEWORDER: if (sceneT > 1) sound("neworder"); break;
-			case Event::BIN: sound("bin"); break;
-			case Event::DASH: sound("dash"); break;
-			case Event::TICK: sound("tick"); break;
+			case Event::WRONG: play("wrong"); view.floaters.push_back({ ex - 50, ey, "NOT ORDERED", RED, 1.2f, 0, F13 }); break;
+			case Event::MISSED: play("missed"); missFlash = 1.2f; break;
+			case Event::NEWORDER: if (sceneT > 1) play("neworder"); break;
+			case Event::BIN: play("bin"); break;
+			case Event::DASH: play("dash"); break;
+			case Event::TICK: play("tick"); break;
+			case Event::HEART: play("done"); view.floaters.push_back({ ex - 40, ey, "+1 HEART", RED, 1.4f, 0, F16 }); break;
 			case Event::SIZZLE: break;
 			}
 		}
+	}
+
+	// the title's kitchen: a customer in every few seconds, served (or not) a while after
+	void stepDemo(float dt)
+	{
+		demo.step(dt, {}, {});
+		demoT += dt;
+		if (demoT > 2.6f) {
+			demoT = 0;
+			if (demo.orders.size() < 3 || (demo.rand() % 3 == 0 && demo.orders.size() < 4)) demo.addOrder();
+			else {
+				Event e{ demo.rand() % 4 ? Event::SERVED : Event::MISSED, 0, 0, 0 };
+				e.order = demo.orders.front().id;
+				demo.orders.erase(demo.orders.begin());
+				demo.events.push_back(e);
+			}
+		}
+		view.updateCustomers(demo, dt);
 	}
 
 	// one 60th of a second
@@ -730,8 +1085,11 @@ struct Game {
 		missFlash = std::max(0.f, missFlash - dt);
 		for (auto& f : view.floaters) f.age += dt;
 		view.floaters.erase(std::remove_if(view.floaters.begin(), view.floaters.end(), [](const Floater& f) { return f.age >= f.life; }), view.floaters.end());
+		bool inMenus = scene == TITLE || scene == HOWTO || (scene == OPTIONS && optionsFrom == TITLE);
+		if (inMenus) { stepDemo(dt); pressed = Buttons(); return; }
+		if (scene == RESULTS) { k.events.clear(); view.updateCustomers(k, dt); }
 		if (scene != PLAY) { pressed = Buttons(); return; }
-		if (sceneT < 1.6f) { pressed = Buttons(); return; }   // READY... GO
+		if (sceneT < 1.6f) { pressed = Buttons(); k.events.clear(); view.updateCustomers(k, dt); return; }   // READY... GO
 		std::vector<Buttons> h(k.chefs.size()), p(k.chefs.size());
 		Buttons& mine = h[view.active];
 		mine.up = held[(int)Btn::UP]; mine.down = held[(int)Btn::DOWN]; mine.left = held[(int)Btn::LEFT]; mine.right = held[(int)Btn::RIGHT];
@@ -740,11 +1098,22 @@ struct Game {
 		pressed = Buttons();
 		k.step(dt, h, p);
 		events();
+		view.updateCustomers(k, dt);
+		if (mode == TUTORIAL && tutor.check(k, view.active)) {
+			play(tutor.finished ? "end" : "start");
+			if (tutor.finished) go(RESULTS);
+			return;
+		}
 		if (k.over) {
-			sound("end");
-			int st = k.starsEarned();
-			if (k.tips > bestTips) { bestTips = k.tips; newBest = true; }
-			bestStars = std::max(bestStars, st);
+			play("end");
+			if (mode == RUSH) {
+				int st = k.starsEarned();
+				if (k.tips > bestTips) { bestTips = k.tips; newBest = true; }
+				bestStars = std::max(bestStars, st);
+			} else {
+				if (k.served > bestServed) { bestServed = k.served; newBest = true; }
+				dropSave();
+			}
 			saveBest();
 			go(RESULTS);
 		}
@@ -763,43 +1132,59 @@ struct Game {
 		}
 	}
 
+	// the tutorial's squares to go to: lit up, an arrow over the nearest
+	void drawLessonMarks(Canvas& cv)
+	{
+		if (tutor.finished) return;
+		std::string where = LESSONS[tutor.step].where;
+		if (where.empty()) return;
+		float pulse = 0.55f + 0.45f * std::sin(view.clock * 6);
+		const Chef& c = k.chefs[view.active];
+		float bestD = 1e9, ax = 0, ay = 0;
+		for (int gy = 2; gy < MH - 1; ++gy)
+			for (int gx = 0; gx < MW; ++gx) {
+				if (where.find(k.cells[gy][gx].kind) == std::string::npos) continue;
+				cv.rring(gx * T - 3, gy * T - 3, gx * T + T + 3, gy * T + T - 1, 7, 4, ORANGE, pulse);
+				cv.rring(gx * T + 1, gy * T + 1, gx * T + T - 1, gy * T + T - 5, 4, 2, WHITE, pulse * 0.8f);
+				float d = std::hypot(gx + 0.5f - c.x, gy + 0.5f - c.y);
+				if (d < bestD) { bestD = d; ax = gx * T + T / 2.f; ay = gy * T; }
+			}
+		if (bestD > 1.6f && bestD < 1e9) {
+			float bob = std::sin(view.clock * 6) * 4;
+			bool below = ay < 3 * T;   // (the top row: the arrow under it, pointing up)
+			float dir = below ? -1 : 1, tip = below ? ay + T + 2 - bob : ay - 2 + bob, base = tip - dir * 22;
+			cv.poly({ { ax - 15, base - dir * 2 }, { ax + 15, base - dir * 2 }, { ax, tip + dir * 3 } }, INK);
+			cv.poly({ { ax - 11, base }, { ax + 11, base }, { ax, tip } }, ORANGE);
+			cv.rect(ax - 5, base - dir * 12 - (below ? 0 : 0), ax + 5, base, ORANGE);
+		}
+	}
+
 	void drawTop()
 	{
 		if (redrawBase) { drawKitchenBase(base, k); redrawBase = false; }
-		View v = view;
-		if (scene == TITLE || scene == HOWTO) {
-			// the empty kitchen, its two chefs waiting
-			Kitchen idle(2, 1);
-			idle.orders.clear();
-			idle.chefs[0].fy = 1; idle.chefs[1].fy = 1;
-			View iv; iv.clock = view.clock; iv.markers = false; iv.active = -1;
-			drawKitchen(top, base, idle, iv);
-			if (scene == TITLE) {
-				top.rect(0, 0, W, H, 0x000000, 0.35f);
-				top.rrect(70, 156, 570, 330, 28, 0, 0.5f, 10);
-				top.rrect(70, 150, 570, 320, 28, YELLOW);
-				top.rring(80, 160, 560, 310, 20, 3, BROWN, 0.25f);
-				text(top, F48, 320, 214, "BANANA", BROWN, 1);
-				text(top, F48, 320, 268, "BISTRO", BROWN, 1);
-				sprite(top, "burger", 120, 236, 64);
-				sprite(top, "salad", 520, 236, 64);
-			} else howtoLabels(top);
+		bool inMenus = scene == TITLE || scene == HOWTO || (scene == OPTIONS && optionsFrom == TITLE);
+		if (inMenus) {
+			// the kitchen, its two chefs waiting, customers coming and going
+			View iv = view; iv.markers = false; iv.active = -1; iv.floaters.clear();
+			drawKitchen(top, base, demo, iv);
+			if (scene == HOWTO) howtoLabels(top);
 			return;
 		}
 		drawKitchen(top, base, k, view);
+		if (mode == TUTORIAL && (scene == PLAY || scene == PAUSE)) drawLessonMarks(top);
 		if (scene == PLAY && sceneT < 2.2f) {
 			const char* s = sceneT < 1.6f ? "READY?" : "GO!";
 			float a = sceneT < 1.6f ? std::min(1.f, sceneT * 3) : 1 - (sceneT - 1.6f) / 0.6f;
 			top.rrect(190, 200, 450, 280, 24, 0, 0.45f * a);
 			text(top, F48, 320, 240, s, sceneT < 1.6f ? WHITE : YELLOW, 1, a);
 		}
-		if (scene == PAUSE) {
+		if (scene == PAUSE || scene == OPTIONS) {
 			top.rect(0, 0, W, H, 0x000000, 0.5f);
 			text(top, F48, 320, 240, "PAUSED", WHITE, 1);
 		}
 		if (scene == RESULTS) {
 			top.rect(0, 0, W, H, 0x000000, 0.45f);
-			text(top, F48, 320, 230, "TIME'S UP!", YELLOW, 1);
+			text(top, F48, 320, 230, mode == TUTORIAL ? "WELL DONE!" : mode == RUSH ? "TIME'S UP!" : "CLOSED!", YELLOW, 1);
 		}
 	}
 
@@ -811,7 +1196,7 @@ struct Game {
 			{ 520, 128, "PLATES" }, { 560, 160, "SERVE" }, { 72, 230, "CHOP" }, { 320, 196, "CHOP" },
 			{ 60, 394, "POTS" }, { 200, 394, "PANS" }, { 360, 394, "POTS" }, { 500, 394, "BIN" },
 		};
-		cv.rect(0, 0, W, H, 0x000000, 0.25f);
+		cv.rect(0, 80, W, H, 0x000000, 0.25f);
 		for (auto& l : ls) {
 			float wdt = textW(F11, l.s) + 14;
 			cv.rrect(l.x - wdt / 2, l.y - 10, l.x + wdt / 2, l.y + 10, 10, INK, 0.92f);
@@ -821,19 +1206,19 @@ struct Game {
 
 	void drawBottom()
 	{
-		char buf[64];
-		if (scene == PLAY) { drawOrders(bottom, bottomBg, k, view, (int)k.chefs.size(), missFlash); return; }
+		char buf[96];
+		if (scene == PLAY) { drawOrders(bottom, bottomBg, k, view, tutor, missFlash); return; }
 		bottom.copy(bottomBg);
 		if (scene == TITLE) {
-			text(bottom, F24, 320, 60, "KITCHEN 1", YELLOW, 1);
-			text(bottom, N15, 320, 92, "SALAD  -  TOMATO SOUP  -  CHEESEBURGER", MUTED, 1);
-			for (int i = 0; i < 3; ++i) bottom.star(290 + i * 30, 140, 12, i < bestStars ? YELLOW : 0x5a4c64);
-			snprintf(buf, sizeof buf, "BEST: %d TIPS", bestTips);
-			text(bottom, F11, 320, 166, buf, MUTED, 1);
+			text(bottom, F32, 320, 34, "BISTRO", YELLOW, 1);
+			int y = 70;
+			if (bestServed || bestTips) {
+				snprintf(buf, sizeof buf, "BEST: %d SERVED IN PLAY  -  %d TIPS IN RUSH", bestServed, bestTips);
+				text(bottom, F11, 320, y, buf, MUTED, 1);
+			} else text(bottom, N15, 320, y, "New here? Start with the tutorial.", MUTED, 1);
 			drawMenuButtons(bottom);
 		} else if (scene == HOWTO) {
 			text(bottom, F24, 320, 36, "HOW TO COOK", YELLOW, 1);
-			struct Row { int r; std::vector<std::string> steps; };
 			const char* rows[3][2] = {
 				{ "salad", "Chop a tomato and some lettuce, put both on a plate." },
 				{ "soup", "Chop three tomatoes, put them in a pot. When it's cooked, scoop it with a plate." },
@@ -843,14 +1228,9 @@ struct Game {
 				float y = 76 + i * 78;
 				bottom.rrect(16, y, 624, y + 68, 14, CARD);
 				sprite(bottom, rows[i][0], 56, y + 34, 52);
-				// the sentence, on two lines if it needs them
-				std::string s = rows[i][1], l1 = s, l2;
-				if (textW(N15, s) > 520) {
-					size_t cut = s.rfind(' ', s.size() / 2 + 8);
-					l1 = s.substr(0, cut); l2 = s.substr(cut + 1);
-				}
-				text(bottom, N15, 100, l2.empty() ? y + 34 : y + 24, l1, INK);
-				if (!l2.empty()) text(bottom, N15, 100, y + 46, l2, INK);
+				std::string s = rows[i][1];
+				bool two = textW(N15, s) > 500;
+				wrapText(bottom, N15, 100, two ? y + 24 : y + 34, 500, s, INK, 22);
 			}
 			text(bottom, N15, 320, 330, "Take the plate to the yellow counter to serve it. Hurry: each order has a time.", MUTED, 1);
 			text(bottom, N15, 320, 352, "Don't leave a pan or pot too long: it burns! Throw burnt food in the bin.", MUTED, 1);
@@ -861,22 +1241,45 @@ struct Game {
 			keycap(bottom, x, 400, "Y", "Switch chef");
 			text(bottom, F11, 320, 450, "PRESS B TO GO BACK", MUTED, 1);
 		} else if (scene == PAUSE) {
-			text(bottom, F24, 320, 80, "PAUSED", YELLOW, 1);
+			text(bottom, F24, 320, 60, "PAUSED", YELLOW, 1);
+			if (mode == CALM) text(bottom, N15, 320, 96, "Leave whenever you like: your kitchen is kept for next time.", MUTED, 1);
+			drawMenuButtons(bottom);
+		} else if (scene == OPTIONS) {
+			text(bottom, F24, 320, 60, "OPTIONS", YELLOW, 1);
+			text(bottom, N15, 320, 100, "Kept for next time.", MUTED, 1);
 			drawMenuButtons(bottom);
 		} else if (scene == RESULTS) {
-			int st = k.starsEarned();
-			for (int i = 0; i < 3; ++i) {
-				float appear = std::clamp((sceneT - 0.4f - i * 0.45f) * 4, 0.f, 1.f);
-				float r = 34 * (i < st ? 0.6f + 0.4f * appear + (appear < 1 ? 0.25f * std::sin(appear * 3.14f) : 0) : 1);
-				bottom.star(220 + i * 100, 70, r, i < st && appear > 0 ? YELLOW : 0x5a4c64);
+			if (mode == TUTORIAL) {
+				sprite(bottom, "burger", 200, 90, 64); sprite(bottom, "soup", 320, 84, 64); sprite(bottom, "salad", 440, 90, 64);
+				text(bottom, F32, 320, 170, "YOU'RE READY!", WHITE, 1);
+				text(bottom, N15, 320, 214, "Play: no clock, keep your customers happy.", LIGHT, 1);
+				text(bottom, N15, 320, 238, "Each one who leaves without their dish takes a heart.", LIGHT, 1);
+				text(bottom, N15, 320, 270, "Rush: three minutes, as many tips as you can.", MUTED, 1);
+			} else if (mode == RUSH) {
+				int st = k.starsEarned();
+				for (int i = 0; i < 3; ++i) {
+					float appear = std::clamp((sceneT - 0.4f - i * 0.45f) * 4, 0.f, 1.f);
+					float r = 34 * (i < st ? 0.6f + 0.4f * appear + (appear < 1 ? 0.25f * std::sin(appear * 3.14f) : 0) : 1);
+					bottom.star(220 + i * 100, 70, r, i < st && appear > 0 ? YELLOW : 0x5a4c64);
+				}
+				snprintf(buf, sizeof buf, "%d TIPS", k.tips);
+				text(bottom, F32, 320, 150, buf, WHITE, 1);
+				snprintf(buf, sizeof buf, "SERVED %d    MISSED %d", k.served, k.missed);
+				text(bottom, F13, 320, 190, buf, MUTED, 1);
+				if (newBest) { bottom.rrect(250, 220, 390, 248, 14, GREEN); text(bottom, F13, 320, 234, "NEW BEST!", WHITE, 1); }
+				else { snprintf(buf, sizeof buf, "BEST: %d", bestTips); text(bottom, F13, 320, 234, buf, MUTED, 1); }
+				text(bottom, N15, 320, 290, st == 3 ? "A perfect kitchen!" : st == 2 ? "Great cooking!" : st == 1 ? "Good start! Try for the next star." : "Keep at it: serve the oldest order first.", LIGHT, 1);
+			} else {
+				for (int i = 0; i < Kitchen::MAX_HEARTS; ++i) heart(bottom, 280 + i * 40, 60, 15, 0x5a4c64);
+				snprintf(buf, sizeof buf, "%d SERVED", k.served);
+				text(bottom, F32, 320, 140, buf, WHITE, 1);
+				int mins = (int)(k.played / 60);
+				snprintf(buf, sizeof buf, "%d TIPS    %d MINUTE%s OPEN", k.tips, mins, mins == 1 ? "" : "S");
+				text(bottom, F13, 320, 180, buf, MUTED, 1);
+				if (newBest) { bottom.rrect(250, 210, 390, 238, 14, GREEN); text(bottom, F13, 320, 224, "NEW BEST!", WHITE, 1); }
+				else { snprintf(buf, sizeof buf, "BEST: %d SERVED", bestServed); text(bottom, F13, 320, 224, buf, MUTED, 1); }
+				text(bottom, N15, 320, 290, k.served >= 30 ? "What a bistro! The whole town eats here." : k.served >= 12 ? "Lots of happy customers!" : "Tip: start the soup first, it cooks while you chop.", LIGHT, 1);
 			}
-			snprintf(buf, sizeof buf, "%d TIPS", k.tips);
-			text(bottom, F32, 320, 150, buf, WHITE, 1);
-			snprintf(buf, sizeof buf, "SERVED %d    MISSED %d", k.served, k.missed);
-			text(bottom, F13, 320, 190, buf, MUTED, 1);
-			if (newBest) { bottom.rrect(250, 220, 390, 248, 14, GREEN); text(bottom, F13, 320, 234, "NEW BEST!", WHITE, 1); }
-			else { snprintf(buf, sizeof buf, "BEST: %d", bestTips); text(bottom, F13, 320, 234, buf, MUTED, 1); }
-			text(bottom, N15, 320, 290, st == 3 ? "A perfect kitchen!" : st == 2 ? "Great cooking!" : st == 1 ? "Good start! Try for the next star." : "Keep at it: serve the oldest order first.", LIGHT, 1);
 			drawMenuButtons(bottom);
 		}
 	}
@@ -942,22 +1345,14 @@ static void writeShot(const std::string& path, Game& g)
 	printf("%s\n", path.c_str());
 }
 
-// Each screen, drawn to PNGs: the title, how to play, a moment of play (made, not played), pause, the results
-static int smoke(const std::string& prefix)
+// Each screen, drawn to PNGs: the title, how to cook, a moment of each way to play (made, not played), pause,
+// options, the results
+static void settle(Game& g, float secs) { for (float t = 0; t < secs; t += 1 / 60.f) g.update(1 / 60.f); }
+static void busyKitchen(Kitchen& k)
 {
-	Game g;
-	g.view.clock = 0.3f;
-	g.bestTips = 96; g.bestStars = 2;
-	writeShot(prefix + "-1-title.png", g);
-	g.go(Game::HOWTO); writeShot(prefix + "-2-howto.png", g);
-	// play: two chefs at work
-	g.seed = 7; g.startRound();
-	Kitchen& k = g.k;
-	for (int i = 0; i < 150; ++i) g.update(1 / 60.f);
+	auto order = [&](Recipe r, float left, float total) { Order o; o.r = r; o.left = left; o.total = total; o.id = ++k.orderIds; k.orders.push_back(o); };
 	k.orders.clear();
-	auto order = [&](Recipe r, float left, float total) { Order o; o.r = r; o.left = left; o.total = total; k.orders.push_back(o); };
 	order(BURGER, 16, 80); order(TOMATO_SOUP, 40, 70); order(SALAD, 50, 55); order(SALAD, 54, 55);
-	k.time = 151; k.tips = 64;
 	k.chefs[0].x = 6.3f; k.chefs[0].y = 3.6f; k.chefs[0].fx = 1; k.chefs[0].fy = 0; k.chefs[0].hand = Thing::ofFood(TOMATO);
 	k.chefs[1].x = 9.5f; k.chefs[1].y = 9.4f; k.chefs[1].fx = 0; k.chefs[1].fy = 1; k.chefs[1].hand = Thing::plate();
 	k.cells[5][0].thing = Thing::ofFood(TOMATO, CUT);
@@ -969,12 +1364,50 @@ static int smoke(const std::string& prefix)
 	k.cells[10][9].vessel.n = 3; k.cells[10][9].vessel.cook = 11;
 	k.cells[10][4].vessel.n = 1; k.cells[10][4].vessel.cook = 12;
 	k.cells[10][5].vessel.n = 1; k.cells[10][5].vessel.cook = 2;
+}
+static int smoke(const std::string& prefix)
+{
+	Game g;
+	g.view.clock = 0.3f;
+	g.bestTips = 96; g.bestStars = 2; g.bestServed = 23; g.hasSave = true;
+	settle(g, 9);
+	writeShot(prefix + "-1-title.png", g);
+	g.go(Game::HOWTO); writeShot(prefix + "-2-howto.png", g);
+	// Play: customers along the top, one leaving happy and one cross
+	g.seed = 7; g.startRound(CALM);
+	settle(g, 2.5f);
+	Kitchen& k = g.k;
+	busyKitchen(k);
+	k.hearts = 2; k.served = 14; k.tips = 312;
+	settle(g, 1 / 60.f); g.sceneT = 5;
+	settle(g, 6);
+	{
+		Customer happy; happy.state = Customer::HAPPY; happy.x = 290; happy.t = 0.5f; happy.id = 9001; happy.look = 40;
+		Customer cross; cross.state = Customer::MAD; cross.x = 585; cross.t = 1.2f; cross.id = 9002; cross.look = 77;
+		g.view.customers.push_back(happy); g.view.customers.push_back(cross);
+	}
 	g.view.floaters.push_back({ 600, 150, "+27", GREEN, 1.4f, 0.4f, F24 });
-	g.sceneT = 5; g.view.clock = 0.1f;
 	writeShot(prefix + "-3-play.png", g);
 	g.scene = Game::PAUSE; g.sel = 0; writeShot(prefix + "-4-pause.png", g);
-	k.tips = 112; k.served = 6; k.missed = 1; k.time = 0; g.newBest = true;
-	g.go(Game::RESULTS); g.sceneT = 3; writeShot(prefix + "-5-results.png", g);
+	g.optionsFrom = Game::PAUSE; g.go(Game::OPTIONS); writeShot(prefix + "-5-options.png", g);
+	k.served = 31; k.played = 1260; k.over = true; g.newBest = true;
+	g.go(Game::RESULTS); g.sceneT = 3; writeShot(prefix + "-6-results-play.png", g);
+	// Rush
+	g.startRound(RUSH); settle(g, 2.5f); busyKitchen(g.k); g.k.time = 151; g.k.tips = 64; settle(g, 3); g.sceneT = 5;
+	writeShot(prefix + "-7-rush.png", g);
+	g.k.tips = 112; g.k.served = 6; g.k.missed = 1; g.k.time = 0; g.newBest = true;
+	g.go(Game::RESULTS); g.sceneT = 3; writeShot(prefix + "-8-results-rush.png", g);
+	// the tutorial: its first lesson, then with a customer (lesson 10)
+	g.startRound(TUTORIAL); settle(g, 2.5f);
+	g.k.chefs[0].x = 3.5f; g.k.chefs[0].y = 6.5f;
+	writeShot(prefix + "-9-tutorial-1.png", g);
+	for (int i = 0; i < 9; ++i) g.tutor.skip(g.k);
+	g.k.chefs[0].hand = Thing::plate(); g.k.chefs[0].hand.on = { { TOMATO, CUT }, { CABBAGE, CUT } };
+	g.k.chefs[0].x = 11.5f; g.k.chefs[0].y = 7.5f; g.k.chefs[0].fx = 1; g.k.chefs[0].fy = 0;
+	settle(g, 3);
+	writeShot(prefix + "-10-tutorial-serve.png", g);
+	g.tutor.finished = true; g.go(Game::RESULTS); g.sceneT = 3;
+	writeShot(prefix + "-11-tutorial-done.png", g);
 	return 0;
 }
 
@@ -1233,14 +1666,32 @@ public:
 	}
 };
 
-// The sounds, mixed in a thread of their own. ALSA's "default", 44.1 kHz stereo (each 22.05 kHz sample twice).
+// The sounds and the music, mixed in a thread of their own. ALSA's "default", 44.1 kHz stereo (each 22.05 kHz
+// sample twice). What happens to the device goes in the log (bistro.log): a game with no sound says why there.
 class Audio {
 	struct Voice { const bistro_sounds::Clip* c; int at; };
 	std::vector<Voice> voices;
 	std::mutex m;
 	std::thread th;
-	std::atomic<bool> run{ true };
+	std::atomic<bool> run{ true }, musicOn{ true };
+	std::atomic<float> musicVol{ 0.42f };
 	std::unordered_map<std::string, const bistro_sounds::Clip*> clips;
+	// the music: IMA ADPCM, decoded as it plays, from the start again at its end
+	int mAt = 0, mPred = 0, mIdx = 0;
+	float mGain = 0;
+	int musicSample()
+	{
+		static const int IDX[8] = { -1, -1, -1, -1, 2, 4, 6, 8 };
+		int code = (bistro_sounds::music[mAt >> 1] >> ((mAt & 1) * 4)) & 15;
+		int step = bistro_sounds::ADPCM_STEPS[mIdx], d = step >> 3;
+		if (code & 4) d += step;
+		if (code & 2) d += step >> 1;
+		if (code & 1) d += step >> 2;
+		mPred = std::clamp(code & 8 ? mPred - d : mPred + d, -32768, 32767);
+		mIdx = std::clamp(mIdx + IDX[code & 7], 0, 88);
+		if (++mAt >= bistro_sounds::MUSIC_SAMPLES) mAt = mPred = mIdx = 0;
+		return mPred;
+	}
 public:
 	Audio()
 	{
@@ -1248,22 +1699,41 @@ public:
 #ifndef BISTRO_NO_ALSA
 		th = std::thread([this] {
 			snd_pcm_t* pcm = nullptr;
-			if (snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) return;
-			if (snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, 2, bistro_sounds::RATE * 2, 1, 50000) < 0) { snd_pcm_close(pcm); return; }
+			// (the menu lets go of the device once its launch chime has played: a few tries, half a second apart)
+			int err = 0;
+			for (int i = 0; run && i < 20; ++i) {
+				err = snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+				if (err >= 0) break;
+				if (i == 0) fprintf(stderr, "bistro: sound: the device isn't free yet (%s), trying again\n", snd_strerror(err));
+				pcm = nullptr;
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			}
+			if (!pcm) { fprintf(stderr, "bistro: sound: no device (%s): playing without sound\n", snd_strerror(err)); return; }
+			snd_pcm_nonblock(pcm, 0);
+			err = snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, 2, bistro_sounds::RATE * 2, 1, 50000);
+			if (err < 0) { fprintf(stderr, "bistro: sound: the device refused 44.1 kHz stereo (%s)\n", snd_strerror(err)); snd_pcm_close(pcm); return; }
+			fprintf(stderr, "bistro: sound: playing (%s)\n", snd_pcm_name(pcm));
 			std::vector<int16_t> buf(256 * 2);
+			int recovered = 0;
 			while (run) {
 				{
 					std::lock_guard<std::mutex> l(m);
+					float want = musicOn ? musicVol.load() : 0;
 					for (int i = 0; i < 128; ++i) {
 						int s = 0;
 						for (auto& v : voices) if (v.at < v.c->n) s += v.c->s[v.at++];
+						mGain += (want - mGain) * 0.0005f;   // (fades in and out)
+						if (mGain > 0.001f) s += (int)(musicSample() * mGain);
 						int16_t o = (int16_t)std::clamp(s * 3 / 4, -32768, 32767);
 						for (int k = 0; k < 4; ++k) buf[i * 4 + k] = o;   // two frames, two channels
 					}
 					voices.erase(std::remove_if(voices.begin(), voices.end(), [](const Voice& v) { return v.at >= v.c->n; }), voices.end());
 				}
 				snd_pcm_sframes_t w = snd_pcm_writei(pcm, buf.data(), 256);
-				if (w < 0 && snd_pcm_recover(pcm, (int)w, 1) < 0) break;
+				if (w < 0) {
+					if (recovered++ < 5) fprintf(stderr, "bistro: sound: %s, recovering\n", snd_strerror((int)w));
+					if (snd_pcm_recover(pcm, (int)w, 1) < 0) { fprintf(stderr, "bistro: sound: lost the device\n"); break; }
+				}
 			}
 			snd_pcm_drop(pcm);
 			snd_pcm_close(pcm);
@@ -1271,6 +1741,8 @@ public:
 #endif
 	}
 	~Audio() { run = false; if (th.joinable()) th.join(); }
+	void music(bool on) { musicOn = on; }
+	void musicVolume(float v) { musicVol = v; }
 	void play(const char* name)
 	{
 		auto it = clips.find(name);
@@ -1295,6 +1767,8 @@ static int playOnDevice(const std::string& data, const std::string& top)
 	Game g;
 	g.dataDir = data; g.loadBest();
 	g.sound = [&](const char* s) { audio.play(s); };
+	g.optionsChanged = [&] { audio.music(g.musicOn); };
+	audio.music(g.musicOn);
 	auto last = std::chrono::steady_clock::now();
 	double acc = 0;
 	int frame = 0;
@@ -1312,12 +1786,15 @@ static int playOnDevice(const std::string& data, const std::string& top)
 		last = now;
 		acc = std::min(acc, 0.1);
 		while (acc >= 1 / 60.0) { g.update(1 / 60.f); acc -= 1 / 60.0; }
+		audio.musicVolume(g.scene == Game::PAUSE || g.scene == Game::OPTIONS ? 0.18f : 0.42f);
 		if (disp.ready(0)) {
 			g.drawTop(); disp.show(0, g.top);
 			// the orders: every other frame is plenty
 			if (disp.p[1].on && (frame++ % 2 == 0 || g.scene != Game::PLAY) && disp.ready(1)) { g.drawBottom(); disp.show(1, g.bottom); }
 		}
 	}
+	// closed while cooking (the home button, the power): a Play kitchen is kept
+	if (g.mode == CALM && (g.scene == Game::PLAY || g.scene == Game::PAUSE || (g.scene == Game::OPTIONS && g.optionsFrom == Game::PAUSE))) g.saveGame();
 	return 0;
 }
 #endif
@@ -1337,7 +1814,7 @@ int main(int argc, char** argv)
 	if (!smokePrefix.empty()) return smoke(smokePrefix);
 	if (bench) {
 		// what a frame of play costs to draw: the kitchen each frame, the orders every other one
-		Game g; g.seed = 3; g.startRound();
+		Game g; g.seed = 3; g.startRound(CALM);
 		for (int i = 0; i < 200; ++i) g.update(1 / 60.f);
 		auto t0 = std::chrono::steady_clock::now();
 		for (int i = 0; i < 300; ++i) { g.update(1 / 60.f); g.drawTop(); if (i % 2 == 0) g.drawBottom(); }
